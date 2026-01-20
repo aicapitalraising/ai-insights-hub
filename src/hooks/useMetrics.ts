@@ -58,6 +58,7 @@ export interface AggregatedMetrics {
   reconnectCalls: number;
   reconnectShowed: number;
   closeRate: number;
+  pipelineValue: number;
 }
 
 export function useDailyMetrics(clientId: string | undefined, startDate?: string, endDate?: string) {
@@ -137,7 +138,7 @@ export function useFundedInvestors(clientId?: string, startDate?: string, endDat
   });
 }
 
-export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: FundedInvestor[]): AggregatedMetrics {
+export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: FundedInvestor[], leads?: { pipeline_value?: number | null }[]): AggregatedMetrics {
   const totals = dailyMetrics.reduce(
     (acc, day) => ({
       totalAdSpend: acc.totalAdSpend + Number(day.ad_spend || 0),
@@ -185,6 +186,12 @@ export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: F
   const leadToBookedPercent = totals.totalLeads > 0 ? (totals.totalCalls / totals.totalLeads) * 100 : 0;
   const closeRate = totals.showedCalls > 0 ? (totals.fundedInvestors / totals.showedCalls) * 100 : 0;
 
+  // Calculate pipeline value (min value from leads with pipeline_value > 0)
+  const leadsWithPipeline = leads?.filter(l => l.pipeline_value && l.pipeline_value > 0) || [];
+  const pipelineValue = leadsWithPipeline.length > 0
+    ? Math.min(...leadsWithPipeline.map(l => l.pipeline_value || 0))
+    : 0;
+
   return {
     totalAdSpend: totals.totalAdSpend,
     totalLeads: totals.totalLeads,
@@ -209,5 +216,6 @@ export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: F
     reconnectCalls: totals.reconnectCalls,
     reconnectShowed: totals.reconnectShowed,
     closeRate,
+    pipelineValue,
   };
 }

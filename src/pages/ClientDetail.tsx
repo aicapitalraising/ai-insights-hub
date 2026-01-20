@@ -15,10 +15,13 @@ import { AdSpendDrillDownModal } from '@/components/drilldown/AdSpendDrillDownMo
 import { CallRecordingsModal } from '@/components/drilldown/CallRecordingsModal';
 import { ShareableLinkButton } from '@/components/dashboard/ShareableLinkButton';
 import { CSVImportModal, ImportType } from '@/components/import/CSVImportModal';
+import { CreativeApproval } from '@/components/creative/CreativeApproval';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { AIAnalysisChat } from '@/components/ai/AIAnalysisChat';
+import { CashBagLoader } from '@/components/ui/CashBagLoader';
 import { useClient } from '@/hooks/useClients';
 import { useDailyMetrics, useFundedInvestors, aggregateMetrics } from '@/hooks/useMetrics';
+import { useLeads } from '@/hooks/useLeadsAndCalls';
 import { useClientSettings, getThresholdsFromSettings } from '@/hooks/useClientSettings';
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { exportToCSV } from '@/lib/exportUtils';
@@ -56,11 +59,12 @@ export default function ClientDetail() {
   const { data: client, isLoading: clientLoading } = useClient(clientId);
   const { data: dailyMetrics = [], isLoading: metricsLoading } = useDailyMetrics(clientId, startDate, endDate);
   const { data: fundedInvestors = [] } = useFundedInvestors(clientId, startDate, endDate);
+  const { data: leads = [] } = useLeads(clientId, startDate, endDate);
   const { data: settings } = useClientSettings(clientId);
 
   const aggregatedMetrics = useMemo(() => {
-    return aggregateMetrics(dailyMetrics, fundedInvestors);
-  }, [dailyMetrics, fundedInvestors]);
+    return aggregateMetrics(dailyMetrics, fundedInvestors, leads);
+  }, [dailyMetrics, fundedInvestors, leads]);
 
   const thresholds = useMemo(() => getThresholdsFromSettings(settings), [settings]);
 
@@ -71,7 +75,7 @@ export default function ClientDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+        <CashBagLoader message="Loading client..." />
       </div>
     );
   }
@@ -293,6 +297,12 @@ export default function ClientDetail() {
             </div>
           )}
         </section>
+
+        <CreativeApproval 
+          clientId={client.id} 
+          clientName={client.name} 
+          isPublicView={false}
+        />
       </main>
 
       <ClientSettingsModal

@@ -28,6 +28,7 @@ interface KPIMetrics {
   reconnectCalls?: number;
   reconnectShowed?: number;
   closeRate?: number;
+  pipelineValue?: number;
 }
 
 export interface KPIThresholds {
@@ -59,6 +60,7 @@ export function KPIGrid({
     { key: 'leads', label: 'Leads', value: metrics.leads ?? metrics.totalLeads ?? 0, format: 'number' as const, change: 0, clickable: true },
     { key: 'spamBadLeads', label: 'Spam/Bad Leads', value: metrics.spamBadLeads ?? metrics.spamLeads ?? 0, format: 'number' as const, change: 0 },
     { key: 'costPerLead', label: 'Cost Per Lead', value: metrics.costPerLead ?? 0, format: 'currency' as const, change: 0, threshold: thresholds?.costPerLead },
+    { key: 'pipelineValue', label: 'Pipeline Value', value: metrics.pipelineValue ?? 0, format: 'currency' as const, change: 0 },
     { key: 'leadToBookedPercent', label: 'Lead to Booked %', value: metrics.leadToBookedPercent ?? 0, format: 'percent' as const, change: 0 },
     { key: 'calls', label: 'Booked Calls', value: metrics.calls ?? metrics.totalCalls ?? 0, format: 'number' as const, change: 0, clickable: true },
     { key: 'costPerCall', label: 'Cost Per Call', value: metrics.costPerCall ?? 0, format: 'currency' as const, change: 0, threshold: thresholds?.costPerCall },
