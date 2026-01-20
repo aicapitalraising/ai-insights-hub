@@ -19,6 +19,7 @@ export interface Lead {
   utm_content?: string | null;
   utm_term?: string | null;
   assigned_user?: string | null;
+  pipeline_value?: number | null;
 }
 
 export interface Call {

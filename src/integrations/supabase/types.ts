@@ -223,6 +223,59 @@ export type Database = {
         }
         Relationships: []
       }
+      creatives: {
+        Row: {
+          body_copy: string | null
+          client_id: string
+          comments: Json | null
+          created_at: string
+          cta_text: string | null
+          file_url: string | null
+          headline: string | null
+          id: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body_copy?: string | null
+          client_id: string
+          comments?: Json | null
+          created_at?: string
+          cta_text?: string | null
+          file_url?: string | null
+          headline?: string | null
+          id?: string
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          body_copy?: string | null
+          client_id?: string
+          comments?: Json | null
+          created_at?: string
+          cta_text?: string | null
+          file_url?: string | null
+          headline?: string | null
+          id?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creatives_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_metrics: {
         Row: {
           ad_spend: number | null
