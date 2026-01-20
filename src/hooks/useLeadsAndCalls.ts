@@ -13,6 +13,12 @@ export interface Lead {
   is_spam: boolean | null;
   created_at: string;
   updated_at: string;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_content?: string | null;
+  utm_term?: string | null;
+  assigned_user?: string | null;
 }
 
 export interface Call {
@@ -25,6 +31,7 @@ export interface Call {
   outcome: string | null;
   created_at: string;
   updated_at: string;
+  is_reconnect?: boolean;
 }
 
 export function useLeads(clientId?: string, startDate?: string, endDate?: string) {

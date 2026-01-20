@@ -1,0 +1,253 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Calendar, Phone, CheckCircle2, DollarSign, User, MapPin, Tag, Clock, Mail, Globe } from 'lucide-react';
+
+interface ActivityEvent {
+  date: string;
+  label: string;
+  icon: React.ReactNode;
+  type: 'lead' | 'call' | 'show' | 'commit' | 'funded' | 'info';
+}
+
+interface RecordActivityModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  recordType: 'lead' | 'call' | 'funded_investor';
+  record: any;
+  lead?: any;
+  calls?: any[];
+  fundedRecord?: any;
+}
+
+export function RecordActivityModal({
+  open,
+  onOpenChange,
+  recordType,
+  record,
+  lead,
+  calls = [],
+  fundedRecord,
+}: RecordActivityModalProps) {
+  if (!record) return null;
+
+  // Build activity timeline
+  const activities: ActivityEvent[] = [];
+
+  // Add lead creation if available
+  const leadRecord = recordType === 'lead' ? record : lead;
+  if (leadRecord?.created_at) {
+    activities.push({
+      date: leadRecord.created_at,
+      label: 'Lead Created',
+      icon: <User className="h-4 w-4" />,
+      type: 'lead',
+    });
+  }
+
+  // Add calls
+  const relevantCalls = recordType === 'call' ? [record] : calls;
+  relevantCalls.forEach((call: any) => {
+    if (call?.scheduled_at || call?.created_at) {
+      activities.push({
+        date: call.scheduled_at || call.created_at,
+        label: call.is_reconnect ? 'Reconnect Call Booked' : 'Call Booked',
+        icon: <Phone className="h-4 w-4" />,
+        type: 'call',
+      });
+      
+      if (call.showed) {
+        activities.push({
+          date: call.scheduled_at || call.created_at,
+          label: call.is_reconnect ? 'Reconnect Call Showed' : 'Call Showed',
+          icon: <CheckCircle2 className="h-4 w-4" />,
+          type: 'show',
+        });
+      }
+    }
+  });
+
+  // Add funded date
+  const fundedData = recordType === 'funded_investor' ? record : fundedRecord;
+  if (fundedData?.funded_at) {
+    activities.push({
+      date: fundedData.funded_at,
+      label: `Funded $${Number(fundedData.funded_amount || 0).toLocaleString()}`,
+      icon: <DollarSign className="h-4 w-4" />,
+      type: 'funded',
+    });
+  }
+
+  // Sort by date
+  activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // Get display title based on record type
+  const getTitle = () => {
+    switch (recordType) {
+      case 'lead':
+        return record.name || record.email || 'Lead Details';
+      case 'call':
+        return `Call - ${record.outcome || 'Details'}`;
+      case 'funded_investor':
+        return record.name || 'Funded Investor';
+      default:
+        return 'Record Details';
+    }
+  };
+
+  const typeColors = {
+    lead: 'bg-blue-500',
+    call: 'bg-amber-500',
+    show: 'bg-green-500',
+    commit: 'bg-purple-500',
+    funded: 'bg-emerald-500',
+    info: 'bg-muted',
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="text-xl">📊</span>
+            {getTitle()}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-6 flex-1 overflow-hidden">
+          {/* Record Details */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              Record Information
+            </h3>
+            <div className="space-y-3">
+              {(leadRecord || record) && (
+                <>
+                  {(leadRecord?.name || record?.name) && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{leadRecord?.name || record?.name}</span>
+                    </div>
+                  )}
+                  {(leadRecord?.email || record?.email) && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{leadRecord?.email || record?.email}</span>
+                    </div>
+                  )}
+                  {(leadRecord?.phone || record?.phone) && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{leadRecord?.phone || record?.phone}</span>
+                    </div>
+                  )}
+                  {leadRecord?.source && (
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <Badge variant="outline">{leadRecord.source}</Badge>
+                    </div>
+                  )}
+                  {leadRecord?.assigned_user && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Assigned: {leadRecord.assigned_user}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* UTM Parameters */}
+            {leadRecord && (leadRecord.utm_source || leadRecord.utm_medium || leadRecord.utm_campaign) && (
+              <>
+                <Separator />
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  UTM Parameters
+                </h3>
+                <div className="space-y-2 text-sm">
+                  {leadRecord.utm_source && (
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Source:</span>
+                      <Badge variant="secondary" className="text-xs">{leadRecord.utm_source}</Badge>
+                    </div>
+                  )}
+                  {leadRecord.utm_medium && (
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Medium:</span>
+                      <Badge variant="secondary" className="text-xs">{leadRecord.utm_medium}</Badge>
+                    </div>
+                  )}
+                  {leadRecord.utm_campaign && (
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Campaign:</span>
+                      <Badge variant="secondary" className="text-xs">{leadRecord.utm_campaign}</Badge>
+                    </div>
+                  )}
+                  {leadRecord.utm_content && (
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Content:</span>
+                      <Badge variant="secondary" className="text-xs">{leadRecord.utm_content}</Badge>
+                    </div>
+                  )}
+                  {leadRecord.utm_term && (
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Term:</span>
+                      <Badge variant="secondary" className="text-xs">{leadRecord.utm_term}</Badge>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Activity Timeline */}
+          <div className="overflow-hidden flex flex-col">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-4">
+              Activity Timeline
+            </h3>
+            <ScrollArea className="flex-1">
+              {activities.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No activity recorded</p>
+              ) : (
+                <div className="relative pl-6 space-y-4">
+                  {/* Timeline line */}
+                  <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-border" />
+                  
+                  {activities.map((activity, index) => (
+                    <div key={index} className="relative flex items-start gap-3">
+                      {/* Timeline dot */}
+                      <div className={`absolute -left-6 mt-1 h-4 w-4 rounded-full ${typeColors[activity.type]} flex items-center justify-center`}>
+                        <div className="text-white scale-75">
+                          {activity.icon}
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{activity.label}</p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {new Date(activity.date).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

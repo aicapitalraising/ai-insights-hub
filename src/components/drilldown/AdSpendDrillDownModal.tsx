@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,21 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Save, X, Pencil, Trash2, Plus } from 'lucide-react';
+import { Download, Save, X, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useDailyMetrics, DailyMetric } from '@/hooks/useMetrics';
+import { useDateFilter } from '@/contexts/DateFilterContext';
 import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { CashBagLoader } from '@/components/ui/CashBagLoader';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface AdSpendDrillDownModalProps {
   clientId?: string;
@@ -28,11 +37,16 @@ interface AdSpendDrillDownModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const PAGE_SIZE = 150;
+
 export function AdSpendDrillDownModal({ clientId, open, onOpenChange }: AdSpendDrillDownModalProps) {
-  const { data: metrics = [], isLoading } = useDailyMetrics(clientId);
+  const { startDate, endDate } = useDateFilter();
+  const { data: metrics = [], isLoading } = useDailyMetrics(clientId, startDate, endDate);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<DailyMetric>>({});
   const [isAdding, setIsAdding] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const [newRecord, setNewRecord] = useState({
     date: new Date().toISOString().split('T')[0],
     ad_spend: 0,
@@ -41,8 +55,27 @@ export function AdSpendDrillDownModal({ clientId, open, onOpenChange }: AdSpendD
   });
   const queryClient = useQueryClient();
 
-  const handleExport = () => {
-    exportToCSV(metrics, 'ad-spend-metrics');
+  // Filter metrics by search (date)
+  const filteredMetrics = useMemo(() => {
+    if (!searchQuery) return metrics;
+    return metrics.filter((m: DailyMetric) => 
+      m.date.includes(searchQuery)
+    );
+  }, [metrics, searchQuery]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredMetrics.length / PAGE_SIZE);
+  const paginatedMetrics = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredMetrics.slice(start, start + PAGE_SIZE);
+  }, [filteredMetrics, currentPage]);
+
+  const handleExportAll = () => {
+    exportToCSV(metrics, 'ad-spend-metrics-all');
+  };
+
+  const handleExportFiltered = () => {
+    exportToCSV(filteredMetrics, 'ad-spend-metrics-filtered');
   };
 
   const startEdit = (metric: DailyMetric) => {
@@ -135,22 +168,50 @@ export function AdSpendDrillDownModal({ clientId, open, onOpenChange }: AdSpendD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Ad Spend Records ({metrics.length})</DialogTitle>
+            <DialogTitle>
+              Ad Spend Records ({filteredMetrics.length} of {metrics.length})
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                {startDate} to {endDate}
+              </span>
+            </DialogTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setIsAdding(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Record
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
+              <Select onValueChange={(v) => v === 'all' ? handleExportAll() : handleExportFiltered()}>
+                <SelectTrigger className="w-36">
+                  <Download className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Export" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="filtered">Export Filtered</SelectItem>
+                  <SelectItem value="all">Export All</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </DialogHeader>
+
+        {/* Search */}
+        <div className="flex items-center gap-2 py-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter by date (YYYY-MM-DD)..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="max-w-sm"
+          />
+          <span className="text-sm text-muted-foreground">
+            Showing {paginatedMetrics.length} of {filteredMetrics.length}
+          </span>
+        </div>
         
         <div className="flex-1 overflow-auto">
           {isAdding && (
@@ -199,8 +260,10 @@ export function AdSpendDrillDownModal({ clientId, open, onOpenChange }: AdSpendD
           )}
 
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading records...</div>
-          ) : metrics.length === 0 ? (
+            <div className="flex justify-center py-12">
+              <CashBagLoader message="Loading records..." />
+            </div>
+          ) : paginatedMetrics.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No ad spend records found</div>
           ) : (
             <Table>
@@ -214,8 +277,8 @@ export function AdSpendDrillDownModal({ clientId, open, onOpenChange }: AdSpendD
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {metrics.map((metric) => (
-                  <TableRow key={metric.id} className="border-b">
+                {paginatedMetrics.map((metric) => (
+                  <TableRow key={metric.id} className="border-b hover:bg-muted/50">
                     <TableCell className="font-medium">{metric.date}</TableCell>
                     <TableCell className="text-right">
                       {editingId === metric.id ? (
@@ -281,6 +344,35 @@ export function AdSpendDrillDownModal({ clientId, open, onOpenChange }: AdSpendD
             </Table>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 border-t">
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
