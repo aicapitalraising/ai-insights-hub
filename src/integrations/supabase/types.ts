@@ -64,6 +64,7 @@ export type Database = {
           created_at: string
           external_id: string
           id: string
+          is_reconnect: boolean | null
           lead_id: string | null
           outcome: string | null
           quality_score: number | null
@@ -79,6 +80,7 @@ export type Database = {
           created_at?: string
           external_id: string
           id?: string
+          is_reconnect?: boolean | null
           lead_id?: string | null
           outcome?: string | null
           quality_score?: number | null
@@ -94,6 +96,7 @@ export type Database = {
           created_at?: string
           external_id?: string
           id?: string
+          is_reconnect?: boolean | null
           lead_id?: string | null
           outcome?: string | null
           quality_score?: number | null
@@ -236,6 +239,8 @@ export type Database = {
           id: string
           impressions: number | null
           leads: number | null
+          reconnect_calls: number | null
+          reconnect_showed: number | null
           showed_calls: number | null
           spam_leads: number | null
           updated_at: string
@@ -255,6 +260,8 @@ export type Database = {
           id?: string
           impressions?: number | null
           leads?: number | null
+          reconnect_calls?: number | null
+          reconnect_showed?: number | null
           showed_calls?: number | null
           spam_leads?: number | null
           updated_at?: string
@@ -274,6 +281,8 @@ export type Database = {
           id?: string
           impressions?: number | null
           leads?: number | null
+          reconnect_calls?: number | null
+          reconnect_showed?: number | null
           showed_calls?: number | null
           spam_leads?: number | null
           updated_at?: string
@@ -350,6 +359,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          assigned_user: string | null
           client_id: string
           created_at: string
           custom_fields: Json | null
@@ -370,6 +380,7 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          assigned_user?: string | null
           client_id: string
           created_at?: string
           custom_fields?: Json | null
@@ -390,6 +401,7 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          assigned_user?: string | null
           client_id?: string
           created_at?: string
           custom_fields?: Json | null

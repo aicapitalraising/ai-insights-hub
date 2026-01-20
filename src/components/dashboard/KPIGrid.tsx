@@ -23,6 +23,11 @@ interface KPIMetrics {
   costOfCapital?: number;
   avgTimeToFund?: number;
   avgCallsToFund?: number;
+  // New KPIs
+  leadToBookedPercent?: number;
+  reconnectCalls?: number;
+  reconnectShowed?: number;
+  closeRate?: number;
 }
 
 export interface KPIThresholds {
@@ -54,11 +59,15 @@ export function KPIGrid({
     { key: 'leads', label: 'Leads', value: metrics.leads ?? metrics.totalLeads ?? 0, format: 'number' as const, change: 0, clickable: true },
     { key: 'spamBadLeads', label: 'Spam/Bad Leads', value: metrics.spamBadLeads ?? metrics.spamLeads ?? 0, format: 'number' as const, change: 0 },
     { key: 'costPerLead', label: 'Cost Per Lead', value: metrics.costPerLead ?? 0, format: 'currency' as const, change: 0, threshold: thresholds?.costPerLead },
-    { key: 'calls', label: 'Calls', value: metrics.calls ?? metrics.totalCalls ?? 0, format: 'number' as const, change: 0, clickable: true },
+    { key: 'leadToBookedPercent', label: 'Lead to Booked %', value: metrics.leadToBookedPercent ?? 0, format: 'percent' as const, change: 0 },
+    { key: 'calls', label: 'Booked Calls', value: metrics.calls ?? metrics.totalCalls ?? 0, format: 'number' as const, change: 0, clickable: true },
     { key: 'costPerCall', label: 'Cost Per Call', value: metrics.costPerCall ?? 0, format: 'currency' as const, change: 0, threshold: thresholds?.costPerCall },
     { key: 'showedCalls', label: 'Showed Calls', value: metrics.showedCalls ?? 0, format: 'number' as const, change: 0, clickable: true },
-    { key: 'showedPercent', label: 'Showed %', value: metrics.showedPercent ?? 0, format: 'percent' as const, change: 0 },
+    { key: 'showedPercent', label: 'Show Rate', value: metrics.showedPercent ?? 0, format: 'percent' as const, change: 0 },
     { key: 'costPerShow', label: 'Cost Per Show', value: metrics.costPerShow ?? 0, format: 'currency' as const, change: 0, threshold: thresholds?.costPerShow },
+    { key: 'reconnectCalls', label: 'Reconnect Calls', value: metrics.reconnectCalls ?? 0, format: 'number' as const, change: 0 },
+    { key: 'reconnectShowed', label: 'Reconnect Showed', value: metrics.reconnectShowed ?? 0, format: 'number' as const, change: 0 },
+    { key: 'closeRate', label: 'Close Rate', value: metrics.closeRate ?? 0, format: 'percent' as const, change: 0 },
     { key: 'commitments', label: 'Commitments', value: metrics.commitments ?? metrics.totalCommitments ?? 0, format: 'number' as const, change: 0, clickable: true },
     { key: 'commitmentDollars', label: 'Commitment $', value: metrics.commitmentDollars ?? 0, format: 'currency' as const, change: 0 },
     { key: 'fundedInvestors', label: fundedInvestorLabel, value: metrics.fundedInvestors ?? 0, format: 'number' as const, change: 0, clickable: true },
@@ -76,7 +85,7 @@ export function KPIGrid({
   const allKpis = [...kpis, ...fundedMetrics];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {allKpis.map((kpi) => (
         <KPICard
           key={kpi.key}

@@ -17,6 +17,8 @@ export interface DailyMetric {
   commitment_dollars: number;
   funded_investors: number;
   funded_dollars: number;
+  reconnect_calls?: number;
+  reconnect_showed?: number;
 }
 
 export interface FundedInvestor {
@@ -51,6 +53,11 @@ export interface AggregatedMetrics {
   costOfCapital: number;
   avgTimeToFund: number;
   avgCallsToFund: number;
+  // New KPIs
+  leadToBookedPercent: number;
+  reconnectCalls: number;
+  reconnectShowed: number;
+  closeRate: number;
 }
 
 export function useDailyMetrics(clientId: string | undefined, startDate?: string, endDate?: string) {
@@ -144,6 +151,8 @@ export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: F
       fundedDollars: acc.fundedDollars + Number(day.funded_dollars || 0),
       totalClicks: acc.totalClicks + (day.clicks || 0),
       totalImpressions: acc.totalImpressions + (day.impressions || 0),
+      reconnectCalls: acc.reconnectCalls + (day.reconnect_calls || 0),
+      reconnectShowed: acc.reconnectShowed + (day.reconnect_showed || 0),
     }),
     {
       totalAdSpend: 0,
@@ -157,6 +166,8 @@ export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: F
       fundedDollars: 0,
       totalClicks: 0,
       totalImpressions: 0,
+      reconnectCalls: 0,
+      reconnectShowed: 0,
     }
   );
 
@@ -169,6 +180,10 @@ export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: F
   const avgCallsToFund = fundedInvestors.length > 0
     ? fundedInvestors.reduce((sum, f) => sum + (f.calls_to_fund || 0), 0) / fundedInvestors.length
     : 0;
+
+  // Calculate new KPIs
+  const leadToBookedPercent = totals.totalLeads > 0 ? (totals.totalCalls / totals.totalLeads) * 100 : 0;
+  const closeRate = totals.showedCalls > 0 ? (totals.fundedInvestors / totals.showedCalls) * 100 : 0;
 
   return {
     totalAdSpend: totals.totalAdSpend,
@@ -189,5 +204,10 @@ export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: F
     costOfCapital: totals.fundedDollars > 0 ? (totals.totalAdSpend / totals.fundedDollars) * 100 : 0,
     avgTimeToFund,
     avgCallsToFund,
+    // New KPIs
+    leadToBookedPercent,
+    reconnectCalls: totals.reconnectCalls,
+    reconnectShowed: totals.reconnectShowed,
+    closeRate,
   };
 }
