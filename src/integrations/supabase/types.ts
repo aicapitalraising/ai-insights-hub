@@ -183,6 +183,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          business_manager_url: string | null
           created_at: string
           ghl_api_key: string | null
           ghl_location_id: string | null
@@ -196,6 +197,7 @@ export type Database = {
           webhook_secret: string | null
         }
         Insert: {
+          business_manager_url?: string | null
           created_at?: string
           ghl_api_key?: string | null
           ghl_location_id?: string | null
@@ -209,6 +211,7 @@ export type Database = {
           webhook_secret?: string | null
         }
         Update: {
+          business_manager_url?: string | null
           created_at?: string
           ghl_api_key?: string | null
           ghl_location_id?: string | null
@@ -233,6 +236,7 @@ export type Database = {
           file_url: string | null
           headline: string | null
           id: string
+          platform: string | null
           status: string
           title: string
           type: string
@@ -247,6 +251,7 @@ export type Database = {
           file_url?: string | null
           headline?: string | null
           id?: string
+          platform?: string | null
           status?: string
           title: string
           type?: string
@@ -261,6 +266,7 @@ export type Database = {
           file_url?: string | null
           headline?: string | null
           id?: string
+          platform?: string | null
           status?: string
           title?: string
           type?: string
