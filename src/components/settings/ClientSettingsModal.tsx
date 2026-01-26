@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { WebhookSettingsTab } from './WebhookSettingsTab';
 import { EmailParsingTab } from './EmailParsingTab';
-import { DollarSign, Target } from 'lucide-react';
+import { DollarSign, Target, Plug, Loader2, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 
 interface ClientSettingsModalProps {
   client: Client | null;
@@ -63,6 +63,13 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
   const [totalRaiseAmount, setTotalRaiseAmount] = useState('0');
   const [adSpendInputMode, setAdSpendInputMode] = useState<'monthly' | 'daily'>('monthly');
 
+  // GHL Integration state
+  const [ghlLocationId, setGhlLocationId] = useState('');
+  const [ghlApiKey, setGhlApiKey] = useState('');
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
+
   // Load settings when available
   useEffect(() => {
     if (settings) {
@@ -95,10 +102,22 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     }
   }, [settings]);
 
-  // Load client business manager URL
+  // Load client business manager URL and GHL credentials
   useEffect(() => {
     if (client?.business_manager_url) {
       setBusinessManagerUrl(client.business_manager_url);
+    }
+    if (client?.ghl_location_id) {
+      setGhlLocationId(client.ghl_location_id);
+    }
+    if (client?.ghl_api_key) {
+      setGhlApiKey(client.ghl_api_key);
+    }
+    // Determine connection status based on saved credentials
+    if (client?.ghl_location_id && client?.ghl_api_key) {
+      setConnectionStatus('connected');
+    } else {
+      setConnectionStatus('unknown');
     }
   }, [client]);
 
@@ -184,15 +203,28 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         }
       }
 
-      // Save business manager URL to client
+      // Save business manager URL and GHL credentials to client
+      const clientUpdates: Record<string, string | null> = {};
+      
       if (businessManagerUrl !== (client.business_manager_url || '')) {
+        clientUpdates.business_manager_url = businessManagerUrl || null;
+      }
+      if (ghlLocationId !== (client.ghl_location_id || '')) {
+        clientUpdates.ghl_location_id = ghlLocationId || null;
+      }
+      if (ghlApiKey !== (client.ghl_api_key || '')) {
+        clientUpdates.ghl_api_key = ghlApiKey || null;
+      }
+
+      if (Object.keys(clientUpdates).length > 0) {
         await supabase
           .from('clients')
-          .update({ business_manager_url: businessManagerUrl })
+          .update(clientUpdates)
           .eq('id', client.id);
       }
 
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['client', client.id] });
       queryClient.invalidateQueries({ queryKey: ['all-client-mrr'] });
       queryClient.invalidateQueries({ queryKey: ['all-client-settings'] });
       toast.success('Settings saved successfully');
@@ -202,6 +234,56 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
       toast.error('Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!ghlLocationId || !ghlApiKey) {
+      toast.error('Please enter both Location ID and Private Integration Key');
+      return;
+    }
+    setTestingConnection(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-ghl-contacts', {
+        body: { 
+          client_id: client?.id,
+          testOnly: true,
+          apiKey: ghlApiKey,
+          locationId: ghlLocationId 
+        }
+      });
+      if (error) throw error;
+      setConnectionStatus('connected');
+      toast.success('Connection successful! GHL credentials are valid.');
+    } catch (error) {
+      console.error('GHL connection test failed:', error);
+      setConnectionStatus('error');
+      toast.error('Connection failed - please check your credentials');
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSyncContacts = async () => {
+    if (!client?.ghl_location_id || !client?.ghl_api_key) {
+      toast.error('Please save GHL credentials first');
+      return;
+    }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-ghl-contacts', {
+        body: { client_id: client.id }
+      });
+      if (error) throw error;
+      const created = data?.results?.[0]?.created || 0;
+      const updated = data?.results?.[0]?.updated || 0;
+      toast.success(`Synced ${created + updated} contacts (${created} new, ${updated} updated)`);
+      queryClient.invalidateQueries({ queryKey: ['leads', client.id] });
+    } catch (error) {
+      console.error('GHL sync failed:', error);
+      toast.error('Sync failed - please try again');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -218,8 +300,9 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         </DialogHeader>
 
         <Tabs defaultValue="kpis" className="mt-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="kpis">KPIs</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
             <TabsTrigger value="email-parsing">Email Parsing</TabsTrigger>
             <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
@@ -397,6 +480,117 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                   placeholder="0"
                 />
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="space-y-4 mt-4">
+            <div className="border-2 border-border p-4 space-y-4">
+              <div>
+                <h4 className="font-medium mb-1 flex items-center gap-2">
+                  <Plug className="h-4 w-4" />
+                  GoHighLevel Integration
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Connect your GHL account to sync contacts and calls automatically
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ghlLocationId">Location ID</Label>
+                  <Input
+                    id="ghlLocationId"
+                    value={ghlLocationId}
+                    onChange={(e) => setGhlLocationId(e.target.value)}
+                    placeholder="ve9EPM428h8vShlRW1KT"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Found in GHL → Settings → Business Profile
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ghlApiKey">Private Integration Key</Label>
+                  <Input
+                    id="ghlApiKey"
+                    type="password"
+                    value={ghlApiKey}
+                    onChange={(e) => setGhlApiKey(e.target.value)}
+                    placeholder="••••••••••••••••••••••••"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Generate from GHL → Settings → Integrations → Private Integrations
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <span className="text-sm font-medium">Status:</span>
+                {connectionStatus === 'connected' && (
+                  <span className="flex items-center gap-1 text-sm text-chart-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Connected
+                  </span>
+                )}
+                {connectionStatus === 'error' && (
+                  <span className="flex items-center gap-1 text-sm text-destructive">
+                    <XCircle className="h-4 w-4" />
+                    Connection Failed
+                  </span>
+                )}
+                {connectionStatus === 'unknown' && (
+                  <span className="text-sm text-muted-foreground">Not Configured</span>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection || !ghlLocationId || !ghlApiKey}
+                >
+                  {testingConnection ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    'Test Connection'
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSyncContacts}
+                  disabled={syncing || !client?.ghl_location_id || !client?.ghl_api_key}
+                >
+                  {syncing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sync Contacts Now
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-2 border-border p-4 space-y-3">
+              <h4 className="font-medium">Required GHL Scopes</h4>
+              <p className="text-sm text-muted-foreground">
+                When creating your Private Integration, enable these permissions:
+              </p>
+              <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+                <li>Contacts (read/write) - Required for syncing leads</li>
+                <li>Calendars (read) - For appointment data</li>
+                <li>Opportunities (read) - For pipeline tracking</li>
+                <li>Conversations (write) - Optional, for notifications</li>
+              </ul>
             </div>
           </TabsContent>
           

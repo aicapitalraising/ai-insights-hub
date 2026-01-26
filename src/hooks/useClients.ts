@@ -10,6 +10,8 @@ export interface Client {
   business_manager_url: string | null;
   slug: string | null;
   industry: string | null;
+  ghl_location_id: string | null;
+  ghl_api_key: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,7 +22,7 @@ export function useClients() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, status, public_token, business_manager_url, slug, industry, created_at, updated_at')
+        .select('id, name, status, public_token, business_manager_url, slug, industry, ghl_location_id, ghl_api_key, created_at, updated_at')
         .order('name');
       
       if (error) throw error;
@@ -37,7 +39,7 @@ export function useClient(clientId: string | undefined) {
       
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, status, public_token, business_manager_url, slug, industry, created_at, updated_at')
+        .select('id, name, status, public_token, business_manager_url, slug, industry, ghl_location_id, ghl_api_key, created_at, updated_at')
         .eq('id', clientId)
         .maybeSingle();
       
@@ -57,7 +59,7 @@ export function useClientByToken(token: string | undefined) {
       // First try to find by slug (friendly URL)
       let { data, error } = await supabase
         .from('clients')
-        .select('id, name, status, public_token, business_manager_url, slug, industry, created_at, updated_at')
+        .select('id, name, status, public_token, business_manager_url, slug, industry, ghl_location_id, ghl_api_key, created_at, updated_at')
         .eq('slug', token)
         .maybeSingle();
       
@@ -65,7 +67,7 @@ export function useClientByToken(token: string | undefined) {
       if (!data) {
         const result = await supabase
           .from('clients')
-          .select('id, name, status, public_token, business_manager_url, slug, industry, created_at, updated_at')
+          .select('id, name, status, public_token, business_manager_url, slug, industry, ghl_location_id, ghl_api_key, created_at, updated_at')
           .eq('public_token', token)
           .maybeSingle();
         
