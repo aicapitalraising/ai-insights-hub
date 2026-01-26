@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { WebhookSettingsTab } from './WebhookSettingsTab';
+import { EmailParsingTab } from './EmailParsingTab';
 import { DollarSign, Target } from 'lucide-react';
 
 interface ClientSettingsModalProps {
@@ -217,9 +218,10 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         </DialogHeader>
 
         <Tabs defaultValue="kpis" className="mt-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="kpis">KPIs</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            <TabsTrigger value="email-parsing">Email Parsing</TabsTrigger>
             <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
           </TabsList>
@@ -400,6 +402,10 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
           
           <TabsContent value="webhooks" className="mt-4">
             <WebhookSettingsTab clientId={client.id} />
+          </TabsContent>
+
+          <TabsContent value="email-parsing" className="mt-4">
+            <EmailParsingTab clientId={client.id} />
           </TabsContent>
 
           <TabsContent value="thresholds" className="space-y-4 mt-4">
