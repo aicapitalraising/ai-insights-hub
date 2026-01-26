@@ -309,6 +309,10 @@ export type Database = {
           cpl_threshold_yellow: number | null
           created_at: string
           daily_ad_spend_target: number | null
+          email_auto_approve_threshold: number | null
+          email_default_offering: string | null
+          email_parsing_enabled: boolean | null
+          email_trusted_domains: string[] | null
           funded_investor_label: string | null
           id: string
           monthly_ad_spend_target: number | null
@@ -333,6 +337,10 @@ export type Database = {
           cpl_threshold_yellow?: number | null
           created_at?: string
           daily_ad_spend_target?: number | null
+          email_auto_approve_threshold?: number | null
+          email_default_offering?: string | null
+          email_parsing_enabled?: boolean | null
+          email_trusted_domains?: string[] | null
           funded_investor_label?: string | null
           id?: string
           monthly_ad_spend_target?: number | null
@@ -357,6 +365,10 @@ export type Database = {
           cpl_threshold_yellow?: number | null
           created_at?: string
           daily_ad_spend_target?: number | null
+          email_auto_approve_threshold?: number | null
+          email_default_offering?: string | null
+          email_parsing_enabled?: boolean | null
+          email_trusted_domains?: string[] | null
           funded_investor_label?: string | null
           id?: string
           monthly_ad_spend_target?: number | null
@@ -630,8 +642,90 @@ export type Database = {
           },
         ]
       }
+      email_parsed_investors: {
+        Row: {
+          client_id: string
+          created_at: string
+          email_body: string | null
+          email_from: string | null
+          email_received_at: string | null
+          email_subject: string | null
+          funded_investor_id: string | null
+          id: string
+          parsed_accredited: boolean | null
+          parsed_amount: number | null
+          parsed_class: string | null
+          parsed_email: string | null
+          parsed_name: string | null
+          parsed_offering: string | null
+          parsed_phone: string | null
+          raw_parsed_data: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email_body?: string | null
+          email_from?: string | null
+          email_received_at?: string | null
+          email_subject?: string | null
+          funded_investor_id?: string | null
+          id?: string
+          parsed_accredited?: boolean | null
+          parsed_amount?: number | null
+          parsed_class?: string | null
+          parsed_email?: string | null
+          parsed_name?: string | null
+          parsed_offering?: string | null
+          parsed_phone?: string | null
+          raw_parsed_data?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email_body?: string | null
+          email_from?: string | null
+          email_received_at?: string | null
+          email_subject?: string | null
+          funded_investor_id?: string | null
+          id?: string
+          parsed_accredited?: boolean | null
+          parsed_amount?: number | null
+          parsed_class?: string | null
+          parsed_email?: string | null
+          parsed_name?: string | null
+          parsed_offering?: string | null
+          parsed_phone?: string | null
+          raw_parsed_data?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_parsed_investors_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_parsed_investors_funded_investor_id_fkey"
+            columns: ["funded_investor_id"]
+            isOneToOne: false
+            referencedRelation: "funded_investors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funded_investors: {
         Row: {
+          approval_status: string | null
           calls_to_fund: number | null
           client_id: string
           commitment_amount: number | null
@@ -643,9 +737,11 @@ export type Database = {
           id: string
           lead_id: string | null
           name: string | null
+          source: string | null
           time_to_fund_days: number | null
         }
         Insert: {
+          approval_status?: string | null
           calls_to_fund?: number | null
           client_id: string
           commitment_amount?: number | null
@@ -657,9 +753,11 @@ export type Database = {
           id?: string
           lead_id?: string | null
           name?: string | null
+          source?: string | null
           time_to_fund_days?: number | null
         }
         Update: {
+          approval_status?: string | null
           calls_to_fund?: number | null
           client_id?: string
           commitment_amount?: number | null
@@ -671,6 +769,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           name?: string | null
+          source?: string | null
           time_to_fund_days?: number | null
         }
         Relationships: [

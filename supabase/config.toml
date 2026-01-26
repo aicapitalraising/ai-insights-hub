@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.sync-ghl-contacts]
 verify_jwt = false
+
+[functions.parse-investor-email]
+verify_jwt = false
