@@ -1,266 +1,391 @@
 
 
-# Comprehensive Funnel Metrics & GHL Integration Plan
+# Plan: MeetGeek Integration with Pending Task Approval
 
-## Executive Summary
+## Summary
 
-This plan outlines a cohesive approach to create the most accurate and user-friendly capital raising performance dashboard. The system will track the complete advertising funnel from Ad Spend through Funded Investors, with detailed cost metrics at each stage and direct GHL record links.
-
----
-
-## Current State Analysis
-
-### What's Already Working
-1. **Webhook ingestion** for all funnel stages (lead, booked, showed, reconnect, funded, ad-spend)
-2. **GHL sync function** that can pull contacts in bulk
-3. **KPI Grid** displaying cost metrics (CPL, Cost/Call, Cost/Show, Cost/Investor, CoC%)
-4. **Detailed Records tabs** with 8 funnel stages (just reorganized)
-5. **Attribution dashboard** for campaign-level analysis
-
-### Current Gaps
-1. **Missing KPIs**: Cost per Reconnect Call, Cost per Reconnect Showed
-2. **No GHL links**: Can't click directly to view contact in GHL
-3. **API vs Webhook clarity**: No guidance on best approach per use case
-4. **Incomplete cost breakdown**: Some stages don't have cost metrics visible
+Integrate MeetGeek.ai at the agency level to pull all meeting recordings, transcripts, and action items into the dashboard. Meetings can be manually assigned to clients, and action items extracted from meetings will create "pending tasks" that require user approval before being added to the project management system.
 
 ---
 
-## Data Ingestion Strategy: API vs Webhooks
-
-### Recommendation: Hybrid Approach
-
-| Data Type | Best Method | Rationale |
-|-----------|-------------|-----------|
-| **Ad Spend** | Webhook (Make.com) | Meta API requires complex OAuth; webhooks from Make/Zapier are simpler |
-| **New Leads** | Webhook | Real-time, GHL workflow-triggered, immediate capture |
-| **Call Booked** | Webhook | Triggered by GHL calendar events |
-| **Call Showed** | Webhook | Triggered by GHL appointment status change |
-| **Reconnect Calls** | Webhook | Workflow-triggered when tagged as reconnect |
-| **Commitments/Funded** | Webhook | Pipeline stage triggers in GHL |
-| **Historical Backfill** | GHL API Sync | One-time or periodic pull of all contacts |
-| **Contact Attribution** | GHL API Sync | Better extraction of UTM/campaign data from GHL |
-
-### Why Webhooks Are Primary
-- **Real-time**: Data appears instantly
-- **Simple setup**: No OAuth, no API key management per platform
-- **Reliable**: GHL workflows are battle-tested
-- **Client-friendly**: They can set up workflows themselves
-
-### When to Use GHL API Sync
-- **Initial onboarding**: Backfill all historical contacts
-- **Data enrichment**: Pull missing attribution data
-- **Periodic validation**: Ensure webhook data matches GHL
-
----
-
-## Implementation Plan
-
-### Phase 1: Add Missing Cost Metrics
-
-**File: `src/hooks/useMetrics.ts`**
-
-Add new calculated metrics to `AggregatedMetrics` interface:
-
-```typescript
-// Add to AggregatedMetrics interface
-costPerReconnectCall: number;
-costPerReconnectShowed: number;
-costPerBooked: number;  // Alias for costPerCall for clarity
-costPerShowed: number;  // Alias for costPerShow for clarity
-
-// In aggregateMetrics function, add calculations:
-costPerReconnectCall: totals.reconnectCalls > 0 
-  ? totals.totalAdSpend / totals.reconnectCalls 
-  : 0,
-costPerReconnectShowed: totals.reconnectShowed > 0 
-  ? totals.totalAdSpend / totals.reconnectShowed 
-  : 0,
-```
-
-**File: `src/components/dashboard/KPIGrid.tsx`**
-
-Add new KPI cards for reconnect cost metrics in the KPIs array.
-
----
-
-### Phase 2: Add GHL Quick Links
-
-**File: `src/hooks/useClients.ts`**
-
-The `ghl_location_id` field is already available - this enables constructing GHL contact URLs.
-
-**File: `src/components/dashboard/InlineRecordsView.tsx`**
-
-Add a clickable GHL link column to Leads, Calls, and Funded tables:
-
-```typescript
-// GHL contact link format:
-const getGHLContactUrl = (locationId: string, contactId: string) => {
-  return `https://app.gohighlevel.com/location/${locationId}/contacts/detail/${contactId}`;
-};
-
-// In table rows, add action column:
-<TableCell>
-  {record.external_id && !record.external_id.startsWith('wh_') && locationId && (
-    <a 
-      href={getGHLContactUrl(locationId, record.external_id)}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary hover:underline flex items-center gap-1"
-    >
-      <ExternalLink className="h-3 w-3" />
-      View in GHL
-    </a>
-  )}
-</TableCell>
-```
-
-**Props Update**: Pass `ghlLocationId` to `InlineRecordsView` from `ClientDetail.tsx`.
-
----
-
-### Phase 3: Complete Funnel Metrics Display
-
-**File: `src/components/dashboard/PeriodicStatsTable.tsx`**
-
-Add columns for the complete funnel with cost metrics:
+## Architecture Overview
 
 ```text
-Current columns: Ad Spend | Leads | CPL | Calls | $/Call | Showed | Show% | Recon | Recon Showed | Commits | Commit$ | Funded# | Funded$ | CPA | CoC%
-
-Add: $/Showed | $/Recon | $/Recon Showed
++------------------+     Webhook      +---------------------+
+|   MeetGeek.ai    | ---------------> |  meetgeek-webhook   |
++------------------+  (on complete)   +---------------------+
+                                              |
+                                              | 1. Store meeting data
+                                              | 2. Extract action items → pending_tasks
+                                              v
+                              +------------------------------+
+                              |  Database Tables             |
+                              |  - agency_meetings           |
+                              |  - pending_meeting_tasks     |
+                              +------------------------------+
+                                        |
+            +---------------------------+---------------------------+
+            |                           |                           |
+            v                           v                           v
++------------------+       +------------------------+    +------------------+
+| Meetings List    |       | Pending Tasks Review   |    | AI Chat Context  |
+| (assign client)  |       | (approve → real tasks) |    | (meeting data)   |
++------------------+       +------------------------+    +------------------+
 ```
 
-Update the table to include:
-- Cost per Showed = Ad Spend / Showed Calls
-- Cost per Reconnect = Ad Spend / Reconnect Calls  
-- Cost per Reconnect Showed = Ad Spend / Reconnect Showed
+---
+
+## Database Schema
+
+### New Table: `agency_meetings`
+
+Stores all synced meeting data from MeetGeek.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| client_id | uuid | Optional - manually assigned client |
+| meeting_id | text | MeetGeek meeting ID (unique) |
+| title | text | Meeting title |
+| meeting_date | timestamptz | When meeting occurred |
+| duration_minutes | integer | Duration in minutes |
+| participants | jsonb | Array of participant objects |
+| summary | text | AI-generated summary |
+| transcript | text | Full transcript |
+| action_items | jsonb | Extracted action items from MeetGeek |
+| recording_url | text | Link to recording |
+| meetgeek_url | text | Link to MeetGeek dashboard |
+| created_at | timestamptz | Record creation |
+
+### New Table: `pending_meeting_tasks`
+
+Stores proposed tasks from meetings awaiting user approval.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| meeting_id | uuid | Reference to agency_meetings |
+| client_id | uuid | Suggested/inherited client |
+| title | text | Task title (from action item) |
+| description | text | Task description |
+| priority | text | Suggested priority |
+| status | text | 'pending' / 'approved' / 'rejected' |
+| approved_at | timestamptz | When approved |
+| approved_by | text | Who approved |
+| task_id | uuid | Reference to tasks table (after approval) |
+| created_at | timestamptz | Record creation |
+
+### Update: `agency_settings` Table
+
+Add MeetGeek configuration fields.
+
+| New Column | Type | Description |
+|------------|------|-------------|
+| meetgeek_api_key | text | MeetGeek API key |
+| meetgeek_webhook_secret | text | For signature verification |
 
 ---
 
-### Phase 4: Enhanced Record Details Panel
+## Implementation Details
 
-**File: `src/components/dashboard/InlineRecordsView.tsx`**
+### 1. Agency Settings - MeetGeek Configuration Tab
 
-When a record is selected, display a comprehensive side panel with:
+**File: `src/components/settings/AgencySettingsModal.tsx`**
 
-1. **Contact Info**: Name, Email, Phone (clickable)
-2. **Timeline**: Lead created → Booked → Showed → Reconnects → Commitment → Funded
-3. **Attribution**: Campaign, Ad Set, Ad ID
-4. **Questions/Survey**: All captured form responses
-5. **Quick Actions**:
-   - View in GHL (external link)
-   - View recordings (if call has recording_url)
-   - Mark as spam
+Add a third tab "Integrations" with MeetGeek settings:
+
+```text
++------------------------------------------------------------+
+|  [AI Prompts] [API Keys] [Integrations]                    |
++------------------------------------------------------------+
+|  MeetGeek.ai Integration                                   |
+|  Sync meeting recordings and summaries automatically       |
+|                                                            |
+|  API Key                                                   |
+|  [••••••••••••••••••••••••••]  [👁]                        |
+|  Get from MeetGeek Settings > Integrations > Public API    |
+|                                                            |
+|  Webhook Secret (optional)                                 |
+|  [••••••••••••••••••••••••••]  [👁]                        |
+|  For signature verification                                |
+|                                                            |
+|  Webhook URL (copy this to MeetGeek)                       |
+|  https://[project-id].supabase.co/functions/v1/meetgeek-webhook
+|  [📋 Copy]                                                 |
+|                                                            |
+|  [🔄 Sync Recent Meetings]                                 |
++------------------------------------------------------------+
+```
 
 ---
 
-### Phase 5: Improve Data Accuracy
+### 2. Edge Function: `meetgeek-webhook`
 
-**File: `supabase/functions/webhook-ingest/index.ts`**
+**New File: `supabase/functions/meetgeek-webhook/index.ts`**
 
-Ensure `updateDailyMetrics` function accurately counts all stages:
+Handles incoming webhooks from MeetGeek:
+
+1. Validate webhook signature (optional, using `X-MG-Signature` header)
+2. Fetch full meeting details via MeetGeek API:
+   - `GET /meetings/{meeting_id}` - Basic info
+   - `GET /meetings/{meeting_id}/transcript` - Full transcript
+   - `GET /meetings/{meeting_id}/summary` - AI summary
+   - `GET /meetings/{meeting_id}/insights` - Action items
+3. Store meeting in `agency_meetings` table
+4. Extract action items and create entries in `pending_meeting_tasks` (status: 'pending')
+5. Return 200 OK
+
+**Also handles manual sync** via POST with `{ action: 'sync' }` to pull recent meetings.
+
+---
+
+### 3. Meetings Hook
+
+**New File: `src/hooks/useMeetings.ts`**
 
 ```typescript
-async function updateDailyMetrics(supabase: any, clientId: string) {
-  const today = new Date().toISOString().split('T')[0];
-  
-  // Count leads created today
-  const { count: leadsCount } = await supabase
-    .from('leads')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', clientId)
-    .gte('created_at', today + 'T00:00:00')
-    .lte('created_at', today + 'T23:59:59.999');
-
-  // Count spam leads
-  const { count: spamCount } = await supabase
-    .from('leads')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', clientId)
-    .eq('is_spam', true)
-    .gte('created_at', today + 'T00:00:00');
-
-  // Count booked calls (non-reconnect)
-  const { count: bookedCount } = await supabase
-    .from('calls')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', clientId)
-    .eq('is_reconnect', false)
-    .gte('created_at', today + 'T00:00:00');
-
-  // Count showed calls (non-reconnect, showed=true)
-  const { count: showedCount } = await supabase
-    .from('calls')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', clientId)
-    .eq('is_reconnect', false)
-    .eq('showed', true)
-    .gte('created_at', today + 'T00:00:00');
-
-  // Count reconnect calls
-  const { count: reconnectCount } = await supabase
-    .from('calls')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', clientId)
-    .eq('is_reconnect', true)
-    .gte('created_at', today + 'T00:00:00');
-
-  // Count reconnect showed
-  const { count: reconnectShowedCount } = await supabase
-    .from('calls')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', clientId)
-    .eq('is_reconnect', true)
-    .eq('showed', true)
-    .gte('created_at', today + 'T00:00:00');
-
-  // Upsert daily metrics
-  await supabase.from('daily_metrics').upsert({
-    client_id: clientId,
-    date: today,
-    leads: leadsCount || 0,
-    spam_leads: spamCount || 0,
-    calls: bookedCount || 0,
-    showed_calls: showedCount || 0,
-    reconnect_calls: reconnectCount || 0,
-    reconnect_showed: reconnectShowedCount || 0,
-  }, { onConflict: 'client_id,date', ignoreDuplicates: false });
+export interface Meeting {
+  id: string;
+  client_id: string | null;
+  meeting_id: string;
+  title: string;
+  meeting_date: string;
+  duration_minutes: number;
+  participants: any[];
+  summary: string;
+  transcript: string;
+  action_items: any[];
+  recording_url: string;
+  meetgeek_url: string;
+  created_at: string;
 }
+
+export interface PendingMeetingTask {
+  id: string;
+  meeting_id: string;
+  client_id: string | null;
+  title: string;
+  description: string;
+  priority: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_at: string | null;
+  task_id: string | null;
+  created_at: string;
+  meeting?: Meeting; // Joined
+}
+
+// Hooks
+export function useMeetings(clientId?: string)
+export function usePendingMeetingTasks()
+export function useAssignMeetingToClient()
+export function useApprovePendingTask()
+export function useRejectPendingTask()
+export function useSyncMeetings()
 ```
 
 ---
 
-## Client Setup Guide
+### 4. Meetings List Component
 
-### For Each New Client
+**New File: `src/components/meetings/MeetingsList.tsx`**
 
-1. **In Dashboard**: Add client with name
+Displays all agency meetings with client assignment:
 
-2. **Configure GHL Integration**:
-   - Go to Client Settings → Integrations
-   - Enter GHL Location ID
-   - Create Private Integration in GHL with scopes: Contacts, Calendars, Opportunities
-   - Enter Private Integration Key
-   - Click "Test Connection"
-   - Click "Sync Contacts Now" for initial backfill
+```text
++------------------------------------------------------------------+
+|  Agency Meetings              [🔄 Sync]         [Filter ▾]       |
++------------------------------------------------------------------+
+| 🔍 Search meetings...                                            |
++------------------------------------------------------------------+
+| Date       | Title                | Client       | Duration | ▶️ |
+|------------|----------------------|--------------|----------|----|
+| Jan 25     | Weekly Strategy Call | [Assign ▾]   | 45 min   | ▶️ |
+| Jan 24     | Campaign Review      | Blue Capital | 32 min   | ▶️ |
+| Jan 23     | Onboarding Call      | HRT          | 58 min   | ▶️ |
++------------------------------------------------------------------+
+```
 
-3. **Set Up GHL Webhooks** (in GoHighLevel):
-   
-   | Webhook Type | GHL Trigger | Dashboard URL |
-   |--------------|-------------|---------------|
-   | Lead | New Contact Created | `/webhook-ingest/{clientId}/lead` |
-   | Booked Call | Calendar Event Created | `/webhook-ingest/{clientId}/booked` |
-   | Showed Call | Appointment Status = Showed | `/webhook-ingest/{clientId}/showed` |
-   | Reconnect | Tag Added: "reconnect" | `/webhook-ingest/{clientId}/reconnect` |
-   | Reconnect Showed | Appointment Showed + Tag "reconnect" | `/webhook-ingest/{clientId}/reconnect-showed` |
-   | Commitment | Pipeline Stage = "Committed" | `/webhook-ingest/{clientId}/committed` |
-   | Funded | Pipeline Stage = "Funded" | `/webhook-ingest/{clientId}/funded` |
+**Features:**
+- Client assignment dropdown per meeting
+- Click to expand: summary, transcript, action items
+- "View in MeetGeek" external link
+- Recording playback link
+- "Create Task" button for individual action items
 
-4. **Ad Spend** (via Make.com or manual):
-   - Set up Make.com scenario to pull Meta Ads data daily
-   - Send to `/webhook-ingest/{clientId}/ad-spend`
-   - Fields: `date`, `spend`, `impressions`, `clicks`
+---
+
+### 5. Meeting Detail Modal
+
+**New File: `src/components/meetings/MeetingDetailModal.tsx`**
+
+Comprehensive meeting view:
+
+```text
++------------------------------------------------------------------+
+|  Weekly Strategy Call                          Jan 25, 2026      |
+|  Duration: 45 min | Client: [Blue Capital ▾]   [View in MeetGeek]|
++------------------------------------------------------------------+
+|  [Summary] [Transcript] [Action Items]                           |
++------------------------------------------------------------------+
+|  Summary                                                         |
+|  Discussed Q1 campaign performance. CPL is trending well at      |
+|  $42. Team agreed to increase budget by 20% next month.          |
+|  Follow-up needed on creative refresh timeline.                  |
++------------------------------------------------------------------+
+|  Action Items (3)                                                |
+|  +---------------------------------------------------------+     |
+|  | ☐ Increase Meta ad budget by 20%           [+ Add Task] |     |
+|  | ☐ Schedule creative review for next week   [+ Add Task] |     |
+|  | ☐ Send Q1 performance report to client     [+ Add Task] |     |
+|  +---------------------------------------------------------+     |
++------------------------------------------------------------------+
+```
+
+**"+ Add Task" creates a pending task** with pre-filled title/description for user review.
+
+---
+
+### 6. Pending Tasks Review Panel
+
+**New File: `src/components/meetings/PendingTasksReview.tsx`**
+
+Shows all pending tasks from meetings awaiting approval:
+
+```text
++------------------------------------------------------------------+
+|  Pending Tasks from Meetings                    4 pending        |
++------------------------------------------------------------------+
+|  From: Weekly Strategy Call (Jan 25)                             |
+|  +--------------------------------------------------------------+|
+|  | Increase Meta ad budget by 20%                               ||
+|  | Client: Blue Capital | Priority: [Medium ▾]                  ||
+|  | [Edit Title] [Edit Description]                              ||
+|  |                                               [✓ Approve] [✗]||
+|  +--------------------------------------------------------------+|
+|  | Schedule creative review for next week                       ||
+|  | Client: Blue Capital | Priority: [Medium ▾]                  ||
+|  |                                               [✓ Approve] [✗]||
+|  +--------------------------------------------------------------+|
++------------------------------------------------------------------+
+|                              [Approve All Selected]              |
++------------------------------------------------------------------+
+```
+
+**Workflow:**
+1. User reviews each pending task
+2. Can edit title, description, priority, or reassign client
+3. Click "Approve" → Creates real task in `tasks` table
+4. Click "✗" (Reject) → Marks as rejected, doesn't create task
+
+---
+
+### 7. Activity Feed Integration
+
+**File: `src/components/tasks/ActivityFeed.tsx`**
+
+Add new activity types:
+
+```typescript
+type ActivityType = 
+  | 'task_created' 
+  | 'task_completed' 
+  | 'creative_uploaded' 
+  | 'creative_approved' 
+  | 'creative_launched'
+  | 'meeting_synced'      // NEW
+  | 'meeting_task_created'; // NEW (when pending task approved)
+
+// Add to ACTIVITY_CONFIG:
+meeting_synced: { 
+  icon: Video, 
+  label: 'Meeting Synced', 
+  color: 'text-indigo-500' 
+},
+meeting_task_created: { 
+  icon: CheckSquare, 
+  label: 'Task from Meeting', 
+  color: 'text-cyan-500' 
+},
+```
+
+---
+
+### 8. AI Chat Context Enhancement
+
+**File: `src/components/chat/AgencyChatInterface.tsx`**
+
+Update `buildContext()` to include meeting data:
+
+```typescript
+const buildContext = useCallback(() => {
+  // ... existing client and task logic ...
+  
+  // Add meeting summaries for AI context
+  const meetingSummaries = meetings.slice(0, 10).map(m => ({
+    title: m.title,
+    date: m.meeting_date,
+    client: clients.find(c => c.id === m.client_id)?.name || 'Unassigned',
+    summary: m.summary?.slice(0, 500), // Truncate for context
+    actionItems: m.action_items?.length || 0,
+  }));
+
+  return {
+    agencyTotals: { ... },
+    clients: clientSummaries,
+    tasks: taskSummaries,
+    recentMeetings: meetingSummaries, // NEW
+  };
+}, [clients, clientMetrics, agencyMetrics, allTasks, meetings]);
+```
+
+**Also add client filter dropdown** to the AI chat header so users can focus questions on a specific client.
+
+---
+
+### 9. Agency Dashboard Integration
+
+**File: `src/pages/Index.tsx`**
+
+Add Meetings section to the agency dashboard:
+
+```tsx
+{/* Meetings Section */}
+<section>
+  <div className="flex items-center justify-between mb-2">
+    <div>
+      <h2 className="text-lg font-bold">Recent Meetings</h2>
+      <p className="text-sm text-muted-foreground">
+        Synced from MeetGeek with action items
+      </p>
+    </div>
+    <div className="flex gap-2">
+      {pendingTasksCount > 0 && (
+        <Button variant="outline" size="sm" onClick={() => setPendingTasksOpen(true)}>
+          <CheckCircle className="h-4 w-4 mr-2" />
+          {pendingTasksCount} Pending Tasks
+        </Button>
+      )}
+      <Button variant="outline" size="sm" onClick={handleSyncMeetings}>
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Sync
+      </Button>
+    </div>
+  </div>
+  <MeetingsList meetings={meetings} clients={clients} />
+</section>
+```
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/meetgeek-webhook/index.ts` | Webhook handler + manual sync |
+| `src/hooks/useMeetings.ts` | React Query hooks for meetings and pending tasks |
+| `src/components/meetings/MeetingsList.tsx` | Agency-wide meetings list |
+| `src/components/meetings/MeetingDetailModal.tsx` | Full meeting view with transcript |
+| `src/components/meetings/PendingTasksReview.tsx` | Pending task approval panel |
 
 ---
 
@@ -268,38 +393,70 @@ async function updateDailyMetrics(supabase: any, clientId: string) {
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useMetrics.ts` | Add costPerReconnectCall, costPerReconnectShowed metrics |
-| `src/components/dashboard/KPIGrid.tsx` | Add new KPI cards for reconnect costs |
-| `src/components/dashboard/PeriodicStatsTable.tsx` | Add cost per showed, reconnect columns |
-| `src/components/dashboard/InlineRecordsView.tsx` | Add GHL quick link column, pass locationId |
-| `src/pages/ClientDetail.tsx` | Pass ghlLocationId to InlineRecordsView |
-| `supabase/functions/webhook-ingest/index.ts` | Improve updateDailyMetrics accuracy |
+| `agency_settings` table | Add `meetgeek_api_key`, `meetgeek_webhook_secret` columns |
+| `src/hooks/useAgencySettings.ts` | Add MeetGeek fields to interface |
+| `src/components/settings/AgencySettingsModal.tsx` | Add Integrations tab with MeetGeek config |
+| `src/components/tasks/ActivityFeed.tsx` | Add meeting activity types |
+| `src/components/chat/AgencyChatInterface.tsx` | Add client filter, include meetings in AI context |
+| `src/pages/Index.tsx` | Add MeetingsList and PendingTasksReview |
+| `supabase/config.toml` | Register meetgeek-webhook function |
 
 ---
 
-## Cost Metrics Summary
+## User Workflow
 
-After implementation, the dashboard will display these cost metrics across the funnel:
+### Initial Setup
+1. Go to **Agency Settings > Integrations**
+2. Paste MeetGeek API key
+3. Copy the webhook URL displayed
+4. In MeetGeek dashboard, paste webhook URL under **Settings > Integrations > Public API**
+5. Click "Sync Recent Meetings" to pull existing data
 
-| Stage | Metric | Calculation |
-|-------|--------|-------------|
-| Leads | Cost Per Lead (CPL) | Ad Spend / Leads |
-| Booked Calls | Cost Per Booked | Ad Spend / Booked Calls |
-| Showed Calls | Cost Per Showed | Ad Spend / Showed Calls |
-| Reconnect Calls | Cost Per Reconnect | Ad Spend / Reconnect Calls |
-| Reconnect Showed | Cost Per Recon Showed | Ad Spend / Reconnect Showed |
-| Funded Investors | Cost Per Investor (CPA) | Ad Spend / Funded Investors |
-| Funded Dollars | Cost of Capital (CoC%) | (Ad Spend / Funded $) * 100 |
+### Ongoing Usage
+1. After each meeting, MeetGeek webhook fires automatically
+2. Meeting appears in "Recent Meetings" section
+3. If action items detected, they appear in "Pending Tasks" panel
+4. User reviews and assigns to a client if needed
+5. Click "Approve" to add as real task, or "Reject" to dismiss
+6. AI chat can reference all meeting summaries and notes
+
+---
+
+## Task Approval Flow
+
+```text
+MeetGeek extracts action item
+        |
+        v
++-------------------+
+| pending_meeting_  |  status = 'pending'
+| tasks table       |
++-------------------+
+        |
+        | User clicks "Approve"
+        v
++-------------------+     +-------------------+
+| Update pending    | --> | Create task in    |
+| status='approved' |     | tasks table       |
+| task_id = new_id  |     +-------------------+
++-------------------+
+        |
+        | User clicks "Reject"
+        v
++-------------------+
+| Update pending    |  (no task created)
+| status='rejected' |
++-------------------+
+```
 
 ---
 
 ## Expected Outcome
 
-After implementation:
-
-1. **Agency View**: See aggregated funnel metrics across all clients with cost breakdowns
-2. **Client View**: Detailed records with GHL quick links, complete cost metrics
-3. **Public Report**: Client-facing dashboard with all the same data
-4. **Simple Setup**: Webhook-based ingestion with optional API backfill
-5. **One-Click GHL Access**: Every record links directly to GHL contact
+1. **All meetings sync** automatically from MeetGeek via webhook
+2. **Manual client assignment** - meetings aren't auto-assigned, user picks the client
+3. **Action items become pending tasks** - require explicit approval
+4. **Approval workflow** - edit, assign client, set priority before adding
+5. **AI has meeting context** - can reference summaries in conversations
+6. **Activity feed** shows meeting syncs and approved tasks
 
