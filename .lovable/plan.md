@@ -1,193 +1,319 @@
 
-# UTM Parameter Extraction & Attribution Enhancement Plan
+# Team Pods & Client Assignment System
 
-## Problem Summary
-UTM Campaign, UTM Medium, and UTM Content values are being stored in the `questions` array as form responses (e.g., `question: "UTM Campaign"`, `answer: "TOF | Blue Cap | REPs | Lead Form | CBO"`) instead of being extracted into the proper `utm_campaign`, `utm_medium`, `utm_content` columns. This breaks:
-- The UTM Parameters display in record details
-- Attribution Dashboard filtering and aggregation
+## Overview
 
-## Root Cause
-GoHighLevel sends UTM data as root-level fields with labels like "UTM Campaign", "UTM Medium" which the current extraction logic captures as "questions" rather than recognizing them as UTM parameters.
+This plan implements a pod-based team structure where agency members are organized into functional pods (Creatives, Media Buyer, Account Manager, CRM, Project Manager), pods are assigned to clients, and visibility is controlled so that **clients only see pod names** while **team members see individual names and their assigned tasks**.
 
 ---
 
-## Solution Architecture
+## Architecture
 
 ```text
-Webhook Payload / GHL Contact
-       |
-       v
-+------------------+
-| Extract Questions|
-+------------------+
-       |
-       v
-+----------------------------+
-| NEW: Filter UTM fields     |
-| from questions array,      |
-| populate proper UTM columns|
-+----------------------------+
-       |
-       v
-+------------------+
-| Store in leads   |
-| table correctly  |
-+------------------+
++-------------------+       +------------------+       +------------------+
+| agency_members    |<----->| agency_pods      |<----->| client_pod_      |
+|                   |  M:N  | (new table)      |  M:N  | assignments      |
+| - id              |       | - id             |       | (new table)      |
+| - name            |       | - name           |       | - client_id      |
+| - email           |       | - description    |       | - pod_id         |
+| - role            |       | - color          |       | - is_lead (bool) |
+| - pod_id (new FK) |       +------------------+       +------------------+
++-------------------+
+```
+
+### Data Flow
+1. **Agency Settings** → Manage pods and assign members to pods
+2. **Client Settings** → Assign pods to clients (with optional lead designation)
+3. **Task Assignment** → Assign tasks to individual members OR to pods
+4. **Client View** → Shows only pod names (e.g., "Creatives Pod" instead of "John Smith")
+5. **Agency View** → Shows full member details and task assignments
+
+---
+
+## Database Changes
+
+### 1. New Table: `agency_pods`
+```sql
+CREATE TABLE public.agency_pods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT DEFAULT '#6366f1', -- For visual distinction
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Initial seed data
+INSERT INTO public.agency_pods (name, description, color) VALUES
+  ('Creatives', 'Creative design and ad production team', '#ec4899'),
+  ('Media Buying', 'Media buying and campaign management', '#3b82f6'),
+  ('Account Management', 'Client relationship and strategy', '#10b981'),
+  ('CRM', 'CRM setup and automation', '#f59e0b'),
+  ('Project Management', 'Project oversight and coordination', '#8b5cf6');
+```
+
+### 2. Update `agency_members` Table
+```sql
+ALTER TABLE public.agency_members 
+  ADD COLUMN pod_id UUID REFERENCES public.agency_pods(id) ON DELETE SET NULL;
+```
+
+### 3. New Table: `client_pod_assignments`
+```sql
+CREATE TABLE public.client_pod_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+  pod_id UUID NOT NULL REFERENCES public.agency_pods(id) ON DELETE CASCADE,
+  is_lead BOOLEAN DEFAULT false, -- For Project Manager designation
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(client_id, pod_id)
+);
+```
+
+### 4. RLS Policies
+```sql
+-- agency_pods: Public read/write for agency
+ALTER TABLE public.agency_pods ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view agency_pods" ON public.agency_pods FOR SELECT USING (true);
+CREATE POLICY "Public can insert agency_pods" ON public.agency_pods FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can update agency_pods" ON public.agency_pods FOR UPDATE USING (true);
+CREATE POLICY "Public can delete agency_pods" ON public.agency_pods FOR DELETE USING (true);
+
+-- client_pod_assignments: Public read/write
+ALTER TABLE public.client_pod_assignments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view client_pod_assignments" ON public.client_pod_assignments FOR SELECT USING (true);
+CREATE POLICY "Public can insert client_pod_assignments" ON public.client_pod_assignments FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can update client_pod_assignments" ON public.client_pod_assignments FOR UPDATE USING (true);
+CREATE POLICY "Public can delete client_pod_assignments" ON public.client_pod_assignments FOR DELETE USING (true);
 ```
 
 ---
 
-## Technical Implementation
+## Frontend Changes
 
-### 1. Update Webhook Ingestion (`webhook-ingest/index.ts`)
+### 1. New Hook: `useAgencyPods`
+**File:** `src/hooks/useAgencyPods.ts`
 
-Add logic to:
-- Scan `questions` array for entries where `question` contains "UTM Campaign", "UTM Medium", "UTM Content", or "UTM Term"
-- Extract those values and set the proper `utm_campaign`, `utm_medium`, `utm_content`, `utm_term` fields
-- Remove UTM questions from the `questions` array so they don't appear under "Form Questions"
-
-**New helper function:**
 ```typescript
-function extractUtmFromQuestions(questions: any[]): {
-  utm_campaign?: string;
-  utm_medium?: string;
-  utm_content?: string;
-  utm_term?: string;
-  filteredQuestions: any[];
-} {
-  const result: any = { filteredQuestions: [] };
-  
-  for (const q of questions) {
-    const questionLower = String(q.question || '').toLowerCase().trim();
-    
-    if (questionLower.includes('utm_campaign') || questionLower === 'utm campaign') {
-      result.utm_campaign = q.answer;
-    } else if (questionLower.includes('utm_medium') || questionLower === 'utm medium') {
-      result.utm_medium = q.answer;
-    } else if (questionLower.includes('utm_content') || questionLower === 'utm content') {
-      result.utm_content = q.answer;
-    } else if (questionLower.includes('utm_term') || questionLower === 'utm term') {
-      result.utm_term = q.answer;
-    } else {
-      // Keep non-UTM questions
-      result.filteredQuestions.push(q);
-    }
-  }
-  
-  return result;
+// Interfaces
+export interface AgencyPod {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  created_at: string;
+}
+
+export interface ClientPodAssignment {
+  id: string;
+  client_id: string;
+  pod_id: string;
+  is_lead: boolean;
+  pod?: AgencyPod;
+}
+
+// Hooks
+- useAgencyPods() - Fetch all pods
+- useCreatePod() - Create new pod
+- useUpdatePod() - Update pod details
+- useDeletePod() - Delete pod
+- useClientPodAssignments(clientId) - Get pods assigned to client
+- useAssignPodToClient() - Assign pod to client
+- useRemovePodFromClient() - Remove pod from client
+```
+
+### 2. Update `useAgencyMembers` Interface
+**File:** `src/hooks/useTasks.ts`
+
+```typescript
+export interface AgencyMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  pod_id: string | null; // NEW
+  pod?: AgencyPod;       // NEW (joined)
+  created_at: string;
+  updated_at: string;
 }
 ```
 
-**Integration in processLead():**
+### 3. Agency Settings Modal - New "Team" Tab
+**File:** `src/components/settings/AgencySettingsModal.tsx`
+
+Add a 4th tab with:
+- **Pod Management Section**
+  - List of existing pods with color indicators
+  - Add/Edit/Delete pods
+  - Each pod shows member count
+  
+- **Team Members Section**
+  - List all agency members
+  - Add new member button
+  - Assign member to pod via dropdown
+  - Show pod badge next to each member
+
+```
+┌─────────────────────────────────────────────────┐
+│ Team Management                                  │
+├─────────────────────────────────────────────────┤
+│ PODS                           [+ Add Pod]      │
+│ ┌───────────────────────────────────────┐       │
+│ │ 🟣 Creatives         (3 members) [✏️]│       │
+│ │ 🔵 Media Buying      (2 members) [✏️]│       │
+│ │ 🟢 Account Mgmt      (1 member)  [✏️]│       │
+│ │ 🟡 CRM               (2 members) [✏️]│       │
+│ │ 🟣 Project Mgmt      (1 member)  [✏️]│       │
+│ └───────────────────────────────────────┘       │
+│                                                  │
+│ TEAM MEMBERS                  [+ Add Member]    │
+│ ┌───────────────────────────────────────┐       │
+│ │ John Smith    [Media Buying ▼]  [✏️]│       │
+│ │ Jane Doe      [Creatives ▼]      [✏️]│       │
+│ │ Bob Wilson    [Project Mgmt ▼]   [✏️]│       │
+│ └───────────────────────────────────────┘       │
+└─────────────────────────────────────────────────┘
+```
+
+### 4. Client Settings Modal - Pod Assignment Section
+**File:** `src/components/settings/ClientSettingsModal.tsx`
+
+Add section to assign pods to client:
+
+```
+┌─────────────────────────────────────────────────┐
+│ Assigned Teams                                   │
+├─────────────────────────────────────────────────┤
+│ ☑ Creatives                                     │
+│ ☑ Media Buying                                  │
+│ ☐ Account Management                            │
+│ ☐ CRM                                           │
+│ ☑ Project Management  ★ (Lead)                  │
+│                                                  │
+│ [Select Lead Pod ▼] Project Management          │
+└─────────────────────────────────────────────────┘
+```
+
+### 5. Task Assignment UI Updates
+**File:** `src/components/tasks/CreateTaskModal.tsx`
+
+Update assignment section:
+- Group members by pod in dropdown
+- Show pod color badges
+- Option to assign to entire pod or specific member
+
+```
+Assign To:
+┌─────────────────────────────────────────┐
+│ [Select assignee ▼]                     │
+│  ─── Creatives ───                      │
+│    ○ John Smith                         │
+│    ○ Jane Doe                           │
+│  ─── Media Buying ───                   │
+│    ○ Bob Wilson                         │
+│  ─── Unassigned ───                     │
+│    ○ Mike Jones                         │
+└─────────────────────────────────────────┘
+```
+
+### 6. Visibility Control for Public/Client Views
+**Files:** 
+- `src/components/tasks/KanbanTaskCard.tsx`
+- `src/components/tasks/TaskDetailModal.tsx`
+
+Add `isPublicView` prop handling:
+- **Agency View**: Show full member name and avatar
+- **Public View**: Show pod name only (e.g., "Creatives Pod" instead of "John Smith")
+
 ```typescript
-// After extracting questions...
-const questions = extractQuestions(payload);
-const utmFromQuestions = extractUtmFromQuestions(questions);
-
-// Use UTM from questions as fallback if direct UTM fields are empty
-const final_utm_campaign = utm_campaign || utmFromQuestions.utm_campaign;
-const final_utm_medium = utm_medium || utmFromQuestions.utm_medium;
-const final_utm_content = utm_content || utmFromQuestions.utm_content;
-const final_utm_term = utm_term || utmFromQuestions.utm_term;
-
-// Store filtered questions (without UTM entries)
-const cleanQuestions = utmFromQuestions.filteredQuestions;
+// In KanbanTaskCard
+const displayAssignee = isPublicView 
+  ? assignee?.pod?.name ? `${assignee.pod.name} Pod` : 'Team'
+  : assignee?.name;
 ```
 
-### 2. Update GHL Sync (`sync-ghl-contacts/index.ts`)
+### 7. KanbanBoard Public View Updates
+**File:** `src/components/tasks/KanbanBoard.tsx`
 
-Apply the same `extractUtmFromQuestions` helper when processing GHL contacts, ensuring historical data is also properly attributed.
+- Hide assignee filter dropdown in public view (already done)
+- Pass `isPublicView` to task cards
+- Show pod names instead of individual names
 
-### 3. Database Fix for Existing Records
+---
 
-Create a one-time SQL update to fix existing leads where UTM data is in `questions` but not in UTM columns.
+## Component Tree
 
-### 4. Attribution Dashboard Enhancement
+```
+AgencySettingsModal
+├── TabsList
+│   ├── AI Prompts
+│   ├── API Keys
+│   ├── Integrations
+│   └── Team (NEW)
+└── Team Tab Content
+    ├── PodManagementSection (NEW)
+    │   ├── PodCard (per pod)
+    │   └── AddPodDialog
+    └── TeamMembersSection (NEW)
+        ├── MemberRow (per member)
+        └── AddMemberDialog (existing, enhanced)
 
-Add `utm_content` to:
-- The `Lead` interface props
-- Filter dropdown options
-- Aggregation dimension (optional: add "Content" view)
+ClientSettingsModal
+└── PodAssignmentSection (NEW)
+    ├── PodCheckbox (per pod)
+    └── LeadPodSelector
 
-**Changes to `AttributionDashboard.tsx`:**
-```typescript
-// Add to Lead interface
-utm_content?: string | null;
-utm_medium?: string | null;
-utm_campaign?: string | null;
-
-// Add filter state
-const [contentFilter, setContentFilter] = useState<string[]>([]);
-
-// Add unique values extraction
-const uniqueContents = useMemo(() => {
-  const contents = new Set<string>();
-  leads.forEach(lead => {
-    if (lead.utm_content) contents.add(lead.utm_content);
-  });
-  return Array.from(contents).sort();
-}, [leads]);
-
-// Add FilterDropdown for Content
-<FilterDropdown
-  label="Content"
-  options={uniqueContents}
-  selected={contentFilter}
-  onChange={setContentFilter}
-  icon={<FileText className="h-3 w-3" />}
-/>
+CreateTaskModal
+└── AssignmentSection
+    └── GroupedMemberSelect (members grouped by pod)
 ```
 
 ---
 
-## Files to Modify
+## Files to Create/Modify
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/webhook-ingest/index.ts` | Add `extractUtmFromQuestions()` helper, integrate in `processLead()` |
-| `supabase/functions/sync-ghl-contacts/index.ts` | Add same UTM extraction from questions during sync |
-| `src/components/dashboard/AttributionDashboard.tsx` | Add `utm_content` to interface, add Content filter |
-
----
-
-## Database Backfill (One-time Fix)
-
-Run SQL to extract UTM values from questions JSON for existing leads:
-
-```sql
--- Extract UTM Campaign from questions where utm_campaign is null
-UPDATE leads
-SET utm_campaign = (
-  SELECT elem->>'answer'
-  FROM jsonb_array_elements(questions::jsonb) AS elem
-  WHERE LOWER(elem->>'question') LIKE '%utm campaign%'
-  OR LOWER(elem->>'question') LIKE '%utm_campaign%'
-  LIMIT 1
-)
-WHERE utm_campaign IS NULL
-AND EXISTS (
-  SELECT 1 FROM jsonb_array_elements(questions::jsonb) AS elem
-  WHERE LOWER(elem->>'question') LIKE '%utm campaign%'
-  OR LOWER(elem->>'question') LIKE '%utm_campaign%'
-);
-
--- Similar queries for utm_medium and utm_content
-```
+| File | Action | Description |
+|------|--------|-------------|
+| `src/hooks/useAgencyPods.ts` | CREATE | New hook for pod management |
+| `src/hooks/useTasks.ts` | UPDATE | Add pod_id to AgencyMember, update queries |
+| `src/components/settings/AgencySettingsModal.tsx` | UPDATE | Add "Team" tab with pod/member management |
+| `src/components/settings/TeamManagementTab.tsx` | CREATE | New component for team tab content |
+| `src/components/settings/ClientSettingsModal.tsx` | UPDATE | Add pod assignment section |
+| `src/components/tasks/CreateTaskModal.tsx` | UPDATE | Group members by pod in dropdown |
+| `src/components/tasks/KanbanTaskCard.tsx` | UPDATE | Show pod name in public view |
+| `src/components/tasks/TaskDetailModal.tsx` | UPDATE | Show pod name in public view |
+| `src/components/tasks/KanbanBoard.tsx` | UPDATE | Pass isPublicView to cards |
 
 ---
 
-## Expected Outcome
+## User Experience Flow
 
-1. **UTM Parameters section** will correctly show Source, Medium, Campaign, Content, Term
-2. **Form Questions section** will only show actual form questions (investment ranges, accreditation status, etc.)
-3. **Attribution Dashboard** will have a Content filter and can aggregate by `utm_content`
-4. Historical data will be corrected via backfill query
+### Agency Admin Flow:
+1. Open Agency Settings → Team tab
+2. Create pods (Creatives, Media Buying, etc.)
+3. Add team members and assign each to a pod
+4. In Client Settings, assign relevant pods to each client
+5. Designate one pod (typically Project Management) as the "lead" for client oversight
+
+### Team Member Flow:
+1. View Kanban board
+2. Filter by their assigned pod
+3. See all tasks assigned to them or their pod
+4. Task cards show full member names
+
+### Client Flow (Public View):
+1. Access their shareable report link
+2. View Tasks tab
+3. See task cards with pod names only (e.g., "Creatives Pod")
+4. Cannot see individual team member names
+5. Cannot filter by assignee
 
 ---
 
 ## Benefits
 
-- Proper data organization matching the database schema
-- Attribution Dashboard can filter by all UTM dimensions
-- Cleaner UI with logical separation of UTM tracking vs survey questions
-- Future webhooks automatically extract UTM correctly
+1. **Organized Teams** - Clear pod structure for agency operations
+2. **Client Privacy** - Clients see professional pod names, not individual staff
+3. **Workload Visibility** - Filter tasks by pod to see team workload
+4. **Client Accountability** - Assign specific pods to specific clients
+5. **Lead Designation** - Project Managers clearly assigned to oversee clients
