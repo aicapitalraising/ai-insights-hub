@@ -1,275 +1,216 @@
 
-# Enhanced GHL Sync, Ad Spend Timing, and Funded Investor Tag Detection
+# Manual Sync Per Row Feature Plan
 
-This plan adds three key improvements to the data ingestion system: historical GHL sync options, ad spend time tracking, and expanded funded investor detection via contact tags.
-
----
-
-## Feature 1: GHL Historical Data Sync with Date References
-
-### Current Behavior
-- Contacts sync fetches up to 1000 contacts without date filtering
-- Calls sync uses a hardcoded 7-day lookback
-- No UI option to specify historical date ranges
-
-### Proposed Changes
-
-**1.1 Update `sync-ghl-contacts` Edge Function**
-- Add optional `sinceDateDays` parameter (default: 7, max: 365) to control how far back to fetch calls
-- Use GHL contact's `dateAdded` field for lead creation date reference
-- Track call `dateAdded` for scheduling reference in calls table
-
-**1.2 Update `sync-client-data` Edge Function**
-- Add date range parameters for historical backfill
-- Preserve original `created_at` from GHL when creating new leads
-
-**1.3 Add UI Controls in Client Settings**
-- Add "Historical Sync" section in Integrations tab
-- Dropdown to select sync range (7 days, 30 days, 90 days, All Time)
-- "Sync Historical Data" button that triggers deep sync
+## Overview
+Add per-row manual sync capabilities for leads and calls in the `InlineRecordsView` component. Each row will show:
+1. **Last Synced timestamp** - When this record was last synced with GHL
+2. **GHL Contact Link** - Quick icon to jump directly to the contact in GHL (already partially exists)
+3. **Manual Sync Button** - Refresh individual record data from GHL on demand
 
 ---
 
-## Feature 2: Ad Spend Time Tracking
+## Current State Analysis
 
-### Current Behavior
-- `daily_metrics.date` is a DATE type (no time component)
-- Ad spend imports/webhooks aggregate by date only
-- CSV import has no time field support
+### Existing Infrastructure
+- **GHL Link**: Already implemented via `getGHLContactUrl()` function for leads/calls with valid `external_id`
+- **Calls Table**: Has `ghl_synced_at` column for tracking sync timestamps
+- **Leads Table**: Missing `ghl_synced_at` column - needs migration
+- **Sync Function**: `sync-ghl-contacts` edge function handles bulk syncing but not single-contact refresh
 
-### Proposed Changes
+### Database Schema Changes Needed
+| Table | Column | Type | Purpose |
+|-------|--------|------|---------|
+| leads | ghl_synced_at | timestamp with time zone | Track when lead was last synced from GHL |
 
-**2.1 Database Schema Update**
-Add a new `ad_spend_reports` table for granular time tracking:
+---
+
+## Implementation Plan
+
+### Phase 1: Database Migration
+Add `ghl_synced_at` column to leads table:
 
 ```sql
-CREATE TABLE public.ad_spend_reports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
-  reported_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  platform TEXT DEFAULT 'meta',
-  spend NUMERIC DEFAULT 0,
-  impressions INTEGER DEFAULT 0,
-  clicks INTEGER DEFAULT 0,
-  campaign_name TEXT,
-  ad_set_name TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-
--- Index for efficient queries
-CREATE INDEX idx_ad_spend_reports_client_date ON public.ad_spend_reports(client_id, reported_at);
-
--- RLS policies
-ALTER TABLE public.ad_spend_reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public can view ad_spend_reports" ON public.ad_spend_reports FOR SELECT USING (true);
-CREATE POLICY "Public can insert ad_spend_reports" ON public.ad_spend_reports FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public can delete ad_spend_reports" ON public.ad_spend_reports FOR DELETE USING (true);
+ALTER TABLE public.leads 
+ADD COLUMN ghl_synced_at TIMESTAMP WITH TIME ZONE;
 ```
 
-**2.2 Update Webhook Ingestion**
-- Modify `processAdSpend` to accept `time` or `reported_at` parameter
-- Store granular records in `ad_spend_reports` table
-- Continue aggregating to `daily_metrics` for dashboard compatibility
+### Phase 2: Edge Function - Single Contact Sync
+Create or extend edge function to support single-contact sync mode:
 
-**2.3 Update CSV Import**
-- Add `time` or `reported_at` optional column for ad spend imports
-- Parse datetime when provided, default to noon of the date if not
+**Endpoint**: `sync-ghl-contacts` with new parameter `contactId`
 
-**2.4 Optional: Display Intraday Spend**
-- Add expandable section in client detail to view ad spend by hour/time
-
----
-
-## Feature 3: Enhanced Funded Investor Tag Detection
-
-### Current Behavior
-- Only checks opportunity `status === 'won'` OR `pipelineStageId` containing "funded"/"closed"
-- Does not check contact tags
-- Uses `opp.dateAdded` as funded date (not stage move date)
-
-### Proposed Changes
-
-**3.1 Add Tag-Based Detection Function**
-Create helper function to identify funded contacts by tags:
-
-```typescript
-function hasFundedInvestorTag(contact: GHLContact): boolean {
-  if (!contact.tags || !Array.isArray(contact.tags)) return false;
-  
-  const fundedPatterns = [
-    'funded', 
-    'funded investor', 
-    'fundedinvestor',
-    'funded_investor',
-    'active investor',
-    'activeinvestor',
-    'active_investor'
-  ];
-  
-  return contact.tags.some(tag => 
-    fundedPatterns.some(pattern => 
-      tag.toLowerCase().trim() === pattern ||
-      tag.toLowerCase().includes(pattern)
-    )
-  );
+**Request Body**:
+```json
+{
+  "clientId": "uuid",
+  "contactId": "ghl_external_id",  // NEW - single contact mode
+  "mode": "single"                  // NEW - skip bulk processing
 }
 ```
 
-**3.2 Update `sync-client-data` Opportunity Filtering**
-Expand the funded detection logic:
-
-```typescript
-// Current logic (too restrictive)
-const fundedOpps = opportunities.filter(opp => 
-  opp.status === 'won' || 
-  opp.pipelineStageId?.toLowerCase().includes('funded') ||
-  opp.pipelineStageId?.toLowerCase().includes('closed')
-);
-
-// Updated logic - also check stage NAME not just ID
-const fundedOpps = opportunities.filter(opp => {
-  const stageName = (opp.stageName || opp.pipelineStageName || '').toLowerCase();
-  const stageId = (opp.pipelineStageId || '').toLowerCase();
-  
-  return opp.status === 'won' || 
-    stageName.includes('funded') ||
-    stageName.includes('active investor') ||
-    stageId.includes('funded') ||
-    stageId.includes('closed');
-});
-```
-
-**3.3 Add Contact-Based Funded Detection**
-For contacts without opportunities but with funded tags:
-
-```typescript
-// After processing opportunities, also check contacts with funded tags
-for (const contact of contacts) {
-  if (hasFundedInvestorTag(contact)) {
-    // Check if already a funded investor
-    const { data: existingFunded } = await supabase
-      .from('funded_investors')
-      .select('id')
-      .eq('client_id', client.id)
-      .eq('external_id', contact.id)
-      .maybeSingle();
-    
-    if (!existingFunded) {
-      // Extract pipeline value from custom fields or opportunities
-      const pipelineValue = extractPipelineValue(contact);
-      
-      await supabase.from('funded_investors').insert({
-        client_id: client.id,
-        external_id: contact.id,
-        name: contact.name,
-        lead_id: leadId,
-        funded_amount: pipelineValue,
-        funded_at: contact.dateUpdated || contact.dateAdded,
-        source: 'tag_sync'
-      });
-    }
+**Response**:
+```json
+{
+  "success": true,
+  "contact": {
+    "id": "lead_uuid",
+    "name": "Updated Name",
+    "ghl_synced_at": "2026-01-28T..."
   }
 }
 ```
 
-**3.4 Update `sync-ghl-contacts` for Tags**
-Add funded investor creation during contact sync when funded tags detected:
-
-- Check for funded investor tags during contact processing
-- If found, look up or create corresponding funded_investor record
-- Use opportunity `monetaryValue` as `funded_amount`
-- Use the tag addition date or stage move date as `funded_at` (requires GHL activity log or approximate with `dateUpdated`)
-
-**3.5 Opportunity Value Extraction**
-Update to properly pull opportunity value:
+### Phase 3: React Hook - useSingleContactSync
+Create a custom hook for per-row sync operations:
 
 ```typescript
-interface GHLOpportunity {
-  id: string;
-  contactId: string;
-  status: string;
-  monetaryValue?: number;
-  monetary_value?: number; // alternate field name
-  pipelineStageId?: string;
-  pipelineStageName?: string;
-  stageName?: string;
-  dateAdded: string;
-  lastStageChangeAt?: string; // Use this for accurate funded date if available
+// src/hooks/useSingleContactSync.ts
+export function useSingleContactSync() {
+  const queryClient = useQueryClient();
+  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+
+  const syncContact = async (clientId: string, externalId: string, recordType: 'lead' | 'call') => {
+    setSyncingIds(prev => new Set(prev).add(externalId));
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-ghl-contacts', {
+        body: { clientId, contactId: externalId, mode: 'single' }
+      });
+      if (error) throw error;
+      
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['leads', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['calls', clientId] });
+      
+      toast.success('Contact synced from GHL');
+      return data;
+    } finally {
+      setSyncingIds(prev => {
+        const next = new Set(prev);
+        next.delete(externalId);
+        return next;
+      });
+    }
+  };
+
+  return { syncContact, syncingIds, isSyncing: (id: string) => syncingIds.has(id) };
 }
+```
 
-// Extract value with multiple field fallbacks
-const fundedAmount = opp.monetaryValue ?? opp.monetary_value ?? 0;
+### Phase 4: UI Components - InlineRecordsView Updates
 
-// Use stage change date if available, otherwise dateAdded
-const fundedAt = opp.lastStageChangeAt || opp.dateAdded;
+#### 4a. New Table Columns
+Add to both Leads and Calls table headers:
+
+| New Column | Width | Content |
+|------------|-------|---------|
+| Last Sync | 80px | Relative timestamp (e.g., "2h ago") |
+| Sync | 40px | Refresh icon button |
+
+#### 4b. Lead Row Enhancement
+```text
+| Date | Name | Email | ... | GHL | Last Sync | Sync | Actions |
+|------|------|-------|-----|-----|-----------|------|---------|
+| 1/27 | John | j@... | ... | [↗] | 2h ago    | [⟳] | [✎][🗑] |
+```
+
+- **GHL Column**: Existing external link icon (↗)
+- **Last Sync Column**: Shows `ghl_synced_at` as relative time ("2h ago", "Never")
+- **Sync Column**: RefreshCw icon button that triggers single-contact sync
+
+#### 4c. Call Row Enhancement
+Same pattern as leads, using existing `ghl_synced_at` from calls table.
+
+#### 4d. Visual States
+- **Syncing**: Spinning RefreshCw icon with disabled state
+- **Never Synced**: Gray text "Never"
+- **Recently Synced**: Green checkmark + time
+- **Stale (>24h)**: Orange/yellow indicator
+
+### Phase 5: Tooltip Enhancement
+Hover over "Last Sync" shows full details:
+- Full timestamp
+- Source of last update (webhook vs GHL sync)
+- GHL contact ID for debugging
+
+---
+
+## Component Changes Summary
+
+### Files to Modify:
+1. **`supabase/functions/sync-ghl-contacts/index.ts`**
+   - Add single-contact sync mode
+   - Return updated contact data
+   - Update `ghl_synced_at` on both leads and calls
+
+2. **`src/hooks/useLeadsAndCalls.ts`**
+   - Add `ghl_synced_at` to Lead interface
+
+3. **`src/hooks/useSingleContactSync.ts`** (NEW)
+   - Hook for triggering single-contact sync
+
+4. **`src/components/dashboard/InlineRecordsView.tsx`**
+   - Add Last Sync and Sync columns to lead table
+   - Add Sync column to call tables
+   - Integrate `useSingleContactSync` hook
+   - Add loading states for sync buttons
+
+### Database Migration:
+- Add `ghl_synced_at` to `leads` table
+
+---
+
+## User Experience Flow
+
+```text
+1. User views Leads tab in InlineRecordsView
+2. Each row shows:
+   - GHL icon (↗) → Opens contact in GHL in new tab
+   - "Last Sync" → "3h ago" or "Never"  
+   - Sync button (⟳) → Triggers refresh
+
+3. User clicks Sync button:
+   - Button shows spinning animation
+   - Edge function fetches latest from GHL
+   - Row updates with new data
+   - Toast confirms "Contact synced from GHL"
+   - Last Sync updates to "Just now"
 ```
 
 ---
 
-## Technical Summary
+## Technical Details
 
-| Component | Changes |
-|-----------|---------|
-| `supabase/migrations/` | Add `ad_spend_reports` table with timestamp tracking |
-| `supabase/functions/sync-ghl-contacts/index.ts` | Add `hasFundedInvestorTag()`, historical date range param, funded investor creation from tags |
-| `supabase/functions/sync-client-data/index.ts` | Expand funded detection (stage name, tags), use `lastStageChangeAt`, proper value extraction |
-| `supabase/functions/webhook-ingest/index.ts` | Add time parameter to ad-spend webhook, store in `ad_spend_reports` |
-| `src/components/import/CSVImportModal.tsx` | Add `time`/`reported_at` column support for ad spend imports |
-| `src/components/settings/ClientSettingsModal.tsx` | Add historical sync date range selector and button |
-| `src/hooks/useAdSpendReports.ts` | **NEW** - Hook to query granular ad spend data by time |
+### Edge Function Single-Contact Logic
+When `contactId` is provided:
+1. Skip pagination/batch fetching
+2. Fetch single contact: `GET /contacts/{contactId}`
+3. Update lead record with latest GHL data
+4. Update `ghl_synced_at = now()`
+5. Return updated record
+
+### GHL API Call
+```typescript
+const contact = await fetch(
+  `${GHL_BASE_URL}/contacts/${contactId}`,
+  { headers: { Authorization: `Bearer ${apiKey}` } }
+);
+```
+
+### Sync Button Visibility Rules
+Only show sync button when:
+- `external_id` exists AND
+- `external_id` doesn't start with `wh_` or `manual-` AND
+- `ghlLocationId` is configured for client
 
 ---
 
-## Data Flow Changes
+## Estimated Changes
 
-### Current Funded Investor Detection
-```text
-GHL Opportunity with status='won' OR stageId contains 'funded'/'closed'
-    ↓
-Extract monetaryValue → funded_amount
-Extract dateAdded → funded_at
-```
+| Component | Lines of Code |
+|-----------|---------------|
+| Database Migration | ~5 |
+| Edge Function Update | ~80 |
+| New Hook | ~50 |
+| InlineRecordsView Updates | ~100 |
+| **Total** | **~235 lines** |
 
-### Updated Funded Investor Detection
-```text
-Contact has tag: "Funded" / "funded investor" / "active investor"
-    OR
-Opportunity stage NAME contains: 'funded' / 'active investor'
-    OR
-Opportunity status = 'won' / stageId contains 'funded'/'closed'
-    ↓
-Extract monetaryValue/monetary_value → funded_amount
-Extract lastStageChangeAt OR dateUpdated → funded_at (stage move date)
-Match to lead using contactId → calculate time_to_fund_days
-```
-
-### Ad Spend Time Tracking
-```text
-Webhook/CSV with date + time
-    ↓
-Insert into ad_spend_reports (granular, with reported_at timestamp)
-    ↓
-Aggregate to daily_metrics (for dashboard compatibility)
-```
-
----
-
-## User Experience
-
-### Historical Sync
-1. Open Client Settings → Integrations tab
-2. Select sync range from dropdown (7d / 30d / 90d / All)
-3. Click "Sync Historical Data"
-4. Progress indicator shows sync status
-5. Success message with counts: leads created, calls synced, funded investors found
-
-### Ad Spend Time Upload
-- CSV format: `date,time,spend,impressions,clicks`
-- Example: `2024-01-15,14:30,150.50,5000,120`
-- Time is optional; if omitted, records still import by date
-
-### Funded Investor Tags
-- Contacts tagged "Funded", "funded investor", or "active investor" auto-detected
-- Opportunity value pulled as funded amount
-- Stage move date (or last update) used as funded date
-- No manual intervention required after GHL sync
