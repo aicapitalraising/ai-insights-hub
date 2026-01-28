@@ -1,237 +1,163 @@
 
 
-# Unified Timeline: Merge Customer Journey into Timeline
+# Make KPIs and Records Clickable on Client Dashboard
 
-## Overview
-Consolidate the separate "Timeline" and "Customer Journey" sections into a single, unified "Timeline" view that displays the complete customer journey chronologically for all record types.
+## Problem Analysis
 
----
+1. **KPIGrid on ClientDetail.tsx** (line 386-392) is missing the `onMetricClick` handler that exists on the agency dashboard
+2. No drill-down modals are imported or rendered on the ClientDetail page
+3. Records within drill-down modals are only clickable via the Eye icon, not the entire row
 
-## Current State
+## Solution
 
-| Section | Content | Record Types |
-|---------|---------|--------------|
-| **Timeline** (line 1756) | Created/Updated timestamps only | All types |
-| **Customer Journey** (line 1833) | Lead created, calls with status, funded events | Leads only |
+### 1. Add Clickable KPIs to Client Dashboard
 
-**Problem**: Two separate sections showing overlapping information, confusing UX.
+**File: `src/pages/ClientDetail.tsx`**
 
----
-
-## Proposed Solution
-
-Merge both sections into a single **Timeline** section that:
-1. Shows all events chronologically (lead created, calls booked/showed, funded)
-2. Works for all record types (not just leads)
-3. Uses consistent visual styling with color-coded status badges
-4. Eliminates redundant Created/Updated entries when full journey is shown
-
----
-
-## Implementation Details
-
-### Unified Timeline Structure
-
-For **Leads**:
-```
-Timeline
-├── Lead Created (Jan 27, 10:27 AM)
-├── Call Booked (Jan 28, 2:00 PM) - Confirmed
-├── Call Showed (Jan 28, 2:30 PM)
-├── Reconnect Call Booked (Feb 5, 3:00 PM)
-└── Funded $50,000 (Feb 10, 11:00 AM)
-```
-
-For **Calls**:
-```
-Timeline
-├── Lead Created (Jan 27, 10:27 AM)      ← From linked lead
-├── This Call Scheduled (Jan 28, 2:00 PM) ← Highlighted
-└── Call Outcome: Showed
-```
-
-For **Funded Investors**:
-```
-Timeline
-├── Lead Created (if linked)
-├── First Contact (if available)
-├── All Calls (if linked)
-└── Funded $50,000 ← This record
-```
-
-### Visual Design
-
-Each timeline event will have:
-- Color-coded dot based on event type
-- Event label with status badge
-- Timestamp
-- Optional outcome/details
-
-**Color Legend**:
-| Event Type | Color |
-|------------|-------|
-| Lead Created | Blue (chart-1) |
-| Call Booked | Amber (chart-3) |
-| Call Confirmed | Purple (chart-4) |
-| Call Showed | Green (chart-2) |
-| Call No Show | Red (destructive) |
-| Rescheduled | Amber |
-| Funded | Primary/Emerald |
-
----
-
-## Technical Changes
-
-### File: `src/components/dashboard/InlineRecordsView.tsx`
-
-**1. Remove separate Customer Journey section** (lines 1833-1931)
-
-**2. Enhance Timeline section** (lines 1756-1831) to include:
-
+Add state and imports:
 ```typescript
-// Build comprehensive timeline events for any record type
-const buildTimelineEvents = useMemo(() => {
-  const events: TimelineEvent[] = [];
-  const linkedLead = getLinkedLead(selectedRecord, selectedType);
-  
-  // Add lead creation
-  if (linkedLead?.created_at || (selectedType === 'lead' && selectedRecord?.created_at)) {
-    events.push({
-      date: linkedLead?.created_at || selectedRecord.created_at,
-      label: 'Lead Created',
-      type: 'lead',
-      color: 'bg-chart-1'
-    });
-  }
-  
-  // Add all linked calls
-  const linkedCalls = calls.filter(c => 
-    c.lead_id === (linkedLead?.id || selectedRecord?.id) || 
-    c.external_id === (linkedLead?.external_id || selectedRecord?.external_id)
-  );
-  
-  linkedCalls.forEach(call => {
-    const status = getCallStatusLabel(call);
-    events.push({
-      date: call.scheduled_at || call.created_at,
-      label: `${call.is_reconnect ? 'Reconnect Call' : 'Call'} - ${status.label}`,
-      type: 'call',
-      color: status.color,
-      isCurrentRecord: selectedType === 'call' && call.id === selectedRecord?.id,
-      details: call.outcome
-    });
-  });
-  
-  // Add funded event
-  const linkedFunded = fundedInvestors.find(f => 
-    f.lead_id === (linkedLead?.id || selectedRecord?.id) ||
-    f.external_id === (linkedLead?.external_id || selectedRecord?.external_id)
-  );
-  
-  if (linkedFunded) {
-    events.push({
-      date: linkedFunded.funded_at,
-      label: `Funded $${Number(linkedFunded.funded_amount).toLocaleString()}`,
-      type: 'funded',
-      color: 'bg-primary',
-      isCurrentRecord: selectedType === 'funded' && linkedFunded.id === selectedRecord?.id
-    });
-  }
-  
-  // Sort chronologically
-  return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-}, [selectedRecord, selectedType, calls, fundedInvestors, getLinkedLead]);
+// Add to imports
+import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
+import { CallsDrillDownModal } from '@/components/drilldown/CallsDrillDownModal';
+import { AdSpendDrillDownModal } from '@/components/drilldown/AdSpendDrillDownModal';
+import { FundedInvestorsDrillDownModal } from '@/components/drilldown/FundedInvestorsDrillDownModal';
+
+// Add state
+const [drillDownModal, setDrillDownModal] = useState<string | null>(null);
 ```
 
-**3. Update Timeline rendering** to use the events array:
-
+Update KPIGrid to include click handler:
 ```tsx
-<div className="space-y-2">
-  <h4 className="text-sm font-medium flex items-center gap-2">
-    <Clock className="h-4 w-4" />
-    Timeline
-  </h4>
-  <div className="pl-6 border-l-2 border-primary/30 space-y-3">
-    {timelineEvents.map((event, idx) => (
-      <div key={idx} className={`relative ${event.isCurrentRecord ? 'bg-muted/50 -ml-4 pl-4 py-1 rounded' : ''}`}>
-        <div className={`absolute -left-[25px] w-3 h-3 rounded-full ${event.color}`} />
-        <p className="text-sm font-medium">{event.label}</p>
-        <p className="text-xs text-muted-foreground">
-          {new Date(event.date).toLocaleString()}
-        </p>
-        {event.details && event.details !== event.label.toLowerCase() && (
-          <p className="text-xs text-muted-foreground">
-            Outcome: {event.details}
-          </p>
-        )}
-      </div>
-    ))}
-  </div>
-</div>
+<KPIGrid 
+  metrics={aggregatedMetrics} 
+  priorMetrics={priorMetrics || undefined}
+  showFundedMetrics 
+  thresholds={thresholds}
+  fundedInvestorLabel={fundedInvestorLabel}
+  onMetricClick={(metric) => setDrillDownModal(metric)}  // ADD THIS
+/>
 ```
 
----
+Add drill-down modals before closing `</div>`:
+```tsx
+{/* Drill-Down Modals */}
+<LeadsDrillDownModal
+  clientId={clientId}
+  open={drillDownModal === 'leads'}
+  onOpenChange={(open) => !open && setDrillDownModal(null)}
+/>
 
-## Visual Comparison
+<CallsDrillDownModal
+  clientId={clientId}
+  open={drillDownModal === 'calls'}
+  onOpenChange={(open) => !open && setDrillDownModal(null)}
+/>
 
-### Before (Two Separate Sections)
+<CallsDrillDownModal
+  clientId={clientId}
+  showedOnly
+  open={drillDownModal === 'showedCalls'}
+  onOpenChange={(open) => !open && setDrillDownModal(null)}
+/>
+
+<AdSpendDrillDownModal
+  clientId={clientId}
+  open={drillDownModal === 'totalAdSpend'}
+  onOpenChange={(open) => !open && setDrillDownModal(null)}
+/>
+
+<FundedInvestorsDrillDownModal
+  clientId={clientId}
+  open={drillDownModal === 'fundedInvestors'}
+  onOpenChange={(open) => !open && setDrillDownModal(null)}
+/>
 ```
-┌─────────────────────────────────┐
-│ Timeline                        │
-│ ● Created: 1/27/2026 10:27 AM  │
-│ ● Updated: 1/27/2026 10:27 AM  │
-├─────────────────────────────────┤
-│ Customer Journey                │
-│ ● Lead Created                  │
-│ ● Call - Confirmed              │
-│ ● Call - Showed                 │
-│ ● Funded $50,000               │
-└─────────────────────────────────┘
+
+### 2. Make Entire Row Clickable in Drill-Down Modals
+
+Update the table rows to be clickable (not just the Eye icon):
+
+**LeadsDrillDownModal.tsx** - Line 280:
+```tsx
+<TableRow 
+  key={lead.id} 
+  className="border-b hover:bg-muted/50 cursor-pointer"
+  onClick={() => viewLeadActivity(lead)}  // ADD onClick
+>
 ```
 
-### After (Unified Timeline)
-```
-┌─────────────────────────────────┐
-│ Timeline                        │
-│ ● Lead Created                  │
-│   1/27/2026, 10:27 AM          │
-│ ● Call - Confirmed              │
-│   1/28/2026, 2:00 PM           │
-│ ● Call - Showed                 │
-│   1/28/2026, 2:30 PM           │
-│ ● Funded $50,000               │
-│   2/10/2026, 11:00 AM          │
-└─────────────────────────────────┘
+**CallsDrillDownModal.tsx** - Line 277:
+```tsx
+<TableRow 
+  key={call.id} 
+  className="border-b hover:bg-muted/50 cursor-pointer"
+  onClick={() => viewCallActivity(call)}  // ADD onClick
+>
 ```
 
----
+**FundedInvestorsDrillDownModal.tsx** - Line 285:
+```tsx
+<TableRow 
+  key={investor.id} 
+  className="border-b hover:bg-muted/50 cursor-pointer"
+  onClick={() => viewInvestorActivity(investor)}  // ADD onClick
+>
+```
 
-## Benefits
+## User Experience Flow
 
-1. **Single Source of Truth**: One timeline shows everything
-2. **Consistent UX**: Same timeline format for all record types
-3. **Full Journey Visibility**: See complete customer journey from any record
-4. **Reduced Redundancy**: No duplicate Created/Updated entries
-5. **Better Context**: When viewing a call, see the full lead journey
+```
+┌──────────────────────────────────────────────────────────┐
+│           Client Dashboard - Overview Tab                │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  [Leads: 45 ▼]   [Calls: 32 ▼]   [Showed: 18 ▼]        │
+│  Click to drill  Click to drill  Click to drill         │
+│                                                          │
+│  [Ad Spend: $5,000 ▼]   [Funded: 5 ▼]                   │
+│  Click to drill          Click to drill                 │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+                        │ Click KPI
+                        ▼
+┌──────────────────────────────────────────────────────────┐
+│                  Leads Drill-Down Modal                  │
+├──────────────────────────────────────────────────────────┤
+│ Leads (45)                            [Export] [+Add]    │
+│ ─────────────────────────────────────────────────────── │
+│ Date     │ Name       │ Email          │ Campaign │...  │
+│ 1/27     │ John Doe ▶ │ john@email.com │ FB_Camp  │     │
+│ 1/26     │ Jane Doe ▶ │ jane@email.com │ IG_Camp  │     │
+│          Click row to see full details                   │
+└──────────────────────────────────────────────────────────┘
+                        │ Click row
+                        ▼
+┌──────────────────────────────────────────────────────────┐
+│              Record Activity Modal                       │
+├──────────────────────────────────────────────────────────┤
+│ Contact Info         │  Activity Timeline               │
+│ ──────────────────── │  ────────────────                │
+│ 👤 John Doe          │  ● Lead Created (1/27)           │
+│ 📧 john@email.com    │  ● Call Booked (1/28)            │
+│ 📞 +1-555-1234       │  ● Call Showed (1/28)            │
+│                      │  💰 Funded $50,000 (2/10)        │
+│ Campaign: FB_Camp    │                                   │
+│ Ad Set: Interest_1   │                                   │
+│ Survey Responses...  │                                   │
+└──────────────────────────────────────────────────────────┘
+```
 
----
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/ClientDetail.tsx` | Add imports, state, onMetricClick, drill-down modals |
+| `src/components/drilldown/LeadsDrillDownModal.tsx` | Add onClick to TableRow |
+| `src/components/drilldown/CallsDrillDownModal.tsx` | Add onClick to TableRow |
+| `src/components/drilldown/FundedInvestorsDrillDownModal.tsx` | Add onClick to TableRow |
 
 ## Estimated Changes
-
-| Component | Lines Changed |
-|-----------|---------------|
-| Timeline event builder | ~60 new lines |
-| Timeline renderer update | ~40 lines |
-| Remove Customer Journey section | -100 lines |
-| **Net Change** | ~0 lines (refactor) |
-
----
-
-## Edge Cases Handled
-
-- **No linked lead**: Show only the current record's dates
-- **Ad Spend records**: Show just the date (no journey)
-- **Orphan calls**: Show call without lead context
-- **Multiple calls**: All sorted chronologically
-- **Current record highlight**: Subtle background to show which event is the selected record
+- ~30 lines added to ClientDetail.tsx (imports + modals)
+- ~3 lines modified per drill-down modal (3 files)
+- Total: ~40 lines
 
