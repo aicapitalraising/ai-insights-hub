@@ -1,206 +1,283 @@
 
-# Manual Sync Per Row Feature Plan
+# GHL Contact Integration in Record Details
 
 ## Overview
-Add per-row manual sync capabilities for leads and calls in the `InlineRecordsView` component. Each row will show:
-1. **Last Synced timestamp** - When this record was last synced with GHL
-2. **GHL Contact Link** - Quick icon to jump directly to the contact in GHL (already partially exists)
-3. **Manual Sync Button** - Refresh individual record data from GHL on demand
+This plan implements comprehensive GHL contact integration in the Record Details panel, ensures congruent lead matching across all funnel stages, adds GHL notes storage, filters out incomplete booked calls, and improves funded investor date accuracy.
 
 ---
 
-## Current State Analysis
+## User Request Breakdown
 
-### Existing Infrastructure
-- **GHL Link**: Already implemented via `getGHLContactUrl()` function for leads/calls with valid `external_id`
-- **Calls Table**: Has `ghl_synced_at` column for tracking sync timestamps
-- **Leads Table**: Missing `ghl_synced_at` column - needs migration
-- **Sync Function**: `sync-ghl-contacts` edge function handles bulk syncing but not single-contact refresh
-
-### Database Schema Changes Needed
-| Table | Column | Type | Purpose |
-|-------|--------|------|---------|
-| leads | ghl_synced_at | timestamp with time zone | Track when lead was last synced from GHL |
+| Request | Solution |
+|---------|----------|
+| GHL link & last sync in Record Details | Add GHL Integration section to detail panel |
+| Congruent leads across funnel stages | Link calls/funded via `lead_id` or `external_id` matching |
+| Pull all GHL contact info and notes | New `ghl_notes` column + edge function enhancement |
+| Booked calls need name/phone/email | Filter calls in UI to only show those with linked lead contact info |
+| Remove empty booked calls | Add validation during display (not deletion) |
+| Sync accurate calls for Jan 2026+ | Already implemented via GHL sync |
+| Funded investors from pipeline stages | Enhanced date extraction using `lastStageChangeAt` or `dateUpdated` |
 
 ---
 
-## Implementation Plan
+## Implementation Details
 
 ### Phase 1: Database Migration
-Add `ghl_synced_at` column to leads table:
+Add `ghl_notes` column to store notes synced from GHL:
 
 ```sql
 ALTER TABLE public.leads 
-ADD COLUMN ghl_synced_at TIMESTAMP WITH TIME ZONE;
+ADD COLUMN ghl_notes JSONB DEFAULT '[]'::jsonb;
 ```
 
-### Phase 2: Edge Function - Single Contact Sync
-Create or extend edge function to support single-contact sync mode:
-
-**Endpoint**: `sync-ghl-contacts` with new parameter `contactId`
-
-**Request Body**:
+Structure:
 ```json
-{
-  "clientId": "uuid",
-  "contactId": "ghl_external_id",  // NEW - single contact mode
-  "mode": "single"                  // NEW - skip bulk processing
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "contact": {
-    "id": "lead_uuid",
-    "name": "Updated Name",
-    "ghl_synced_at": "2026-01-28T..."
+[
+  {
+    "id": "note_id",
+    "body": "Note content from GHL",
+    "userId": "user_who_created",
+    "dateAdded": "2026-01-28T..."
   }
+]
+```
+
+### Phase 2: Edge Function Enhancement
+
+Extend `sync-ghl-contacts/index.ts` to fetch GHL notes during single-contact sync:
+
+**New Function:**
+```typescript
+async function fetchGHLNotes(apiKey: string, contactId: string): Promise<GHLNote[]> {
+  const response = await fetch(`${GHL_BASE_URL}/contacts/${contactId}/notes`, {
+    headers: { 
+      'Authorization': `Bearer ${apiKey}`, 
+      'Version': '2021-07-28' 
+    }
+  });
+  if (!response.ok) return [];
+  const data = await response.json();
+  return data.notes || [];
 }
 ```
 
-### Phase 3: React Hook - useSingleContactSync
-Create a custom hook for per-row sync operations:
+**Update syncSingleContact:**
+- Fetch notes after contact sync
+- Store in `ghl_notes` column
+- Return notes in response
+
+**Improved Funded Investor Date Logic:**
+Currently uses `lastStageChangeAt` > `dateUpdated` > `dateAdded`. Already implemented in `createFundedInvestorFromContact` function - no changes needed.
+
+### Phase 3: TypeScript Interface Updates
+
+Update `src/hooks/useLeadsAndCalls.ts`:
 
 ```typescript
-// src/hooks/useSingleContactSync.ts
-export function useSingleContactSync() {
-  const queryClient = useQueryClient();
-  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+export interface GHLNote {
+  id: string;
+  body: string;
+  userId?: string;
+  dateAdded: string;
+}
 
-  const syncContact = async (clientId: string, externalId: string, recordType: 'lead' | 'call') => {
-    setSyncingIds(prev => new Set(prev).add(externalId));
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-ghl-contacts', {
-        body: { clientId, contactId: externalId, mode: 'single' }
-      });
-      if (error) throw error;
-      
-      // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['leads', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['calls', clientId] });
-      
-      toast.success('Contact synced from GHL');
-      return data;
-    } finally {
-      setSyncingIds(prev => {
-        const next = new Set(prev);
-        next.delete(externalId);
-        return next;
-      });
-    }
-  };
-
-  return { syncContact, syncingIds, isSyncing: (id: string) => syncingIds.has(id) };
+export interface Lead {
+  // ... existing fields
+  ghl_notes?: GHLNote[];
 }
 ```
 
-### Phase 4: UI Components - InlineRecordsView Updates
+### Phase 4: Record Details Panel Enhancement
 
-#### 4a. New Table Columns
-Add to both Leads and Calls table headers:
+Update `InlineRecordsView.tsx` Record Details section:
 
-| New Column | Width | Content |
-|------------|-------|---------|
-| Last Sync | 80px | Relative timestamp (e.g., "2h ago") |
-| Sync | 40px | Refresh icon button |
+**4a. GHL Integration Section (all record types)**
+Add to the top of Record Details when a record has a valid `external_id`:
 
-#### 4b. Lead Row Enhancement
-```text
-| Date | Name | Email | ... | GHL | Last Sync | Sync | Actions |
-|------|------|-------|-----|-----|-----------|------|---------|
-| 1/27 | John | j@... | ... | [↗] | 2h ago    | [⟳] | [✎][🗑] |
+```
++--------------------------------------------+
+| GHL Integration                            |
+| [Open in GHL ↗]                           |
+| Last Sync: 2h ago          [Refresh ⟳]    |
+| GHL ID: ABC123XYZ                          |
++--------------------------------------------+
 ```
 
-- **GHL Column**: Existing external link icon (↗)
-- **Last Sync Column**: Shows `ghl_synced_at` as relative time ("2h ago", "Never")
-- **Sync Column**: RefreshCw icon button that triggers single-contact sync
+**4b. Linked Contact Info (for calls, commitments, funded)**
+Create helper to find linked lead:
 
-#### 4c. Call Row Enhancement
-Same pattern as leads, using existing `ghl_synced_at` from calls table.
+```typescript
+const getLinkedLead = (record: any, recordType: string): Lead | null => {
+  if (recordType === 'lead') return record;
+  
+  // For calls, use lead_id
+  if (record.lead_id) {
+    return leads.find(l => l.id === record.lead_id) || null;
+  }
+  
+  // For funded/commitments, match by external_id
+  if (record.external_id) {
+    return leads.find(l => l.external_id === record.external_id) || null;
+  }
+  
+  return null;
+};
+```
 
-#### 4d. Visual States
-- **Syncing**: Spinning RefreshCw icon with disabled state
-- **Never Synced**: Gray text "Never"
-- **Recently Synced**: Green checkmark + time
-- **Stale (>24h)**: Orange/yellow indicator
+When viewing a call/commitment/funded record, display the linked lead's:
+- Name, Email, Phone
+- UTM Parameters (Source, Medium, Campaign, Content, Term)
+- Campaign Attribution (Campaign Name, Ad Set, Ad ID)
+- Survey Questions
 
-### Phase 5: Tooltip Enhancement
-Hover over "Last Sync" shows full details:
-- Full timestamp
-- Source of last update (webhook vs GHL sync)
-- GHL contact ID for debugging
+**4c. GHL Notes Section**
+Display synced notes in Record Details:
+
+```
++--------------------------------------------+
+| GHL Notes                                  |
+| "Client interested in Q2..." - 2 days ago  |
+| "Follow-up scheduled..." - 1 week ago      |
++--------------------------------------------+
+```
+
+### Phase 5: Booked Calls Validation
+
+Update `InlineRecordsView.tsx` to filter calls that lack contact info:
+
+**5a. Create validation function:**
+```typescript
+const isValidBookedCall = (call: Call): boolean => {
+  // Check if call has linked lead with contact info
+  const linkedLead = leads.find(l => l.id === call.lead_id);
+  if (!linkedLead) return false;
+  
+  // Must have at least name OR email OR phone
+  return !!(linkedLead.name || linkedLead.email || linkedLead.phone);
+};
+```
+
+**5b. Update filtered calls:**
+```typescript
+const bookedCalls = useMemo(() => 
+  calls.filter(c => !c.is_reconnect && isValidBookedCall(c)), [calls, leads]);
+```
+
+**5c. Add "Show All" toggle:**
+Add a small toggle to show/hide incomplete records if users want to see them.
+
+### Phase 6: Calls Table Enhancement
+
+Add linked contact info columns to Booked Calls, Showed Calls, Reconnect tabs:
+
+| Existing Columns | New Columns |
+|-----------------|-------------|
+| Date | Name (from linked lead) |
+| Outcome | Email (from linked lead) |
+| Showed | Phone (from linked lead) |
+| GHL | Source (from linked lead) |
+| Actions | Campaign (from linked lead) |
 
 ---
 
 ## Component Changes Summary
 
 ### Files to Modify:
-1. **`supabase/functions/sync-ghl-contacts/index.ts`**
-   - Add single-contact sync mode
-   - Return updated contact data
-   - Update `ghl_synced_at` on both leads and calls
 
-2. **`src/hooks/useLeadsAndCalls.ts`**
-   - Add `ghl_synced_at` to Lead interface
+| File | Changes |
+|------|---------|
+| `supabase/functions/sync-ghl-contacts/index.ts` | Add `fetchGHLNotes`, update `syncSingleContact` to store notes |
+| `src/hooks/useLeadsAndCalls.ts` | Add `ghl_notes` to Lead interface, add `GHLNote` interface |
+| `src/components/dashboard/InlineRecordsView.tsx` | Add GHL section to Record Details, linked contact lookup, notes display, call validation |
+| `src/hooks/useSingleContactSync.ts` | Minor: ensure notes are refreshed after sync |
 
-3. **`src/hooks/useSingleContactSync.ts`** (NEW)
-   - Hook for triggering single-contact sync
-
-4. **`src/components/dashboard/InlineRecordsView.tsx`**
-   - Add Last Sync and Sync columns to lead table
-   - Add Sync column to call tables
-   - Integrate `useSingleContactSync` hook
-   - Add loading states for sync buttons
-
-### Database Migration:
-- Add `ghl_synced_at` to `leads` table
+### Database Changes:
+- Add `leads.ghl_notes` column (JSONB)
 
 ---
 
-## User Experience Flow
+## Record Details Panel Wireframe
 
-```text
-1. User views Leads tab in InlineRecordsView
-2. Each row shows:
-   - GHL icon (↗) → Opens contact in GHL in new tab
-   - "Last Sync" → "3h ago" or "Never"  
-   - Sync button (⟳) → Triggers refresh
-
-3. User clicks Sync button:
-   - Button shows spinning animation
-   - Edge function fetches latest from GHL
-   - Row updates with new data
-   - Toast confirms "Contact synced from GHL"
-   - Last Sync updates to "Just now"
 ```
++------------------------------------------+
+| Record Details                           |
++------------------------------------------+
+| GHL Integration                          |
+| [Open in GHL ↗]                         |
+| Last Sync: 2h ago          [Refresh ⟳]  |
+| GHL ID: ABC123XYZ                        |
++------------------------------------------+
+| Timeline                                 |
+| ● Created: Jan 27, 2026                  |
+| ● Updated: Jan 28, 2026                  |
++------------------------------------------+
+| Contact Info (from linked lead)          |
+| [Mail] john@example.com                  |
+| [Phone] +1 555-123-4567                 |
+| [Source] Facebook                        |
++------------------------------------------+
+| Attribution                              |
+| Campaign: Summer Campaign 2026           |
+| Ad Set: Interest Targeting               |
+| Ad ID: 12345678                          |
++------------------------------------------+
+| GHL Notes                                |
+| "Interested in $50k investment" - 2d ago |
+| "Called back, very engaged" - 1w ago     |
++------------------------------------------+
+| Form Questions                           |
+| Q: Are you accredited?                   |
+| A: Yes                                   |
++------------------------------------------+
+```
+
+---
+
+## Data Flow for Congruent Matching
+
+```
+Lead (external_id: ABC123, id: lead_uuid)
+    │
+    ├──► Call (lead_id: lead_uuid) 
+    │        → Shows lead's Name, Email, Phone, Attribution
+    │
+    ├──► Commitment (lead_id: lead_uuid OR external_id: ABC123)
+    │        → Shows lead's contact info + attribution
+    │
+    └──► Funded (lead_id: lead_uuid)
+             → Shows lead's contact info + attribution
+```
+
+All funnel stages display consistent:
+- Name, Email, Phone
+- UTM Parameters
+- Campaign Attribution
+- Survey Responses
+- GHL Notes (when available)
 
 ---
 
 ## Technical Details
 
-### Edge Function Single-Contact Logic
-When `contactId` is provided:
-1. Skip pagination/batch fetching
-2. Fetch single contact: `GET /contacts/{contactId}`
-3. Update lead record with latest GHL data
-4. Update `ghl_synced_at = now()`
-5. Return updated record
-
-### GHL API Call
+### GHL Notes API Call
 ```typescript
-const contact = await fetch(
-  `${GHL_BASE_URL}/contacts/${contactId}`,
-  { headers: { Authorization: `Bearer ${apiKey}` } }
-);
+GET https://services.leadconnectorhq.com/contacts/{contactId}/notes
+Headers:
+  Authorization: Bearer {apiKey}
+  Version: 2021-07-28
 ```
 
 ### Sync Button Visibility Rules
-Only show sync button when:
-- `external_id` exists AND
-- `external_id` doesn't start with `wh_` or `manual-` AND
-- `ghlLocationId` is configured for client
+Show GHL integration section when:
+- `ghlLocationId` is configured for client AND
+- `record.external_id` exists AND
+- `external_id` doesn't start with `wh_` or `manual-`
+
+### Booked Calls Validation
+Only display calls where the linked lead has at least one of:
+- Non-empty `name`
+- Non-empty `email`  
+- Non-empty `phone`
 
 ---
 
@@ -208,9 +285,18 @@ Only show sync button when:
 
 | Component | Lines of Code |
 |-----------|---------------|
-| Database Migration | ~5 |
+| Database Migration | ~3 |
 | Edge Function Update | ~80 |
-| New Hook | ~50 |
-| InlineRecordsView Updates | ~100 |
-| **Total** | **~235 lines** |
+| Interface Updates | ~20 |
+| InlineRecordsView Updates | ~200 |
+| **Total** | **~303 lines** |
 
+---
+
+## Benefits
+
+1. **End-to-End Tracking**: View complete contact journey from any funnel stage
+2. **Data Accuracy**: Filter out incomplete/spam booked calls
+3. **GHL Integration**: Direct links and notes visible in dashboard
+4. **Consistent Attribution**: Same lead data shown across all funnel stages
+5. **Manual Sync**: Refresh individual records on demand from detail panel
