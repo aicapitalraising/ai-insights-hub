@@ -1,292 +1,179 @@
 
-# Creative Upload AI Review & Aspect-Ratio Preview Formatting
+
+# Task Detail Modal Redesign
+
+This plan transforms the current task detail modal into a unified discussion-style layout that matches the reference design you provided, with file previews at the top, a merged comment/history thread, and proper attribution based on who's logged in.
+
+---
 
 ## Overview
 
-Two enhancements to the creative workflow:
+The new design will have:
 
-1. **Auto AI Spelling/Grammar Review (Agency Only)**: When agency team members upload creatives, automatically run an AI spelling/grammar check on the headline and body copy. If issues are found, flag the creative with feedback or auto-reject.
-
-2. **Aspect Ratio-Aware Preview Formatting**: Detect the actual dimensions of uploaded images/videos and display them correctly in platform previews, respecting 1:1, 9:16, and 16:9 ratios instead of always cropping with `object-cover`.
+1. **Header Section** - Task title, client name, priority & status badges
+2. **Files Gallery** - Visual thumbnail previews of attachments at the top (images, PDFs, videos)
+3. **Unified Discussion Thread** - Comments and history merged chronologically with proper author attribution
+4. **Comment Input** - Text and voice input at the bottom
 
 ---
 
-## Part 1: Auto AI Spelling/Grammar Review on Upload
+## Key Changes
 
-### How It Works
+### 1. Layout Restructure
+- Remove the 4-tab navigation (Details, Comments, Files, History)
+- Replace with a single scrollable view:
+  - Project details summary at the top
+  - File preview gallery (thumbnails)
+  - Unified discussion thread below
+
+### 2. File Previews with Lightbox
+- Display files as visual thumbnails in a horizontal gallery at the top
+- Support preview types:
+  - **Images** (jpg, png, gif, webp): Show actual thumbnail
+  - **PDFs**: Show PDF icon with file name
+  - **Videos**: Show video thumbnail or video icon
+- Clicking a file opens a fullscreen lightbox modal (not a new tab)
+- Lightbox includes download button
+- Upload button remains at the end of the gallery
+
+### 3. Unified Discussion Thread
+- Merge comments and history entries into one chronological feed
+- Each entry shows:
+  - Author avatar (initials)
+  - Author name + timestamp
+  - Content (text comment, voice note player, or history action)
+- **Agency view**: Shows individual team member names (from `useTeamMember` context)
+- **Client/Public view**: Shows pod name or "Client" label
+
+### 4. Author Attribution Integration
+- Import and use `useTeamMember` hook to get current logged-in member
+- When agency member adds a comment: Use `currentMember.name`
+- When client (public view) adds a comment: Use pod assignment or "Client"
+
+---
+
+## Technical Implementation
+
+### New Component: `FilePreviewLightbox.tsx`
+A modal component that:
+- Displays the selected file in fullscreen
+- Supports image rendering, video player, and PDF embed
+- Includes navigation arrows for multiple files
+- Download button
+
+### Modified: `TaskDetailModal.tsx`
+Key changes:
+1. Remove `Tabs` component
+2. Add file preview gallery section with thumbnails
+3. Create unified timeline by merging and sorting `comments` + `history` by `created_at`
+4. Import `useTeamMember` and use `currentMember.name` for author attribution
+5. Add file lightbox state management
+6. Adjust layout for scrollable single-panel design
+
+### Data Flow
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│              AGENCY USER UPLOADS CREATIVE                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│   1. File uploaded to Supabase Storage                      │
-│   2. Creative record created with status='pending'          │
-│   3. IF agency user AND has text (headline/body_copy):      │
-│      → Call AI spelling/grammar check                       │
-│      → If issues found:                                     │
-│        • Add AI comment with feedback                       │
-│        • Change status to 'revisions' if critical           │
-│      → If clean: keep status='pending'                      │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Edge Function Enhancement
-
-**File: `supabase/functions/creative-ai-audit/index.ts`**
-
-Add a new action `spelling_check` that analyzes the text content:
-
-```typescript
-if (action === "spelling_check") {
-  const textContent = `
-    Headline: ${creative.headline || ''}
-    Body Copy: ${creative.body_copy || ''}
-    CTA: ${creative.cta_text || ''}
-  `.trim();
-  
-  // Prompt AI to check for spelling/grammar issues
-  const prompt = `You are a proofreader. Analyze this ad copy for spelling and grammar errors ONLY.
-  
-  ${textContent}
-  
-  Respond with JSON:
-  {
-    "hasErrors": true/false,
-    "severity": "none" | "minor" | "critical",
-    "errors": [{"text": "...", "issue": "...", "suggestion": "..."}],
-    "summary": "Brief summary of issues or 'No issues found'"
-  }
-  
-  - "critical" = misspellings or major grammar errors that look unprofessional
-  - "minor" = style suggestions, optional improvements
-  - "none" = clean copy`;
-  
-  // Call Gemini and return structured response
-}
-```
-
-### Hook Enhancement
-
-**File: `src/hooks/useCreatives.ts`**
-
-Modify `useCreateCreative` to:
-1. Accept a flag indicating if this is an agency upload
-2. After successful creation, call the spelling check endpoint
-3. Update the creative with AI feedback if issues found
-
-```typescript
-// After successful insert, if agency upload and has text content:
-if (isAgencyUpload && (creative.headline || creative.body_copy)) {
-  const spellCheckResult = await supabase.functions.invoke('creative-ai-audit', {
-    body: { action: 'spelling_check', creative: data }
-  });
-  
-  if (spellCheckResult.data?.hasErrors) {
-    // Add AI comment with feedback
-    await supabase.from('creatives').update({
-      comments: [{
-        id: Date.now().toString(),
-        author: 'AI Review',
-        text: spellCheckResult.data.summary,
-        createdAt: new Date().toISOString()
-      }],
-      // If critical errors, set to revisions
-      status: spellCheckResult.data.severity === 'critical' ? 'revisions' : 'pending'
-    }).eq('id', data.id);
-    
-    toast.warning('AI found spelling/grammar issues - please review');
-  }
-}
-```
-
-### UI Integration
-
-**File: `src/components/creative/CreativeApproval.tsx`**
-
-Pass the team member context to the upload handlers:
-
-```typescript
-const { currentMember } = useTeamMember();
-const isAgencyUpload = !!currentMember && !isPublicView;
-
-// In handleUpload and handleBulkUpload:
-await createCreative.mutateAsync({
-  ...creativeData,
-  isAgencyUpload, // New flag
-});
+Task Opens
+    │
+    ├─► Fetch task details
+    ├─► Fetch files → Display as thumbnails
+    ├─► Fetch comments + history → Merge & sort by timestamp
+    │
+    ▼
+Unified View:
+┌─────────────────────────────────────────┐
+│  Title: Update email headers...         │
+│  Client: Blue Capital                   │
+│  [HIGH] [TODO]                          │
+├─────────────────────────────────────────┤
+│  📎 Files (6)                           │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐  [+]   │
+│  │ IMG │ │ IMG │ │ PDF │ │ IMG │        │
+│  └─────┘ └─────┘ └─────┘ └─────┘        │
+├─────────────────────────────────────────┤
+│  💬 Discussion                          │
+│  ─────────────────────────              │
+│  [AV] Alex V. · Jan 28, 4:45 PM         │
+│  "Please review the updated headers"    │
+│  ─────────────────────────              │
+│  ⟲ Status changed: todo → review        │
+│     Jan 28, 5:00 PM                     │
+│  ─────────────────────────              │
+│  [CL] Client · Jan 29, 9:00 AM          │
+│  "Looks good, approved!"                │
+├─────────────────────────────────────────┤
+│  [Post a comment...] [🎙] [➤]           │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-## Part 2: Aspect Ratio-Aware Preview Formatting
+## Files to Create/Modify
 
-### How It Works
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/components/tasks/FilePreviewLightbox.tsx` | Create | Fullscreen file preview modal with download |
+| `src/components/tasks/TaskDetailModal.tsx` | Major Update | New layout with unified thread & file gallery |
+| `src/components/tasks/TaskDiscussionVoiceNote.tsx` | Minor Update | Accept member context for attribution |
 
-```text
-┌───────────────────────────────────────────────────────────────────┐
-│                  ASPECT RATIO DETECTION FLOW                      │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│   Uploaded Image/Video                                            │
-│         ↓                                                         │
-│   On load, detect dimensions → Calculate ratio                    │
-│         ↓                                                         │
-│   ┌─────────────┬─────────────┬─────────────┐                     │
-│   │    1:1      │    9:16     │    16:9     │                     │
-│   │  (Square)   │  (Portrait) │ (Landscape) │                     │
-│   └─────────────┴─────────────┴─────────────┘                     │
-│         ↓                                                         │
-│   Apply appropriate container sizing per platform:                │
-│                                                                   │
-│   FEED (FB/IG):                                                   │
-│   • 1:1 → Square container                                        │
-│   • 9:16 → 4:5 container (max allowed, letterboxed)              │
-│   • 16:9 → 16:9 container with object-contain                     │
-│                                                                   │
-│   STORIES (9:16 format):                                          │
-│   • Always 9:16 container                                         │
-│   • 1:1/16:9 → Scaled down with background blur effect            │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
-```
+---
 
-### Database Schema Update
+## Technical Details
 
-Add an `aspect_ratio` field to store detected dimensions:
-
-```sql
-ALTER TABLE creatives ADD COLUMN IF NOT EXISTS aspect_ratio TEXT;
--- Values: '1:1', '9:16', '16:9', '4:5', 'other'
-```
-
-### File Upload Enhancement
-
-**File: `src/hooks/useCreatives.ts`**
-
-Detect aspect ratio before upload:
-
+### Unified Timeline Logic
 ```typescript
-async function detectAspectRatio(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    if (file.type.startsWith('image/')) {
-      const img = new Image();
-      img.onload = () => {
-        const ratio = img.width / img.height;
-        resolve(categorizeRatio(ratio));
-        URL.revokeObjectURL(img.src);
-      };
-      img.src = URL.createObjectURL(file);
-    } else if (file.type.startsWith('video/')) {
-      const video = document.createElement('video');
-      video.onloadedmetadata = () => {
-        const ratio = video.videoWidth / video.videoHeight;
-        resolve(categorizeRatio(ratio));
-        URL.revokeObjectURL(video.src);
-      };
-      video.src = URL.createObjectURL(file);
-    } else {
-      resolve('1:1'); // Default for copy
-    }
-  });
-}
+type TimelineEntry = 
+  | { type: 'comment'; data: TaskComment; timestamp: Date }
+  | { type: 'history'; data: TaskHistory; timestamp: Date };
 
-function categorizeRatio(ratio: number): string {
-  if (ratio > 1.7) return '16:9';     // Landscape (1.78)
-  if (ratio > 1.1) return '4:5';      // Slightly wide
-  if (ratio > 0.9) return '1:1';      // Square (0.9-1.1)
-  if (ratio > 0.5) return '9:16';     // Portrait (0.5625)
-  return '9:16';                       // Very tall
-}
+const timeline = useMemo(() => {
+  const entries: TimelineEntry[] = [
+    ...comments.map(c => ({ 
+      type: 'comment' as const, 
+      data: c, 
+      timestamp: new Date(c.created_at) 
+    })),
+    ...history.map(h => ({ 
+      type: 'history' as const, 
+      data: h, 
+      timestamp: new Date(h.created_at) 
+    })),
+  ];
+  return entries.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+}, [comments, history]);
 ```
 
-### Preview Component Enhancement
-
-**File: `src/components/creative/CreativeHorizontalPreview.tsx`**
-
-Update `renderMedia` to respect aspect ratio:
-
+### File Type Detection for Previews
 ```typescript
-const renderMedia = (platform: string, containerAspect: string) => {
-  const creativeAspect = creative.aspect_ratio || '1:1';
-  
-  // Determine if we should use object-cover or object-contain
-  const shouldContain = !aspectsMatch(containerAspect, creativeAspect);
-  const objectFit = shouldContain ? 'object-contain' : 'object-cover';
-  const bgClass = shouldContain ? 'bg-black' : 'bg-muted';
-  
-  if (creative.type === 'image' && creative.file_url) {
-    return (
-      <div className={`relative w-full h-full ${bgClass}`}>
-        <img 
-          src={creative.file_url} 
-          alt={creative.title}
-          className={`w-full h-full ${objectFit}`}
-        />
-      </div>
-    );
-  }
-  // Similar for video...
+const getFilePreviewType = (fileType: string | null, fileName: string) => {
+  if (fileType?.startsWith('image/')) return 'image';
+  if (fileType?.startsWith('video/')) return 'video';
+  if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) return 'pdf';
+  return 'document';
 };
-
-// Helper to check if aspects are compatible
-function aspectsMatch(container: string, content: string): boolean {
-  // Feed containers (4:5) work well with 1:1 and 9:16
-  // Stories (9:16) work well with 9:16
-  // etc.
-  if (container === '4:5' && ['1:1', '4:5', '9:16'].includes(content)) return true;
-  if (container === '9:16' && content === '9:16') return true;
-  if (container === '16:9' && content === '16:9') return true;
-  return container === content;
-}
 ```
 
-### Visual Preview Adjustments
-
-For each platform preview in `CreativeHorizontalPreview.tsx`:
-
-**Facebook/Instagram Feed:**
-- Square creatives (1:1): Display in square container
-- Portrait creatives (9:16): Display in 4:5 container (Meta's max)
-- Landscape creatives (16:9): Display with letterboxing
-
-**Stories (IG/FB):**
-- Portrait (9:16): Full bleed
-- Square/Landscape: Centered with blurred background edges
-
----
-
-## Files to Modify/Create
-
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/functions/creative-ai-audit/index.ts` | Modify | Add `spelling_check` action with structured JSON response |
-| `src/hooks/useCreatives.ts` | Modify | Add aspect ratio detection, AI spelling check after agency uploads |
-| `src/components/creative/CreativeApproval.tsx` | Modify | Pass `isAgencyUpload` flag to mutation, import TeamMemberContext |
-| `src/components/creative/CreativeHorizontalPreview.tsx` | Modify | Update renderMedia to respect aspect ratio, use object-contain when needed |
-| `src/components/creative/PlatformAdPreview.tsx` | Modify | Similar aspect ratio handling for single previews |
-
-Database migration:
-```sql
-ALTER TABLE creatives ADD COLUMN IF NOT EXISTS aspect_ratio TEXT;
+### Author Name Resolution
+```typescript
+// Agency view: Use current team member name
+// Public view: Use pod name or "Client"
+const getAuthorName = () => {
+  if (isPublicView) {
+    // For clients, check if there's an assigned pod name
+    return task.assigned_client_name || 'Client';
+  }
+  return currentMember?.name || 'Agency';
+};
 ```
 
 ---
 
-## User Experience
+## Summary
 
-### Agency Upload Flow:
-1. Upload creative with headline/body copy
-2. File uploads, dimensions detected → `aspect_ratio` stored
-3. AI reviews text content in background
-4. If spelling/grammar issues:
-   - Toast: "AI found issues - please review"
-   - Comment added from "AI Review"
-   - Critical errors → status set to "revisions"
-5. Previews display correctly based on actual file dimensions
+This redesign:
+- Creates a cleaner, single-panel layout matching your reference
+- Shows files as visual thumbnails with inline lightbox preview
+- Merges comments and history into one chronological discussion
+- Uses proper author attribution based on logged-in team member
+- Maintains the agency vs client privacy distinction (pod names for clients)
 
-### Preview Behavior:
-- 16:9 landscape video → Shows full width with letterboxing in feed
-- 9:16 portrait → Fills stories perfectly, crops to 4:5 in feed
-- 1:1 square → Displays as square, centered in stories with blur background
