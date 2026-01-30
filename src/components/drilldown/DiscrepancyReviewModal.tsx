@@ -5,7 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, Loader2, AlertTriangle, Globe } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Trash2, Loader2, AlertTriangle, Globe, MoreVertical, Ban, CheckCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DataDiscrepancy } from '@/hooks/useDataDiscrepancies';
@@ -31,6 +38,7 @@ interface GapLead {
   campaign_name: string | null;
   ad_set_name: string | null;
   utm_source: string | null;
+  is_spam?: boolean;
 }
 
 export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: DiscrepancyReviewModalProps) {
@@ -45,7 +53,7 @@ export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: Disc
       // Fetch leads in the date range
       const { data: leads, error: leadsError } = await supabase
         .from('leads')
-        .select('id, external_id, name, email, phone, source, created_at, campaign_name, ad_set_name, utm_source')
+        .select('id, external_id, name, email, phone, source, created_at, campaign_name, ad_set_name, utm_source, is_spam')
         .eq('client_id', discrepancy.client_id)
         .gte('created_at', `${discrepancy.date_range_start}T00:00:00`)
         .lte('created_at', `${discrepancy.date_range_end}T23:59:59`)
@@ -128,6 +136,26 @@ export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: Disc
     },
   });
 
+  const markSpamMutation = useMutation({
+    mutationFn: async ({ ids, isSpam }: { ids: string[]; isSpam: boolean }) => {
+      const { error } = await supabase
+        .from('leads')
+        .update({ is_spam: isSpam })
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, { ids, isSpam }) => {
+      toast.success(`${isSpam ? 'Marked' : 'Unmarked'} ${ids.length} lead(s) as spam`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['gap-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to update leads: ' + (error as Error).message);
+    },
+  });
+
   const toggleSelect = (id: string) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -146,6 +174,11 @@ export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: Disc
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
     deleteMutation.mutate(Array.from(selectedIds));
+  };
+
+  const handleMarkSpamSelected = (isSpam: boolean) => {
+    if (selectedIds.size === 0) return;
+    markSpamMutation.mutate({ ids: Array.from(selectedIds), isSpam });
   };
 
   return (
@@ -182,6 +215,15 @@ export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: Disc
                 Select All
               </Button>
               <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleMarkSpamSelected(true)}
+                disabled={selectedIds.size === 0 || markSpamMutation.isPending}
+              >
+                <Ban className="h-4 w-4 mr-1" />
+                Mark Spam ({selectedIds.size})
+              </Button>
+              <Button 
                 variant="destructive" 
                 size="sm"
                 onClick={handleDeleteSelected}
@@ -192,7 +234,7 @@ export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: Disc
                 ) : (
                   <Trash2 className="h-4 w-4 mr-1" />
                 )}
-                Delete Selected ({selectedIds.size})
+                Delete ({selectedIds.size})
               </Button>
             </div>
           </div>
@@ -233,6 +275,7 @@ export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: Disc
                     <TableHead>Campaign / Ad Set</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -274,6 +317,13 @@ export function DiscrepancyReviewModal({ discrepancy, open, onOpenChange }: Disc
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {lead.phone || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {lead.is_spam ? (
+                          <Badge variant="destructive">Spam</Badge>
+                        ) : (
+                          <Badge variant="outline">New</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(lead.created_at), 'MMM d, h:mm a')}

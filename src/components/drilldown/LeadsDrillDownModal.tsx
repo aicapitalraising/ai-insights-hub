@@ -13,10 +13,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Download, Trash2, Plus, ChevronLeft, ChevronRight, Eye, Filter } from 'lucide-react';
+import { Download, Trash2, Plus, ChevronLeft, ChevronRight, Eye, Filter, MoreVertical, Ban, CheckCircle } from 'lucide-react';
 import { useLeads, Lead, useCalls } from '@/hooks/useLeadsAndCalls';
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,7 +94,8 @@ export function LeadsDrillDownModal({ clientId, open, onOpenChange }: LeadsDrill
     exportToCSV(filteredLeads, 'leads-filtered');
   };
 
-  const deleteLead = async (leadId: string) => {
+  const deleteLead = async (leadId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!confirm('Are you sure you want to delete this lead?')) return;
     
     try {
@@ -103,6 +111,25 @@ export function LeadsDrillDownModal({ clientId, open, onOpenChange }: LeadsDrill
       queryClient.invalidateQueries({ queryKey: ['daily-metrics', clientId] });
     } catch (error: any) {
       toast.error('Failed to delete lead: ' + error.message);
+    }
+  };
+
+  const markAsSpam = async (leadId: string, isSpam: boolean, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ is_spam: isSpam })
+        .eq('id', leadId);
+
+      if (error) throw error;
+
+      toast.success(isSpam ? 'Lead marked as spam' : 'Lead unmarked as spam');
+      queryClient.invalidateQueries({ queryKey: ['leads', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['daily-metrics', clientId] });
+    } catch (error: any) {
+      toast.error('Failed to update lead: ' + error.message);
     }
   };
 
@@ -308,23 +335,43 @@ export function LeadsDrillDownModal({ clientId, open, onOpenChange }: LeadsDrill
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8" 
-                            onClick={() => viewLeadActivity(lead)}
+                            onClick={(e) => { e.stopPropagation(); viewLeadActivity(lead); }}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => deleteLead(lead.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {lead.is_spam ? (
+                                <DropdownMenuItem onClick={(e) => markAsSpam(lead.id, false, e as any)}>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Unmark as Spam
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={(e) => markAsSpam(lead.id, true, e as any)}>
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Mark as Spam
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={(e) => deleteLead(lead.id, e as any)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete from DB
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>

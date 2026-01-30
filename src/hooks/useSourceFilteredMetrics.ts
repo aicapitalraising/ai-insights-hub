@@ -43,7 +43,8 @@ interface SourceFilteredMetricsResult {
 export function useSourceFilteredMetrics(
   leads: Lead[] = [],
   calls: Call[] = [],
-  fundedInvestors: FundedInvestor[] = []
+  fundedInvestors: FundedInvestor[] = [],
+  updateGlobalSources: boolean = true
 ): SourceFilteredMetricsResult {
   const { sourceFilter, setAvailableSources } = useDateFilter();
 
@@ -59,12 +60,12 @@ export function useSourceFilteredMetrics(
     return Array.from(sources).sort();
   }, [leads]);
 
-  // Update available sources in context
+  // Update available sources in context only if requested (prevents overwriting between views)
   useEffect(() => {
-    if (uniqueSources.length > 0) {
+    if (updateGlobalSources && uniqueSources.length > 0) {
       setAvailableSources(uniqueSources);
     }
-  }, [uniqueSources, setAvailableSources]);
+  }, [uniqueSources, setAvailableSources, updateGlobalSources]);
 
   // Filter leads by source
   const filteredLeads = useMemo(() => {
