@@ -1,148 +1,253 @@
 
-# Plan: Improved Live Ad Preview System
+# Persistent Audit/Troubleshoot Section and Enhanced Journey Labels
 
-## Current Issues
+## Overview
 
-Based on analysis of the scraped data and the reference image you provided:
+This plan adds a dedicated **Audit & Troubleshoot** section below the Attribution & Records area to provide persistent visibility into data sync health. It also enhances the timeline journey labels with clearer visual indicators and contextual information.
 
-1. **Scraping limitations**: The Firecrawl scrape captures a page screenshot rather than individual ad creative images
-2. **Data quality**: Page names show as "Ad Library" instead of actual advertiser names like "Lansing Capital Group"
-3. **Media extraction**: The scraped media URLs are small thumbnails (60x60), not the full-resolution ad creatives
-4. **Missing details**: Start dates, platforms, and full ad copy aren't being parsed correctly
+---
+
+## Current State
+
+1. **Data Discrepancy Banner**: Currently displays as a collapsible alert at the top of the client page when issues exist, but disappears when there are no discrepancies. Users have no persistent view to proactively audit data integrity.
+
+2. **Timeline Labels**: The existing timeline shows events like "Lead Created", "Call - Booked", "Funded $X" but lacks:
+   - Data source indicators (webhook vs API sync)
+   - Clear funnel stage progression labels
+   - Visual journey completeness status
+
+---
 
 ## Proposed Solution
 
-Since Facebook Ads Library has complex dynamic content that's difficult to scrape reliably, we'll implement a **hybrid approach**:
+### Part 1: Persistent Audit & Troubleshoot Section
 
-### Option A: Link-Only Mode (Quick Win)
-For each ad, display a clean preview card that links directly to the Facebook Ads Library view. This ensures users always see the actual ad as Facebook renders it.
-
-**Components:**
-- Show page name, basic info from scrape
-- Display the Firecrawl page screenshot as a thumbnail
-- "View in Ads Library" as the primary action opens the exact ad
-
-### Option B: Enhanced Scraping (Recommended)
-Improve the Edge Function to:
-1. Request Firecrawl to capture specific elements
-2. Parse the structured markdown more intelligently
-3. Extract the 600x600 images (which ARE being captured) as primary media
-4. Better parse page names from the page title/meta
-
-**Plus** redesign the card to match your reference exactly:
+Add a new section below "Detailed Records" in the Attribution & Records tab that is always visible:
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  [Avatar] Page Name                              [···]  │
-│           Sponsored                                     │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  Full ad copy text here with emoji support like ✅      │
-│  Multiple paragraphs of the primary text...             │
-│                                                         │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│              ┌─────────────────────┐                    │
-│              │                     │                    │
-│              │    AD CREATIVE      │                    │
-│              │      IMAGE          │                    │
-│              │                     │                    │
-│              └─────────────────────┘                    │
-│                                                         │
-├─────────────────────────────────────────────────────────┤
-│  Started running on Jun 10, 2025                        │
-│  [Facebook] [Instagram]                                 │
-└─────────────────────────────────────────────────────────┘
++-----------------------------------------------------------+
+|  Audit & Troubleshoot                           [Refresh] |
++-----------------------------------------------------------+
+|                                                           |
+|  Sync Health Summary                                      |
+|  +-----------------------------------------------------+  |
+|  | Last Sync    | Status      | Records    | Gap       |  |
+|  +-----------------------------------------------------+  |
+|  | Leads        | 12m ago     | 245        | 0         |  |
+|  | Calls        | 2h ago      | 89         | 0         |  |
+|  | Funded       | 1d ago      | 12         | 0         |  |
+|  +-----------------------------------------------------+  |
+|                                                           |
+|  Active Discrepancies (0)        [Show Resolved History]  |
+|  +-----------------------------------------------------+  |
+|  | No active data discrepancies detected               |  |
+|  | or: List of issues with Review/Acknowledge/Resolve  |  |
+|  +-----------------------------------------------------+  |
+|                                                           |
+|  Quick Checks                                             |
+|  +-----------------------------------------------------+  |
+|  | Leads without webhooks: 3     [Review]              |  |
+|  | Calls missing lead link: 5    [Review]              |  |
+|  | Funded without lead: 1        [Review]              |  |
+|  +-----------------------------------------------------+  |
+|                                                           |
++-----------------------------------------------------------+
+```
+
+**Features:**
+- Sync health summary showing last sync times for each record type
+- Active discrepancies list (integrated from existing `DataDiscrepancyBanner` logic)
+- Quick diagnostic checks for data integrity issues
+- Toggle to show resolved discrepancy history
+
+### Part 2: Enhanced Journey Labels
+
+Update the timeline visualization in `InlineRecordsView.tsx` to include:
+
+1. **Funnel Stage Indicators**: Clear badges showing progression
+   - Lead Created
+   - Call Booked
+   - Call Confirmed
+   - Showed / No Show
+   - Committed
+   - Funded
+
+2. **Data Source Labels**: Small indicator showing origin
+   - Webhook icon for real-time ingestion
+   - API icon for sync-sourced records
+
+3. **Journey Completeness Bar**: Visual progress indicator
+
+```text
+Timeline (Full Journey)
+-----------------------
+Lead → Booked → Showed → Funded
+
+[Webhook] Lead Created              Jan 15, 2025 2:30 PM
+          Source: Facebook • Campaign: Q1 Accredited
+
+[Webhook] Call Booked               Jan 15, 2025 3:15 PM
+          Scheduled: Jan 17, 2025 10:00 AM
+
+[API]     Call - Showed             Jan 17, 2025 10:00 AM
+          Duration: 45 min • Quality: 8/10
+
+[Webhook] Funded $50,000            Jan 25, 2025 11:00 AM
+          Time to Fund: 10 days • Calls: 2
 ```
 
 ---
 
-## Implementation Steps
+## Technical Implementation
 
-### 1. Update Edge Function: Better Parsing
+### New Files
 
-**File: `supabase/functions/scrape-fb-ads/index.ts`**
+| File | Purpose |
+|------|---------|
+| `src/components/dashboard/DataAuditSection.tsx` | Main audit/troubleshoot component |
+| `src/hooks/useSyncHealth.ts` | Hook to fetch sync status for each record type |
 
-Changes:
-- Extract page name from markdown header or title tag (look for patterns like `# Page Name` or title containing the advertiser)
-- Parse "Started running on [DATE]" patterns to get actual start dates
-- Use the 600x600 image URLs (already being captured) as the primary display image
-- Extract full primary text blocks more accurately
-- Detect platforms from badge text (Facebook, Instagram, Messenger)
+### Modified Files
 
-### 2. Redesign LiveAdCard Component
-
-**File: `src/components/funnel/LiveAdCard.tsx`**
-
-Updates to match your reference:
-- Larger card width (max-w-md instead of max-w-sm)
-- Page avatar with proper initials from actual page name
-- "Sponsored" label styled like Facebook
-- Full primary text with emoji support and proper line breaks
-- Large creative image display (use 600x600 URL)
-- Metadata footer with formatted date and platform badges
-- Dropdown menu for actions (View in Library, Analyze, Remove)
-
-### 3. Add "View in Ads Library" Fallback
-
-For any ad where we don't have complete data, provide a prominent button to open the original Facebook Ads Library page where the user can see the ad rendered perfectly.
-
-### 4. Improve Grid Layout
-
-**File: `src/components/funnel/LiveAdsSection.tsx`**
-
-- Reduce columns to fit larger cards (3-4 per row instead of 5)
-- Add proper spacing
-- Consider horizontal scroll option for many ads
+| File | Changes |
+|------|---------|
+| `src/pages/ClientDetail.tsx` | Add DataAuditSection below InlineRecordsView in records tab |
+| `src/components/dashboard/InlineRecordsView.tsx` | Enhance timeline with data source labels and journey stage badges |
+| `src/hooks/useDataDiscrepancies.ts` | Add query for resolved discrepancies history |
 
 ---
 
-## Technical Details
+## Detailed Component Design
 
-### Improved Markdown Parsing
+### DataAuditSection.tsx
 
-The scraped markdown contains patterns like:
-```
-Started running on Jun 10, 2025
-California Accredited Investors: Our fund identifies...
-Learn More
+```text
+Props:
+  - clientId: string
+  - leads: Lead[]
+  - calls: Call[]
+  - fundedInvestors: FundedInvestor[]
+
+Sections:
+  1. Sync Health Grid
+     - Last webhook log per type
+     - Last API sync timestamp from client_settings
+     - Record counts with comparison
+
+  2. Active Discrepancies
+     - Integrates existing useDataDiscrepancies hook
+     - Shows Review Gap modal
+     - Acknowledge/Resolve actions
+
+  3. Quick Checks
+     - Leads where external_id starts with 'wh_' but no webhook log
+     - Calls with null lead_id
+     - Funded investors with null lead_id
 ```
 
-We'll parse these more intelligently to extract:
-- **Start date**: Regex for "Started running on [DATE]"
-- **Primary text**: Longest paragraph blocks
-- **CTA**: Match known CTA button text
-- **Page name**: From page title or first header
+### Timeline Enhancement
 
-### Image URL Selection
+Update the timeline event interface:
 
-Currently we have:
-- `thumbnail_url`: Firecrawl's page screenshot (full page)
-- `media_urls[0]`: Small 60x60 thumbnail
-- `media_urls[1]`: Larger 600x600 image (this is what we want)
+```typescript
+interface TimelineEvent {
+  date: string;
+  label: string;
+  type: 'lead' | 'call' | 'funded' | 'adspend';
+  color: string;
+  isCurrentRecord?: boolean;
+  details?: string | null;
+  // NEW fields
+  dataSource: 'webhook' | 'api' | 'manual';
+  stage?: 'lead' | 'booked' | 'confirmed' | 'showed' | 'no_show' | 'committed' | 'funded';
+  stageIndex?: number; // for progress bar
+}
+```
 
-We'll update the display logic to prefer the larger image when available.
+Add journey progress indicator above timeline:
+
+```text
+Lead ────●──── Booked ────●──── Showed ────○──── Funded
+                                  ↑ Current Stage
+```
 
 ---
 
-## File Changes Summary
+## Database Queries
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/functions/scrape-fb-ads/index.ts` | Modify | Improved parsing logic for page names, dates, full text, image selection |
-| `src/components/funnel/LiveAdCard.tsx` | Modify | Redesign to match reference - larger card, proper layout, platform badges |
-| `src/components/funnel/LiveAdsSection.tsx` | Modify | Adjust grid layout for larger cards |
-| `src/hooks/useLiveAds.ts` | Minor | Add helper for best image URL selection |
+### Sync Health Query
+```sql
+-- Get last sync timestamps
+SELECT 
+  'leads' as record_type,
+  COUNT(*) as count,
+  MAX(ghl_synced_at) as last_synced
+FROM leads 
+WHERE client_id = $1
+
+UNION ALL
+
+SELECT 
+  'calls' as record_type,
+  COUNT(*) as count,
+  MAX(ghl_synced_at) as last_synced
+FROM calls 
+WHERE client_id = $1
+```
+
+### Quick Check Queries
+```sql
+-- Leads without webhook match
+SELECT COUNT(*) FROM leads 
+WHERE client_id = $1 
+  AND external_id NOT LIKE 'wh_%'
+  AND NOT EXISTS (
+    SELECT 1 FROM webhook_logs 
+    WHERE webhook_logs.client_id = leads.client_id
+      AND webhook_logs.webhook_type = 'lead'
+      AND webhook_logs.payload->>'contact_id' = leads.external_id
+  )
+
+-- Calls missing lead link
+SELECT COUNT(*) FROM calls 
+WHERE client_id = $1 AND lead_id IS NULL
+
+-- Funded without lead
+SELECT COUNT(*) FROM funded_investors 
+WHERE client_id = $1 AND lead_id IS NULL
+```
 
 ---
 
-## Expected Result
+## UI/UX Details
 
-After implementation, live ad cards will display:
-- **Page name**: "Lansing Capital Group" (parsed from scrape)
-- **Full ad copy**: Complete primary text with emojis preserved
-- **Clear creative**: 600x600 resolution ad image
-- **Metadata**: "Started running on Jun 10, 2025" + platform badges
-- **Fallback**: "View in Ads Library" button opens original page
+### Color Coding
+- Green: Healthy (synced within 1 hour)
+- Yellow: Stale (synced 1-24 hours ago)
+- Red: Critical (synced over 24 hours ago or never)
 
-This matches your MagicBrief reference while working within the constraints of what Firecrawl can extract from Facebook Ads Library.
+### Data Source Icons
+- Webhook: Lightning bolt icon (real-time)
+- API: Refresh arrows icon (synced)
+- Manual: Pencil icon (manually added)
+
+### Stage Badges
+Using existing color scheme from `getCallStatusLabel`:
+- Lead: `bg-chart-1` (blue)
+- Booked: `bg-chart-3` (green)
+- Confirmed: `bg-chart-4` (yellow)
+- Showed: `bg-chart-2` (teal)
+- No Show: `bg-destructive` (red)
+- Funded: `bg-primary` (purple)
+
+---
+
+## Summary of Changes
+
+1. **New Component**: `DataAuditSection.tsx` - Persistent audit panel with sync health, discrepancies, and quick checks
+2. **New Hook**: `useSyncHealth.ts` - Fetches aggregated sync status data
+3. **ClientDetail.tsx**: Add new section in the records tab
+4. **InlineRecordsView.tsx**: Enhance timeline with data source labels, stage badges, and journey progress bar
+5. **useDataDiscrepancies.ts**: Add resolved history query option
+
+This implementation provides agencies with continuous visibility into data integrity while making record journeys clearer through explicit funnel stage labeling and data source indicators.
