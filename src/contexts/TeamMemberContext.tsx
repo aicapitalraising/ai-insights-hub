@@ -87,8 +87,15 @@ export function TeamMemberProvider({ children }: { children: ReactNode }) {
 
 export function useTeamMember() {
   const context = useContext(TeamMemberContext);
+  // Return safe defaults if used outside provider (e.g., during SSR or error boundaries)
   if (context === undefined) {
-    throw new Error('useTeamMember must be used within a TeamMemberProvider');
+    console.warn('[useTeamMember] Used outside TeamMemberProvider, returning safe defaults');
+    return {
+      currentMember: null,
+      login: async () => {},
+      logout: () => {},
+      isLoading: false,
+    };
   }
   return context;
 }
