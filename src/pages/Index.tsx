@@ -40,6 +40,7 @@ import { exportToCSV } from '@/lib/exportUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUpdateClientOrder } from '@/hooks/useClientOrder';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
+import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -82,8 +83,8 @@ const Index = () => {
   // Data discrepancies
   const { data: discrepancies = [] } = useDataDiscrepancies();
 
-  // Apply source filter to leads for metric calculations
-  const { filteredLeads, isFiltered: hasSourceFilter } = useSourceFilteredMetrics(allLeads, [], fundedInvestors);
+  // Apply source filter to leads for metric calculations - updateGlobalSources=true on agency view
+  const { filteredLeads, isFiltered: hasSourceFilter } = useSourceFilteredMetrics(allLeads, [], fundedInvestors, true);
 
   const aggregatedMetrics = useMemo(() => {
     return aggregateMetrics(dailyMetrics, fundedInvestors);
@@ -141,6 +142,7 @@ const Index = () => {
     queryClient.invalidateQueries({ queryKey: ['leads'] });
     queryClient.invalidateQueries({ queryKey: ['calls'] });
     queryClient.invalidateQueries({ queryKey: ['daily-metrics'] });
+    toast.success('Refreshed dashboard data');
   };
 
   const handleReorder = (orderedIds: string[]) => {

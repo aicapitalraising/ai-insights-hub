@@ -115,12 +115,13 @@ export default function ClientDetail() {
   };
 
   // Apply source filter to leads, calls, and funded investors
+  // updateGlobalSources=true on client detail page to show client-specific sources
   const { 
     filteredLeads, 
     filteredCalls, 
     filteredFundedInvestors,
     isFiltered: hasSourceFilter 
-  } = useSourceFilteredMetrics(leads, calls, fundedInvestors);
+  } = useSourceFilteredMetrics(leads, calls, fundedInvestors, true);
 
   const aggregatedMetrics = useMemo(() => {
     // Use filtered data when source filter is active
@@ -160,6 +161,7 @@ export default function ClientDetail() {
     queryClient.invalidateQueries({ queryKey: ['call-recordings', clientId] });
     queryClient.invalidateQueries({ queryKey: ['leads', clientId] });
     queryClient.invalidateQueries({ queryKey: ['calls', clientId] });
+    toast.success('Refreshed client data');
   };
 
   const openCsvImport = (type: ImportType) => {
