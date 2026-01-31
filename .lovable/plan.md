@@ -1,253 +1,336 @@
 
-# Comprehensive GHL API-Only Sync Implementation Plan
+
+# Comprehensive Sync Queue Implementation Plan
 
 ## Overview
 
-This plan implements a complete API-based synchronization system for GoHighLevel (GHL) data, replacing webhook-based lead creation with a robust hourly sync architecture. The system will track every stage of the funnel with configurable calendar and pipeline mappings.
+This plan implements a robust sync queue system that processes all leads, calls, appointments, and timeline data from GoHighLevel (GHL) API for all clients. Since we cannot call all clients at once due to API rate limits and edge function timeouts, we'll implement a job queue with staggered processing.
 
 ## Current State Analysis
 
-The codebase already has:
-- **Leads table**: Syncs contacts from GHL via `sync-ghl-contacts` edge function
-- **Calls table**: Currently relies on webhook data with limited GHL enrichment
-- **Funded investors table**: Created from tags and pipeline stages
-- **Daily metrics table**: Aggregates data for reporting
-- **Sync logs table**: Tracks sync operations with status and timestamps
+**What exists:**
+- 17 active clients (3 healthy, 13 with errors, 1 not configured)
+- 1,328 leads already synced
+- 338 calls in database
+- 89 timeline events
+- Edge function with 500ms delays between batches
+- MAX_CONTACTS limit of 500-1000 per run
+- No dedicated job queue table
 
-**Gaps identified**:
-1. No calendar ID configuration for tracking booked/reconnect calls
-2. Call stage tracking (showed/no-show/cancelled/rescheduled) needs GHL appointment API integration
-3. No funded investor pipeline stage mapping UI
-4. No visual indicator for clients with broken/missing GHL sync
-5. Daily metrics not recalculated based on actual GHL appointment data
+**Constraints:**
+- Edge function timeout: ~30 seconds max
+- GHL API rate limits require 200-500ms delays between requests
+- Cannot process all 17 clients in a single function call
+- Historical sync (365 days) requires multiple passes per client
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Database Schema Updates
+### Phase 1: Create Sync Queue Infrastructure
 
-#### 1.1 Extend `client_settings` table
-Add new columns for calendar and pipeline mapping:
-- `tracked_calendar_ids` (TEXT[]) - Array of GHL calendar IDs to track booked calls
-- `reconnect_calendar_ids` (TEXT[]) - Array of GHL calendar IDs for reconnect calls
-- `funded_pipeline_id` (TEXT) - GHL pipeline ID for funded investor detection
-- `funded_stage_ids` (TEXT[]) - Array of stage IDs that indicate "funded"
-- `committed_stage_ids` (TEXT[]) - Array of stage IDs that indicate "committed"
+#### 1.1 New Database Table: `sync_queue`
 
-#### 1.2 Extend `clients` table
-Add sync health tracking:
-- `last_ghl_sync_at` (TIMESTAMPTZ) - Last successful GHL sync timestamp
-- `ghl_sync_status` (TEXT) - 'healthy', 'stale', 'error', 'not_configured'
-- `ghl_sync_error` (TEXT) - Last error message if sync failed
+Create a job queue table to track pending sync operations:
 
-#### 1.3 Extend `calls` table
-Add GHL appointment tracking fields:
-- `ghl_appointment_id` (TEXT) - GHL appointment ID
-- `ghl_calendar_id` (TEXT) - Which calendar this came from
-- `appointment_status` (TEXT) - 'confirmed', 'showed', 'no_showed', 'cancelled', 'rescheduled'
-- `booked_at` (TIMESTAMPTZ) - When the appointment was booked
+```sql
+CREATE TABLE public.sync_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id),
+  sync_type TEXT NOT NULL, -- 'contacts', 'appointments', 'timeline', 'full'
+  priority INTEGER DEFAULT 5, -- 1=highest, 10=lowest
+  status TEXT DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
+  date_range_start DATE,
+  date_range_end DATE,
+  batch_number INTEGER DEFAULT 1,
+  total_batches INTEGER DEFAULT 1,
+  records_processed INTEGER DEFAULT 0,
+  error_message TEXT,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
----
-
-### Phase 2: Enhanced Sync Edge Function
-
-#### 2.1 Refactor `sync-ghl-contacts` to support appointment sync
-
-Add new sync modes:
-- `mode: 'contacts'` - Sync leads only (existing behavior)
-- `mode: 'appointments'` - Sync appointments from tracked calendars
-- `mode: 'full'` - Sync both contacts and appointments
-- `mode: 'health_check'` - Validate API credentials only
-
-#### 2.2 Appointment Sync Logic
-
-The function will:
-1. Fetch client's `tracked_calendar_ids` and `reconnect_calendar_ids` from settings
-2. For each calendar, fetch appointments from GHL `/calendars/{calendarId}/events` endpoint
-3. Upsert into `calls` table with:
-   - Match by `(client_id, ghl_appointment_id)` unique constraint
-   - Set `is_reconnect = true` if from reconnect calendar
-   - Parse appointment status from GHL: `confirmed`, `showed`, `no_showed`, `cancelled`, `rescheduled`
-   - Link to `lead_id` via contact matching (email/phone/external_id)
-
-#### 2.3 Daily Metrics Recalculation
-
-After syncing appointments, recalculate `daily_metrics` for affected dates:
-- Count leads by `created_at` date
-- Count calls by `scheduled_at` date
-- Count showed calls where `appointment_status = 'showed'`
-- Count reconnect calls where `is_reconnect = true`
-- Count reconnect showed where both conditions met
-
----
-
-### Phase 3: Client Settings UI Updates
-
-#### 3.1 Add Calendar Configuration Section
-
-In `ClientSettingsModal.tsx` → Integrations tab, add:
-
-```text
-[Calendar Tracking]
-- Multi-select dropdown for "Booked Call Calendars"
-- Multi-select dropdown for "Reconnect Call Calendars"
-- Fetches available calendars from GHL `/calendars/` endpoint
+CREATE INDEX idx_sync_queue_pending ON sync_queue(status, priority, created_at) 
+  WHERE status = 'pending';
 ```
 
-#### 3.2 Add Pipeline Stage Mapping Section
+#### 1.2 Helper Function: Queue All Clients
 
-```text
-[Pipeline Stage Mapping]
-- Dropdown to select "Funded Investor Pipeline"
-- Multi-select for "Committed Stages" (maps to commitments)
-- Multi-select for "Funded Stages" (maps to funded investors)
+Create a database function to enqueue sync jobs for all clients:
+
+```sql
+CREATE OR REPLACE FUNCTION queue_full_sync_all_clients(days_back INTEGER DEFAULT 365)
+RETURNS INTEGER AS $$
+DECLARE
+  client_record RECORD;
+  jobs_created INTEGER := 0;
+  batch_size INTEGER := 90; -- Days per batch
+  num_batches INTEGER;
+  i INTEGER;
+BEGIN
+  num_batches := CEIL(days_back::DECIMAL / batch_size);
+  
+  FOR client_record IN 
+    SELECT id FROM clients 
+    WHERE status = 'active' 
+      AND ghl_api_key IS NOT NULL 
+      AND ghl_location_id IS NOT NULL
+  LOOP
+    -- Create batched jobs for each 90-day period
+    FOR i IN 1..num_batches LOOP
+      INSERT INTO sync_queue (
+        client_id, sync_type, priority, 
+        date_range_start, date_range_end,
+        batch_number, total_batches
+      ) VALUES (
+        client_record.id, 'full',
+        CASE WHEN i = 1 THEN 1 ELSE 5 END, -- Recent data first
+        CURRENT_DATE - (i * batch_size),
+        CURRENT_DATE - ((i - 1) * batch_size),
+        i, num_batches
+      );
+      jobs_created := jobs_created + 1;
+    END LOOP;
+  END LOOP;
+  
+  RETURN jobs_created;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
-#### 3.3 Sync Health Indicator
-
-Add a sync status badge in the integrations tab:
-- Green "Synced X minutes ago" if healthy
-- Yellow "Stale (X hours ago)" if > 2 hours
-- Red "Sync Error: {message}" if failed
-
 ---
 
-### Phase 4: Hourly Sync Cron Job Enhancement
+### Phase 2: Create Sync Worker Edge Function
 
-#### 4.1 Update existing `pg_cron` job
+#### 2.1 New Edge Function: `sync-queue-worker`
 
-Modify the hourly sync cron to:
-1. Fetch all clients with GHL credentials configured
-2. For each client, call sync function with `mode: 'full'`
-3. Update `clients.last_ghl_sync_at` and `ghl_sync_status`
-4. Capture any errors in `ghl_sync_error`
+This function processes one job at a time from the queue:
 
-#### 4.2 Daily Health Check Job
+```typescript
+// supabase/functions/sync-queue-worker/index.ts
+serve(async (req) => {
+  // 1. Claim the next pending job (atomic update)
+  const { data: job } = await supabase
+    .from('sync_queue')
+    .update({ status: 'processing', started_at: new Date().toISOString() })
+    .eq('status', 'pending')
+    .order('priority', { ascending: true })
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .select()
+    .single();
 
-Add a daily cron job (runs at 6 AM) that:
-1. For each client, performs a quick API validation
-2. Marks clients as 'error' if credentials are invalid (401/403)
-3. Creates a data discrepancy record if sync hasn't run in 24 hours
+  if (!job) {
+    return { success: true, message: 'No pending jobs' };
+  }
 
----
+  // 2. Get client credentials
+  const { data: client } = await supabase
+    .from('clients')
+    .select('id, name, ghl_api_key, ghl_location_id')
+    .eq('id', job.client_id)
+    .single();
 
-### Phase 5: Client Table Visual Indicator
+  // 3. Process based on sync_type
+  let result;
+  try {
+    if (job.sync_type === 'contacts' || job.sync_type === 'full') {
+      result = await syncContactsBatch(client, job.date_range_start, job.date_range_end);
+    }
+    if (job.sync_type === 'appointments' || job.sync_type === 'full') {
+      result = await syncAppointmentsBatch(client, job.date_range_start, job.date_range_end);
+    }
+    if (job.sync_type === 'timeline' || job.sync_type === 'full') {
+      result = await syncTimelineBatch(client, job.date_range_start, job.date_range_end);
+    }
 
-#### 5.1 Update `DraggableClientTable.tsx`
+    // 4. Mark job complete
+    await supabase.from('sync_queue').update({
+      status: 'completed',
+      records_processed: result.total,
+      completed_at: new Date().toISOString()
+    }).eq('id', job.id);
 
-Add visual sync status indicator:
-- If `ghl_sync_status === 'error'` or `ghl_sync_status === 'not_configured'`: Apply `border-2 border-destructive` to the row
-- If `ghl_sync_status === 'stale'`: Apply `border-2 border-yellow-500` to the row
-- Hover tooltip showing last sync time and any error message
-
-#### 5.2 Add Sync Status Column (optional)
-
-Add a "Sync" column showing:
-- Green checkmark if healthy
-- Yellow clock if stale
-- Red X if error
-- Gray dash if not configured
-
----
-
-### Phase 6: Hard Numbers by Day and Stage
-
-#### 6.1 Enhance `daily_metrics` calculation
-
-Ensure all stage counts are derived from actual records:
-- `leads`: COUNT of `leads` where `DATE(created_at) = date`
-- `calls`: COUNT of `calls` where `DATE(scheduled_at) = date`
-- `showed_calls`: COUNT where `showed = true` or `appointment_status = 'showed'`
-- `reconnect_calls`: COUNT where `is_reconnect = true`
-- `reconnect_showed`: COUNT where `is_reconnect = true AND showed = true`
-- `commitments`: COUNT of funded_investors where `commitment_amount > 0` for date
-- `funded_investors`: COUNT of funded_investors where `funded_amount > 0` for date
-
-#### 6.2 Add Metrics Refresh Trigger
-
-After each sync, trigger a refresh of daily_metrics for:
-- Today's date
-- Any dates where appointment statuses changed
-
----
-
-## Technical Architecture
-
-```text
-+----------------+     +-------------------+     +------------------+
-|   pg_cron      |---->| sync-ghl-contacts |---->| Leads Table      |
-| (hourly)       |     | Edge Function     |---->| Calls Table      |
-+----------------+     | - contacts mode   |---->| Funded Investors |
-                       | - appointments    |---->| Daily Metrics    |
-                       | - full mode       |     +------------------+
-                       +-------------------+
-                              |
-                              v
-                       +-------------------+
-                       | Clients Table     |
-                       | - last_sync_at    |
-                       | - sync_status     |
-                       | - sync_error      |
-                       +-------------------+
-                              |
-                              v
-                       +-------------------+
-                       | Client Settings   |
-                       | - calendar_ids    |
-                       | - pipeline_maps   |
-                       +-------------------+
+  } catch (error) {
+    // 5. Mark job failed with error
+    await supabase.from('sync_queue').update({
+      status: 'failed',
+      error_message: error.message,
+      completed_at: new Date().toISOString()
+    }).eq('id', job.id);
+  }
+});
 ```
+
+#### 2.2 Sync Logic by Type
+
+**Contacts Sync:**
+- Fetch contacts from GHL API with pagination
+- Filter by `dateAdded` within date range
+- Upsert to `leads` table using `(client_id, external_id)` constraint
+- Preserve GHL `dateAdded` as `created_at` for reporting
+
+**Appointments Sync:**
+- Fetch from `/calendars/{calendarId}/events` for tracked calendars
+- Upsert to `calls` table with `appointment_status`
+- Map calendar IDs to `is_reconnect` flag
+- Link to `lead_id` via contact matching
+
+**Timeline Sync:**
+- For each contact in date range, fetch notes/tasks/appointments/messages
+- Insert into `contact_timeline_events` table
+- Process in batches of 10 contacts with 500ms delays
+
+---
+
+### Phase 3: Scheduled Queue Processing
+
+#### 3.1 Update pg_cron Jobs
+
+Configure cron to process the queue every 5 minutes:
+
+```sql
+-- Process queue every 5 minutes
+SELECT cron.schedule(
+  'process-sync-queue',
+  '*/5 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://jgwwmtuvjlmzapwqiabu.supabase.co/functions/v1/sync-queue-worker',
+    headers := '{"Authorization": "Bearer ' || current_setting('app.settings.service_role_key') || '"}'::jsonb
+  );
+  $$
+);
+```
+
+This means:
+- 1 job processed every 5 minutes
+- 12 jobs per hour
+- 288 jobs per day
+- Full sync of 17 clients x 4 batches = 68 jobs = ~6 hours
+
+#### 3.2 Hourly Incremental Sync
+
+Keep the existing hourly sync for recent data (last 24 hours):
+
+```sql
+-- Hourly sync for recent data (existing job)
+SELECT cron.schedule(
+  'hourly-ghl-sync',
+  '0 * * * *',
+  $$SELECT net.http_post(..., body := '{"sync_type": "contacts", "days": 1}')$$
+);
+```
+
+---
+
+### Phase 4: Manual Trigger UI
+
+#### 4.1 Add "Queue Full Sync" Button
+
+In `ClientSettingsModal.tsx` → Integrations tab:
+
+```tsx
+const handleQueueFullSync = async () => {
+  // Queue sync jobs for this client
+  await supabase.rpc('queue_client_sync', { 
+    p_client_id: clientId, 
+    p_days_back: 365 
+  });
+  toast.success('Sync jobs queued. Processing will begin shortly.');
+};
+```
+
+#### 4.2 Add "Sync All Clients" Button
+
+In agency settings or admin panel:
+
+```tsx
+const handleQueueAllClients = async () => {
+  const { data: jobsCreated } = await supabase.rpc('queue_full_sync_all_clients', { 
+    days_back: 365 
+  });
+  toast.success(`Queued ${jobsCreated} sync jobs for all clients.`);
+};
+```
+
+---
+
+### Phase 5: Queue Monitoring Dashboard
+
+#### 5.1 Sync Queue Status Component
+
+Add a component to show queue progress:
+
+```tsx
+// src/components/settings/SyncQueueStatus.tsx
+const SyncQueueStatus = () => {
+  const { data: queueStats } = useQuery({
+    queryKey: ['sync-queue-stats'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('sync_queue')
+        .select('status, count(*)')
+        .group('status');
+      return data;
+    }
+  });
+
+  return (
+    <div>
+      <h3>Sync Queue</h3>
+      <div>Pending: {queueStats?.pending || 0}</div>
+      <div>Processing: {queueStats?.processing || 0}</div>
+      <div>Completed: {queueStats?.completed || 0}</div>
+      <div>Failed: {queueStats?.failed || 0}</div>
+    </div>
+  );
+};
+```
+
+---
+
+## Processing Timeline
+
+For a full sync of all clients (17 clients x 365 days):
+
+| Phase | Jobs | Processing Time |
+|-------|------|-----------------|
+| Recent data (0-90 days) | 17 jobs | ~1.5 hours |
+| Historical (90-180 days) | 17 jobs | ~1.5 hours |
+| Historical (180-270 days) | 17 jobs | ~1.5 hours |
+| Historical (270-365 days) | 17 jobs | ~1.5 hours |
+| **Total** | **68 jobs** | **~6 hours** |
+
+Timeline sync adds an additional pass but can run concurrently.
 
 ---
 
 ## Files to Create/Modify
 
-### Database Migration
-- Add columns to `client_settings`, `clients`, and `calls` tables
-- Add unique constraint on `calls(client_id, ghl_appointment_id)`
+### New Files
+- `supabase/functions/sync-queue-worker/index.ts` - Queue worker function
+- `src/components/settings/SyncQueueStatus.tsx` - Queue monitoring UI
 
-### Edge Functions
-- `supabase/functions/sync-ghl-contacts/index.ts` - Add appointment sync logic
-
-### React Components
-- `src/components/settings/ClientSettingsModal.tsx` - Add calendar/pipeline config UI
-- `src/components/settings/CalendarTrackingSection.tsx` (new) - Calendar multi-select
-- `src/components/settings/PipelineMappingSection.tsx` (new) - Stage mapping UI
-- `src/components/dashboard/DraggableClientTable.tsx` - Add sync status visual
-
-### Hooks
-- `src/hooks/useGHLCalendars.ts` (new) - Fetch available calendars from GHL
-- `src/hooks/useSyncHealth.ts` - Update to use new sync status fields
+### Modified Files
+- Database migration for `sync_queue` table and helper functions
+- `src/components/settings/ClientSettingsModal.tsx` - Add queue button
+- `src/components/settings/AgencySettingsModal.tsx` - Add "Sync All" button
+- `supabase/config.toml` - Register new edge function
 
 ---
 
-## Summary of Tracked Stages
+## Summary
 
-| Stage | Source | Tracking Method |
-|-------|--------|-----------------|
-| New Contacts | GHL Contacts API | Hourly sync via API |
-| Booked Calls | GHL Calendars API | By calendar ID config |
-| Showed | GHL Appointment Status | `status = 'showed'` |
-| No Show | GHL Appointment Status | `status = 'no_showed'` |
-| Cancelled | GHL Appointment Status | `status = 'cancelled'` |
-| Rescheduled | GHL Appointment Status | `status = 'rescheduled'` |
-| Reconnect Call | GHL Calendars API | By reconnect calendar config |
-| Committed | GHL Opportunities API | By stage ID mapping |
-| Funded | GHL Opportunities API | By stage ID mapping + tags |
+This queue-based architecture ensures:
 
----
+1. **No API rate limit violations** - 5-minute gaps between jobs
+2. **No edge function timeouts** - Each job processes one client + one date range
+3. **Resumable syncs** - Failed jobs can be retried
+4. **Prioritized processing** - Recent data synced first
+5. **Full visibility** - Queue status shown in UI
+6. **Automated background processing** - pg_cron triggers every 5 minutes
 
-## Client Sync Health Visual Indicator
-
-Clients without working GHL integration will be highlighted:
-- **Red border**: API credentials missing, invalid, or sync failed
-- **Yellow border**: Sync is stale (>24 hours since last successful sync)
-- **Normal border**: Healthy sync within last 2 hours
-
-This provides immediate visibility into which clients need attention.
-
-
-
-ALSO NEED TO REMOVE ALL WEBHOOK DATA FOR NOW AND FREEZE WEBHOOKS UNTIL FURTHER NOTICE 
+The system will sync all 17 clients' historical data (365 days) in approximately 6 hours, with real-time updates continuing every hour for new data.
 
