@@ -8,7 +8,6 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   XCircle,
-  ChevronDown,
   Clock,
   Eye,
   Search,
@@ -18,16 +17,7 @@ import {
 import { useSyncHealth, SyncHealthItem, QuickCheckItem } from '@/hooks/useSyncHealth';
 import { useSyncClient } from '@/hooks/useSyncClient';
 import { useMasterSync } from '@/hooks/useMasterSync';
-import { 
-  useDataDiscrepancies, 
-  useAllDiscrepancies,
-  useAcknowledgeDiscrepancy,
-  useResolveDiscrepancy,
-  DataDiscrepancy,
-} from '@/hooks/useDataDiscrepancies';
-import { DiscrepancyReviewModal } from '@/components/drilldown/DiscrepancyReviewModal';
 import { format } from 'date-fns';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Table,
   TableBody,
@@ -76,50 +66,15 @@ function formatAbsoluteTimestamp(timestamp: string | null): string {
 
 export function DataAuditSection({ clientId }: DataAuditSectionProps) {
   const queryClient = useQueryClient();
-  const [showResolved, setShowResolved] = useState(false);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<DataDiscrepancy | null>(null);
   
   const { data: syncHealth, isLoading: syncLoading, refetch: refetchSync } = useSyncHealth(clientId);
-  const { data: activeDiscrepancies = [], isLoading: discrepancyLoading } = useDataDiscrepancies(clientId);
-  const { data: allDiscrepancies = [] } = useAllDiscrepancies(showResolved);
-  const acknowledgeDiscrepancy = useAcknowledgeDiscrepancy();
-  const resolveDiscrepancy = useResolveDiscrepancy();
   
   const { progress, syncLeads, syncCalls } = useSyncClient(clientId);
   const { progress: masterProgress, runMasterSync } = useMasterSync(clientId);
   
-  const clientDiscrepancies = showResolved 
-    ? allDiscrepancies.filter(d => d.client_id === clientId)
-    : activeDiscrepancies;
-  
   const handleRefresh = () => {
     refetchSync();
-    queryClient.invalidateQueries({ queryKey: ['data-discrepancies', clientId] });
     toast.success('Refreshed audit data');
-  };
-  
-  const openReviewModal = (discrepancy: DataDiscrepancy) => {
-    setSelectedDiscrepancy(discrepancy);
-    setReviewModalOpen(true);
-  };
-  
-  const handleAcknowledge = async (id: string) => {
-    try {
-      await acknowledgeDiscrepancy.mutateAsync(id);
-      toast.success('Discrepancy acknowledged');
-    } catch (error) {
-      toast.error('Failed to acknowledge discrepancy');
-    }
-  };
-  
-  const handleResolve = async (id: string, notes?: string) => {
-    try {
-      await resolveDiscrepancy.mutateAsync({ id, notes });
-      toast.success('Discrepancy resolved');
-    } catch (error) {
-      toast.error('Failed to resolve discrepancy');
-    }
   };
 
   const handleSyncByType = async (recordType: 'leads' | 'calls' | 'funded') => {
@@ -134,7 +89,7 @@ export function DataAuditSection({ clientId }: DataAuditSectionProps) {
   };
 
   const isSyncing = progress.isLoading || masterProgress.isLoading;
-  const isLoading = syncLoading || discrepancyLoading;
+  const isLoading = syncLoading;
 
   return (
     <Card className="border-2 border-border">
@@ -240,110 +195,6 @@ export function DataAuditSection({ clientId }: DataAuditSectionProps) {
           </div>
         </div>
 
-        {/* Active Discrepancies */}
-        <Collapsible defaultOpen={clientDiscrepancies.length > 0}>
-          <div className="flex items-center justify-between">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="p-0 h-auto hover:bg-transparent">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Active Discrepancies ({clientDiscrepancies.filter(d => d.status !== 'resolved').length})
-                  <ChevronDown className="h-4 w-4" />
-                </h4>
-              </Button>
-            </CollapsibleTrigger>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowResolved(!showResolved)}
-              className="text-xs"
-            >
-              {showResolved ? 'Hide' : 'Show'} Resolved History
-            </Button>
-          </div>
-          <CollapsibleContent className="mt-3">
-            {clientDiscrepancies.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground text-sm border rounded-lg bg-muted/30">
-                <CheckCircle2 className="h-5 w-5 mx-auto mb-2 text-chart-2" />
-                No active data discrepancies detected
-              </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b bg-muted/50">
-                      <TableHead className="py-2">Type</TableHead>
-                      <TableHead className="py-2">Severity</TableHead>
-                      <TableHead className="py-2">Date Range</TableHead>
-                      <TableHead className="py-2 text-right">Gap</TableHead>
-                      <TableHead className="py-2">Status</TableHead>
-                      <TableHead className="py-2 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clientDiscrepancies.map((discrepancy) => (
-                      <TableRow key={discrepancy.id}>
-                        <TableCell className="font-medium py-2 capitalize">
-                          {discrepancy.discrepancy_type.replace('_', ' ')}
-                        </TableCell>
-                        <TableCell className="py-2">
-                          <Badge 
-                            variant={
-                              discrepancy.severity === 'critical' ? 'destructive' : 
-                              discrepancy.severity === 'warning' ? 'secondary' : 'outline'
-                            }
-                            className="text-xs capitalize"
-                          >
-                            {discrepancy.severity}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm py-2">
-                          {new Date(discrepancy.date_range_start).toLocaleDateString()} - {new Date(discrepancy.date_range_end).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right font-mono py-2">
-                          {discrepancy.difference}
-                        </TableCell>
-                        <TableCell className="py-2 capitalize">{discrepancy.status}</TableCell>
-                        <TableCell className="text-right py-2">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openReviewModal(discrepancy)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {discrepancy.status === 'open' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAcknowledge(discrepancy.id)}
-                                disabled={acknowledgeDiscrepancy.isPending}
-                              >
-                                Acknowledge
-                              </Button>
-                            )}
-                            {discrepancy.status !== 'resolved' && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleResolve(discrepancy.id)}
-                                disabled={resolveDiscrepancy.isPending}
-                              >
-                                Resolve
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-
         {/* Quick Checks */}
         <div>
           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -372,15 +223,6 @@ export function DataAuditSection({ clientId }: DataAuditSectionProps) {
           </div>
         </div>
       </CardContent>
-      
-      {/* Discrepancy Review Modal */}
-      {selectedDiscrepancy && (
-        <DiscrepancyReviewModal
-          open={reviewModalOpen}
-          onOpenChange={setReviewModalOpen}
-          discrepancy={selectedDiscrepancy}
-        />
-      )}
     </Card>
   );
 }

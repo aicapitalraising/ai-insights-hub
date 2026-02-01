@@ -810,87 +810,7 @@ async function createFundedInvestorFromContact(
   return true;
 }
 
-async function detectDiscrepancies(
-  supabase: any,
-  clientId: string,
-  apiContactsTotal: number,
-  syncLogId?: string
-): Promise<void> {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  try {
-    const { count: webhookCount } = await supabase
-      .from('webhook_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('client_id', clientId)
-      .eq('webhook_type', 'lead')
-      .eq('status', 'success')
-      .gte('processed_at', yesterday.toISOString());
-    
-    const { count: dbCount } = await supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('client_id', clientId)
-      .gte('created_at', yesterday.toISOString());
-    
-    const webhookNum = webhookCount || 0;
-    const dbNum = dbCount || 0;
-    const difference = Math.abs(webhookNum - dbNum);
-    const percentDiff = dbNum > 0 ? (difference / dbNum) * 100 : (webhookNum > 0 ? 100 : 0);
-    
-    if (difference > 3 || percentDiff > 5) {
-      const severity = percentDiff > 20 ? 'critical' : percentDiff > 10 ? 'warning' : 'info';
-      
-      console.log(`Discrepancy detected for client ${clientId}: webhook=${webhookNum}, db=${dbNum}, api=${apiContactsTotal}, diff=${difference}, severity=${severity}`);
-      
-      await supabase.from('data_discrepancies').insert({
-        client_id: clientId,
-        discrepancy_type: 'lead_count_mismatch',
-        date_range_start: yesterday.toISOString().split('T')[0],
-        date_range_end: today.toISOString().split('T')[0],
-        webhook_count: webhookNum,
-        api_count: apiContactsTotal,
-        db_count: dbNum,
-        difference,
-        severity,
-        status: 'open',
-        sync_log_id: syncLogId || null,
-      });
-    }
-    
-    const { count: failedWebhooks } = await supabase
-      .from('webhook_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('client_id', clientId)
-      .eq('status', 'error')
-      .gte('processed_at', yesterday.toISOString());
-    
-    const failedNum = failedWebhooks || 0;
-    if (failedNum > 2) {
-      const failedSeverity = failedNum > 5 ? 'critical' : 'warning';
-      
-      console.log(`Failed webhooks detected for client ${clientId}: count=${failedNum}, severity=${failedSeverity}`);
-      
-      await supabase.from('data_discrepancies').insert({
-        client_id: clientId,
-        discrepancy_type: 'failed_webhooks',
-        date_range_start: yesterday.toISOString().split('T')[0],
-        date_range_end: today.toISOString().split('T')[0],
-        webhook_count: failedNum,
-        api_count: 0,
-        db_count: 0,
-        difference: failedNum,
-        severity: failedSeverity,
-        status: 'open',
-        sync_log_id: syncLogId || null,
-      });
-    }
-  } catch (err) {
-    console.error(`Error detecting discrepancies for client ${clientId}:`, err);
-  }
-}
+// Discrepancy detection removed - webhooks are frozen, using API-only sync
 
 async function syncClientContacts(
   supabase: any,
@@ -921,10 +841,6 @@ async function syncClientContacts(
   // Calculate cutoff date if sinceDateDays is specified
   const cutoffDate = sinceDateDays ? new Date(Date.now() - sinceDateDays * 24 * 60 * 60 * 1000) : null;
   
-  // For discrepancy detection: count contacts added in last 24 hours
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  let contactsInLast24h = 0;
 
   // Track contacts that need timeline sync
   const contactsForTimeline: string[] = [];
@@ -941,13 +857,6 @@ async function syncClientContacts(
       console.log(`Fetched ${contacts.length} contacts for ${client.name}`);
 
       for (const contact of contacts) {
-        // Track contacts added in last 24 hours for accurate discrepancy detection
-        if (contact.dateAdded) {
-          const contactDate = new Date(contact.dateAdded);
-          if (contactDate >= yesterday) {
-            contactsInLast24h++;
-          }
-        }
         
         // If sinceDateDays is set and contact is older than cutoff, skip (but count for total)
         if (cutoffDate && contact.dateAdded) {
@@ -1001,7 +910,7 @@ async function syncClientContacts(
     }
     
     result.totalApiContacts = totalProcessed;
-    result.contactsInDateRange = contactsInLast24h;
+    result.contactsInDateRange = totalProcessed;
     
     // Sync timeline for queued contacts (in batches to avoid timeout)
     if (syncTimeline && contactsForTimeline.length > 0) {
@@ -1042,8 +951,6 @@ async function syncClientContacts(
         .eq('id', client.id);
     }
     
-    // Use contactsInLast24h for discrepancy detection (not totalProcessed which could be 1000)
-    await detectDiscrepancies(supabase, client.id, contactsInLast24h, syncLogId);
     
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -1065,7 +972,7 @@ async function syncClientContacts(
     console.error(`Error updating client sync status:`, err);
   }
 
-  console.log(`GHL sync complete for ${client.name}: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}, fundedFromTags=${result.fundedFromTags}, timelineSynced=${result.timelineSynced}, contactsInLast24h=${contactsInLast24h}`);
+  console.log(`GHL sync complete for ${client.name}: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}, fundedFromTags=${result.fundedFromTags}, timelineSynced=${result.timelineSynced}`);
   return result;
 }
 
