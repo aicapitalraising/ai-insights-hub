@@ -28,7 +28,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { AIAnalysisChat } from '@/components/ai/AIAnalysisChat';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
 import { TaskBoardView } from '@/components/tasks/TaskBoardView';
-import { DataDiscrepancyBanner } from '@/components/dashboard/DataDiscrepancyBanner';
+
 import { DataAuditSection } from '@/components/dashboard/DataAuditSection';
 import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { PipelineTab } from '@/components/pipeline/PipelineTab';
@@ -42,7 +42,7 @@ import { useAllTasks } from '@/hooks/useTasks';
 import { useVoiceNotes } from '@/hooks/useVoiceNotes';
 import { useMeetings } from '@/hooks/useMeetings';
 import { useCreatives } from '@/hooks/useCreatives';
-import { useDataDiscrepancies } from '@/hooks/useDataDiscrepancies';
+
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { useSourceFilteredMetrics } from '@/hooks/useSourceFilteredMetrics';
 import { exportToCSV } from '@/lib/exportUtils';
@@ -92,7 +92,7 @@ export default function ClientDetail() {
   const { data: voiceNotes = [] } = useVoiceNotes(clientId);
   const { data: meetings = [] } = useMeetings(clientId);
   const { data: creatives = [] } = useCreatives(clientId);
-  const { data: discrepancies = [] } = useDataDiscrepancies(clientId);
+  
   const deleteCustomTab = useDeleteCustomTab();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
@@ -300,10 +300,6 @@ export default function ClientDetail() {
       <main className="p-6 space-y-6">
         <DateRangeFilter showAddClient={false} onExportCSV={handleExportCSV} onRefresh={handleRefresh} />
 
-        {/* Client-specific data discrepancy alert */}
-        {discrepancies.length > 0 && (
-          <DataDiscrepancyBanner discrepancies={discrepancies} compact />
-        )}
 
         {/* Main Navigation Tabs */}
         <div className="flex items-center gap-2 flex-wrap">

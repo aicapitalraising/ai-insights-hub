@@ -20,7 +20,7 @@ import { AdSpendDrillDownModal } from '@/components/drilldown/AdSpendDrillDownMo
 import { MeetingsTab } from '@/components/meetings/MeetingsTab';
 import { CreativesTab } from '@/components/creative/CreativesTab';
 import { PendingTasksReview } from '@/components/meetings/PendingTasksReview';
-import { DataDiscrepancyBanner } from '@/components/dashboard/DataDiscrepancyBanner';
+
 import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ import { useAllDailyMetrics, useFundedInvestors, aggregateMetrics, AggregatedMet
 import { useAllClientSettings, useAllClientFullSettings } from '@/hooks/useAllClientSettings';
 import { useAllClientMRR } from '@/hooks/useClientMRR';
 import { useMeetings, usePendingMeetingTasks, useSyncMeetings } from '@/hooks/useMeetings';
-import { useDataDiscrepancies } from '@/hooks/useDataDiscrepancies';
+
 import { useAllCreatives } from '@/hooks/useAllCreatives';
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { useSourceFilteredMetrics } from '@/hooks/useSourceFilteredMetrics';
@@ -80,8 +80,6 @@ const Index = () => {
   const { data: allCreatives = [] } = useAllCreatives();
   const pendingCreatives = allCreatives.filter(c => c.status === 'pending');
   
-  // Data discrepancies
-  const { data: discrepancies = [] } = useDataDiscrepancies();
 
   // Apply source filter to leads for metric calculations - updateGlobalSources=true on agency view
   const { filteredLeads, isFiltered: hasSourceFilter } = useSourceFilteredMetrics(allLeads, [], fundedInvestors, true);
@@ -171,10 +169,6 @@ const Index = () => {
           onRefresh={handleRefresh}
         />
 
-        {/* Data Discrepancy Alert */}
-        {discrepancies.length > 0 && (
-          <DataDiscrepancyBanner discrepancies={discrepancies} />
-        )}
 
         {/* Main Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
