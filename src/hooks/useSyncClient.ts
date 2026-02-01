@@ -68,12 +68,13 @@ export function useSyncClient(clientId: string | undefined) {
     setProgress({ isLoading: true, type: 'calls', message: 'Syncing calls from GHL...' });
     
     try {
-      // Use pipelines sync for calls enrichment
-      const { data, error } = await supabase.functions.invoke('sync-ghl-pipelines', {
-        body: { client_id: clientId, mode: 'sync', sync_contacts: true }
+      // Use contacts sync which handles calls enrichment
+      const { data, error } = await supabase.functions.invoke('sync-ghl-contacts', {
+        body: { client_id: clientId, mode: 'incremental' }
       });
 
       if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Sync failed');
 
       invalidateQueries();
       toast.success('Calls synced successfully');
