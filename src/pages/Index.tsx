@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
@@ -25,12 +25,13 @@ import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sliders, Video, CheckCircle, RefreshCw, Upload, LayoutDashboard, Smartphone, Bot } from 'lucide-react';
+import { Sliders, Video, CheckCircle, RefreshCw, Upload, LayoutDashboard, Smartphone, Bot, Wifi } from 'lucide-react';
 import { useClients, Client } from '@/hooks/useClients';
 import { useAllDailyMetrics, useFundedInvestors, aggregateMetrics, AggregatedMetrics } from '@/hooks/useMetrics';
 import { useAllClientSettings, useAllClientFullSettings } from '@/hooks/useAllClientSettings';
 import { useAllClientMRR } from '@/hooks/useClientMRR';
 import { useMeetings, usePendingMeetingTasks, useSyncMeetings } from '@/hooks/useMeetings';
+import { useApiConnectionTest } from '@/hooks/useApiConnectionTest';
 
 import { useAllCreatives } from '@/hooks/useAllCreatives';
 import { useDateFilter } from '@/contexts/DateFilterContext';
@@ -76,9 +77,13 @@ const Index = () => {
   const { data: pendingTasks = [] } = usePendingMeetingTasks();
   const syncMeetings = useSyncMeetings();
   
+  // API Connection Test
+  const { testResults, isTesting, testAllClients, getClientStatus } = useApiConnectionTest();
+  
   // Creatives data
   const { data: allCreatives = [] } = useAllCreatives();
   const pendingCreatives = allCreatives.filter(c => c.status === 'pending');
+
   
 
   // Apply source filter to leads for metric calculations - updateGlobalSources=true on agency view
@@ -209,10 +214,23 @@ const Index = () => {
           <TabsContent value="dashboard" className="space-y-6">
             {/* Client Summary - moved to top */}
             <section>
-              <h2 className="text-lg font-bold mb-2">Client Summary</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Aggregated performance metrics by client
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-lg font-bold">Client Summary</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Aggregated performance metrics by client
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => testAllClients(clientIds)}
+                  disabled={isTesting || clients.length === 0}
+                >
+                  <Wifi className={`h-4 w-4 mr-2 ${isTesting ? 'animate-pulse' : ''}`} />
+                  {isTesting ? 'Testing...' : 'Test API Connections'}
+                </Button>
+              </div>
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading clients...</div>
               ) : clients.length === 0 ? (
@@ -238,6 +256,7 @@ const Index = () => {
                     onDeleteClient={handleDeleteClient}
                     onReorder={handleReorder}
                     isAdmin={currentMember?.role === 'admin'}
+                    apiTestResults={testResults}
                   />
                 </>
               )}

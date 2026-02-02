@@ -2011,6 +2011,108 @@ serve(async (req) => {
       // No body or invalid JSON - sync all clients
     }
     
+    // Handle API connection test mode
+    if (mode === 'test_connection' && targetClientId) {
+      console.log(`Test connection mode: clientId=${targetClientId}`);
+      
+      // Fetch client's GHL credentials
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id, name, ghl_api_key, ghl_location_id')
+        .eq('id', targetClientId)
+        .maybeSingle();
+      
+      if (clientError || !client) {
+        return new Response(
+          JSON.stringify({ 
+            contacts: { success: false, error: 'Client not found' },
+            calendars: { success: false, error: 'Client not found' },
+            opportunities: { success: false, error: 'Client not found' },
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!client.ghl_api_key || !client.ghl_location_id) {
+        return new Response(
+          JSON.stringify({ 
+            contacts: { success: false, error: 'No GHL credentials configured' },
+            calendars: { success: false, error: 'No GHL credentials configured' },
+            opportunities: { success: false, error: 'No GHL credentials configured' },
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const headers = {
+        'Authorization': `Bearer ${client.ghl_api_key}`,
+        'Content-Type': 'application/json',
+        'Version': '2021-07-28',
+      };
+      
+      // Test contacts endpoint
+      let contactsResult = { success: false, error: '' };
+      try {
+        const contactsRes = await fetch(
+          `${GHL_BASE_URL}/contacts/?locationId=${client.ghl_location_id}&limit=1`,
+          { method: 'GET', headers }
+        );
+        if (contactsRes.ok) {
+          contactsResult = { success: true, error: '' };
+        } else {
+          const errorText = await contactsRes.text();
+          contactsResult = { success: false, error: `${contactsRes.status}: ${errorText.substring(0, 100)}` };
+        }
+      } catch (err) {
+        contactsResult = { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+      
+      // Test calendars endpoint
+      let calendarsResult = { success: false, error: '' };
+      try {
+        const calendarsRes = await fetch(
+          `${GHL_BASE_URL}/calendars/?locationId=${client.ghl_location_id}`,
+          { method: 'GET', headers }
+        );
+        if (calendarsRes.ok) {
+          calendarsResult = { success: true, error: '' };
+        } else {
+          const errorText = await calendarsRes.text();
+          calendarsResult = { success: false, error: `${calendarsRes.status}: ${errorText.substring(0, 100)}` };
+        }
+      } catch (err) {
+        calendarsResult = { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+      
+      // Test opportunities endpoint
+      let opportunitiesResult = { success: false, error: '' };
+      try {
+        const oppsRes = await fetch(
+          `${GHL_BASE_URL}/opportunities/?locationId=${client.ghl_location_id}&limit=1`,
+          { method: 'GET', headers }
+        );
+        if (oppsRes.ok) {
+          opportunitiesResult = { success: true, error: '' };
+        } else {
+          const errorText = await oppsRes.text();
+          opportunitiesResult = { success: false, error: `${oppsRes.status}: ${errorText.substring(0, 100)}` };
+        }
+      } catch (err) {
+        opportunitiesResult = { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+      
+      console.log(`API test results: contacts=${contactsResult.success}, calendars=${calendarsResult.success}, opportunities=${opportunitiesResult.success}`);
+      
+      return new Response(
+        JSON.stringify({
+          contacts: contactsResult,
+          calendars: calendarsResult,
+          opportunities: opportunitiesResult,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Handle single contact sync mode
     if (mode === 'single' && singleContactId && targetClientId) {
       console.log(`Single contact sync mode: contactId=${singleContactId}, clientId=${targetClientId}`);

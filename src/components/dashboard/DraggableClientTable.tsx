@@ -32,6 +32,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SortConfig, SortDirection } from './SortableTableHeader';
 import { formatDistanceToNow } from 'date-fns';
+import { ClientApiStatus } from '@/hooks/useApiConnectionTest';
+import { ApiConnectionStatus } from '@/components/settings/ApiConnectionStatus';
 
 interface DraggableClientTableProps {
   clients: Client[];
@@ -42,6 +44,7 @@ interface DraggableClientTableProps {
   onDeleteClient?: (client: Client) => void;
   onReorder?: (orderedClientIds: string[]) => void;
   isAdmin?: boolean;
+  apiTestResults?: ClientApiStatus;
 }
 
 const STATUS_OPTIONS = [
@@ -104,6 +107,7 @@ export function DraggableClientTable({
   onDeleteClient,
   onReorder,
   isAdmin = false,
+  apiTestResults = {},
 }: DraggableClientTableProps) {
   const navigate = useNavigate();
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -473,42 +477,52 @@ export function DraggableClientTable({
                 <TableCell className="cursor-grab sticky left-0 bg-card z-10" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1">
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    {/* Sync Status Icon */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className={cn(
-                          "ml-1",
-                          syncInfo.status === 'healthy' && 'text-chart-2',
-                          syncInfo.status === 'stale' && 'text-yellow-500',
-                          syncInfo.status === 'error' && 'text-destructive',
-                          syncInfo.status === 'not_configured' && 'text-muted-foreground'
-                        )}>
-                          {syncInfo.status === 'healthy' && <CheckCircle className="h-3 w-3" />}
-                          {syncInfo.status === 'stale' && <Clock className="h-3 w-3" />}
-                          {syncInfo.status === 'error' && <XCircle className="h-3 w-3" />}
-                          {syncInfo.status === 'not_configured' && <AlertCircle className="h-3 w-3" />}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <div className="text-sm">
-                          <strong>GHL Sync: </strong>
-                          {syncInfo.status === 'healthy' && 'Synced'}
-                          {syncInfo.status === 'stale' && 'Stale (>2 hours)'}
-                          {syncInfo.status === 'error' && 'Error'}
-                          {syncInfo.status === 'not_configured' && 'Not Configured'}
-                          {syncInfo.lastSyncAt && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Last: {formatDistanceToNow(new Date(syncInfo.lastSyncAt), { addSuffix: true })}
-                            </div>
-                          )}
-                          {syncInfo.error && (
-                            <div className="text-xs text-destructive mt-1">
-                              {syncInfo.error}
-                            </div>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
+                    {/* API Test Status or Sync Status Icon */}
+                    {apiTestResults[client.id] ? (
+                      <ApiConnectionStatus
+                        contacts={apiTestResults[client.id].contacts}
+                        calendars={apiTestResults[client.id].calendars}
+                        opportunities={apiTestResults[client.id].opportunities}
+                        errors={apiTestResults[client.id].errors}
+                        compact
+                      />
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className={cn(
+                            "ml-1",
+                            syncInfo.status === 'healthy' && 'text-chart-2',
+                            syncInfo.status === 'stale' && 'text-yellow-600 dark:text-yellow-500',
+                            syncInfo.status === 'error' && 'text-destructive',
+                            syncInfo.status === 'not_configured' && 'text-muted-foreground'
+                          )}>
+                            {syncInfo.status === 'healthy' && <CheckCircle className="h-3 w-3" />}
+                            {syncInfo.status === 'stale' && <Clock className="h-3 w-3" />}
+                            {syncInfo.status === 'error' && <XCircle className="h-3 w-3" />}
+                            {syncInfo.status === 'not_configured' && <AlertCircle className="h-3 w-3" />}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <div className="text-sm">
+                            <strong>GHL Sync: </strong>
+                            {syncInfo.status === 'healthy' && 'Synced'}
+                            {syncInfo.status === 'stale' && 'Stale (>2 hours)'}
+                            {syncInfo.status === 'error' && 'Error'}
+                            {syncInfo.status === 'not_configured' && 'Not Configured'}
+                            {syncInfo.lastSyncAt && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Last: {formatDistanceToNow(new Date(syncInfo.lastSyncAt), { addSuffix: true })}
+                              </div>
+                            )}
+                            {syncInfo.error && (
+                              <div className="text-xs text-destructive mt-1">
+                                {syncInfo.error}
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="font-semibold text-sm sticky left-10 bg-card z-10">{client.name}</TableCell>
