@@ -245,7 +245,7 @@ export function PeriodicStatsTable({ clientId, dailyMetrics: externalMetrics }: 
       };
     }).filter(p => p.hasData);
 
-    return stats.sort((a, b) => b.period.localeCompare(a.period));
+    return stats.sort((a, b) => a.period.localeCompare(b.period));
   }, [metricsToUse, periodType, selectedYear]);
 
   const displayStats = periodType === 'monthly'
