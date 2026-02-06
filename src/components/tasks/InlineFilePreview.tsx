@@ -9,6 +9,8 @@ import {
   Loader2,
   FileText,
   Film,
+  FileAudio,
+  Mic,
 } from 'lucide-react';
 import { TaskFile } from '@/hooks/useTasks';
 import { cn } from '@/lib/utils';
@@ -22,6 +24,9 @@ interface InlineFilePreviewProps {
   onAIReview: (file: TaskFile) => void;
   isReviewing?: boolean;
   reviewingFileId?: string | null;
+  onTranscribe?: (file: TaskFile) => void;
+  isTranscribing?: boolean;
+  transcribingFileId?: string | null;
 }
 
 export function InlineFilePreview({
@@ -33,21 +38,27 @@ export function InlineFilePreview({
   onAIReview,
   isReviewing = false,
   reviewingFileId = null,
+  onTranscribe,
+  isTranscribing = false,
+  transcribingFileId = null,
 }: InlineFilePreviewProps) {
   const currentFile = files[currentIndex];
   
   if (!currentFile) return null;
   
-  const getFilePreviewType = (fileType: string | null, fileName: string): 'image' | 'video' | 'pdf' | 'document' => {
+  const getFilePreviewType = (fileType: string | null, fileName: string): 'image' | 'video' | 'audio' | 'pdf' | 'document' => {
     if (fileType?.startsWith('image/')) return 'image';
     if (fileType?.startsWith('video/')) return 'video';
+    if (fileType?.startsWith('audio/')) return 'audio';
     if (fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) return 'pdf';
     return 'document';
   };
   
   const previewType = getFilePreviewType(currentFile.file_type, currentFile.file_name);
   const canReview = previewType === 'image' || previewType === 'video';
+  const canTranscribe = previewType === 'audio' || previewType === 'video';
   const isCurrentFileReviewing = reviewingFileId === currentFile.id;
+  const isCurrentFileTranscribing = transcribingFileId === currentFile.id;
   
   const handlePrev = () => {
     if (currentIndex > 0) {
@@ -108,6 +119,19 @@ export function InlineFilePreview({
               Your browser does not support the video tag.
             </video>
           )}
+          {previewType === 'audio' && (
+            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground w-full max-w-md">
+              <FileAudio className="h-12 w-12" />
+              <audio
+                key={currentFile.id}
+                src={currentFile.file_url}
+                controls
+                className="w-full"
+              >
+                Your browser does not support the audio tag.
+              </audio>
+            </div>
+          )}
           {previewType === 'pdf' && (
             <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <FileText className="h-12 w-12" />
@@ -131,6 +155,7 @@ export function InlineFilePreview({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {previewType === 'video' && <Film className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+            {previewType === 'audio' && <FileAudio className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
             <span className="text-sm font-medium truncate">{currentFile.file_name}</span>
             {files.length > 1 && (
               <span className="text-xs text-muted-foreground flex-shrink-0">
@@ -140,6 +165,22 @@ export function InlineFilePreview({
           </div>
           
           <div className="flex items-center gap-1 flex-shrink-0">
+            {canTranscribe && onTranscribe && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onTranscribe(currentFile)}
+                disabled={isTranscribing}
+                className="h-8"
+              >
+                {isCurrentFileTranscribing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Mic className="h-3.5 w-3.5" />
+                )}
+                <span className="ml-1.5 hidden sm:inline">Transcribe</span>
+              </Button>
+            )}
             {canReview && (
               <Button
                 variant="outline"

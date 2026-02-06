@@ -1,72 +1,75 @@
- import { useState, useRef, useEffect, useMemo } from 'react';
- import {
-   Sheet,
-   SheetContent,
-   SheetHeader,
-   SheetTitle,
- } from '@/components/ui/sheet';
- import { Button } from '@/components/ui/button';
- import { Input } from '@/components/ui/input';
- import { Label } from '@/components/ui/label';
- import { Textarea } from '@/components/ui/textarea';
- import { Badge } from '@/components/ui/badge';
- import { ScrollArea } from '@/components/ui/scroll-area';
- import {
-   Select,
-   SelectContent,
-   SelectItem,
-   SelectTrigger,
-   SelectValue,
- } from '@/components/ui/select';
- import { Calendar } from '@/components/ui/calendar';
- import {
-   Popover,
-   PopoverContent,
-   PopoverTrigger,
- } from '@/components/ui/popover';
- import {
-   CalendarIcon,
-   Loader2,
-   Trash2,
-   Send,
-   CheckCircle2,
-   Video,
-   ExternalLink,
-   Mic,
-   Paperclip,
-   MessageSquare,
-   History,
-   Plus,
-   FileUp,
-   Link,
-   Copy,
- } from 'lucide-react';
- import { format } from 'date-fns';
- import { cn, addBusinessDays } from '@/lib/utils';
- import {
-   Task,
-   TaskComment,
-   TaskHistory,
-   TaskFile,
-   useUpdateTask,
-   useDeleteTask,
-   useTaskComments,
-   useTaskFiles,
-   useTaskHistory,
-   useAddTaskComment,
-   useUploadTaskFile,
-   useAddTaskHistory,
-   useAgencyMembers,
- } from '@/hooks/useTasks';
- import { useMeetings } from '@/hooks/useMeetings';
- import { useTeamMember } from '@/contexts/TeamMemberContext';
- import { useTaskFileReview } from '@/hooks/useTaskFileReview';
- import { TaskDiscussionVoiceNote, VoiceNotePlayer } from './TaskDiscussionVoiceNote';
- import { FilePreviewLightbox, MiniThumbnail } from './FilePreviewLightbox';
- import { InlineFilePreview } from './InlineFilePreview';
- import { SendToCreativeModal } from './SendToCreativeModal';
- import { MultiAssigneeSelector } from './MultiAssigneeSelector';
- import { toast } from 'sonner';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  CalendarIcon,
+  Loader2,
+  Trash2,
+  Send,
+  CheckCircle2,
+  Video,
+  ExternalLink,
+  Mic,
+  Paperclip,
+  MessageSquare,
+  History,
+  Plus,
+  FileUp,
+  Link,
+  Copy,
+  Upload,
+  FileAudio,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { cn, addBusinessDays } from '@/lib/utils';
+import {
+  Task,
+  TaskComment,
+  TaskHistory,
+  TaskFile,
+  useUpdateTask,
+  useDeleteTask,
+  useTaskComments,
+  useTaskFiles,
+  useTaskHistory,
+  useAddTaskComment,
+  useUploadTaskFile,
+  useAddTaskHistory,
+  useAgencyMembers,
+} from '@/hooks/useTasks';
+import { useMeetings } from '@/hooks/useMeetings';
+import { useTeamMember } from '@/contexts/TeamMemberContext';
+import { useTaskFileReview } from '@/hooks/useTaskFileReview';
+import { TaskDiscussionVoiceNote, VoiceNotePlayer } from './TaskDiscussionVoiceNote';
+import { FilePreviewLightbox, MiniThumbnail } from './FilePreviewLightbox';
+import { InlineFilePreview } from './InlineFilePreview';
+import { SendToCreativeModal } from './SendToCreativeModal';
+import { MultiAssigneeSelector } from './MultiAssigneeSelector';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
  
  interface TaskDetailPanelProps {
    task: Task | null;
@@ -110,11 +113,15 @@
    const [lightboxOpen, setLightboxOpen] = useState(false);
    const [selectedFileIndex, setSelectedFileIndex] = useState(0);
    const [inlineFileIndex, setInlineFileIndex] = useState(0);
-   const [sendToCreativeOpen, setSendToCreativeOpen] = useState(false);
-   const [selectedFileForCreative, setSelectedFileForCreative] = useState<TaskFile | null>(null);
-   
-   const fileInputRef = useRef<HTMLInputElement>(null);
-   const discussionFileInputRef = useRef<HTMLInputElement>(null);
+  const [sendToCreativeOpen, setSendToCreativeOpen] = useState(false);
+  const [selectedFileForCreative, setSelectedFileForCreative] = useState<TaskFile | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcribingFileId, setTranscribingFileId] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const discussionFileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
    
    const memberLookup = useMemo(() => {
      const lookup: Record<string, { name: string; podName?: string }> = {};
@@ -132,32 +139,78 @@
      return entries.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
    }, [comments, history]);
    
-   const getAuthorName = () => {
-     if (isPublicView) return task?.assigned_client_name || 'Client';
-     return currentMember?.name || 'Agency';
-   };
-   
-   const getDisplayAuthorName = (authorName: string) => {
-     if (!isPublicView) return authorName;
-     const member = memberLookup[authorName];
-     if (member?.podName) return `${member.podName} Team`;
-     return authorName;
-   };
-   
-   useEffect(() => {
-     if (task) {
-       setEditedDescription(task.description || '');
-       setInlineFileIndex(0);
-     }
-   }, [task]);
-   
-   useEffect(() => {
-     if (inlineFileIndex >= files.length && files.length > 0) {
-       setInlineFileIndex(files.length - 1);
-     }
-   }, [files.length, inlineFileIndex]);
-   
-   if (!task) return null;
+  const getAuthorName = useCallback(() => {
+    if (isPublicView) return task?.assigned_client_name || 'Client';
+    return currentMember?.name || 'Agency';
+  }, [isPublicView, task?.assigned_client_name, currentMember?.name]);
+    
+  const getDisplayAuthorName = useCallback((authorName: string) => {
+    if (!isPublicView) return authorName;
+    const member = memberLookup[authorName];
+    if (member?.podName) return `${member.podName} Team`;
+    return authorName;
+  }, [isPublicView, memberLookup]);
+
+  const uploadSingleFile = useCallback(async (file: File) => {
+    if (!task) return;
+    const authorName = getAuthorName();
+    await uploadFile.mutateAsync({ taskId: task.id, file, uploadedBy: authorName });
+    await addHistory.mutateAsync({
+      taskId: task.id,
+      action: 'file_uploaded',
+      newValue: file.name,
+      changedBy: authorName,
+    });
+  }, [task, uploadFile, addHistory, getAuthorName]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dropZoneRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length === 0) return;
+
+    toast.info(`Uploading ${droppedFiles.length} file${droppedFiles.length > 1 ? 's' : ''}...`);
+    
+    for (const file of droppedFiles) {
+      await uploadSingleFile(file);
+    }
+  }, [uploadSingleFile]);
+    
+  useEffect(() => {
+    if (task) {
+      setEditedDescription(task.description || '');
+      setInlineFileIndex(0);
+    }
+  }, [task]);
+    
+  useEffect(() => {
+    if (inlineFileIndex >= files.length && files.length > 0) {
+      setInlineFileIndex(files.length - 1);
+    }
+  }, [files.length, inlineFileIndex]);
+    
+  if (!task) return null;
    
    const resolvedClientId = clientId || task.client_id;
    
@@ -245,24 +298,100 @@
      setNewComment('');
    };
    
-   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (!file) return;
-     const authorName = getAuthorName();
-     await uploadFile.mutateAsync({ taskId: task.id, file, uploadedBy: authorName });
-     await addHistory.mutateAsync({
-       taskId: task.id,
-       action: 'file_uploaded',
-       newValue: file.name,
-       changedBy: authorName,
-     });
-     e.target.value = '';
-   };
-   
-   const openLightbox = (index: number) => {
-     setSelectedFileIndex(index);
-     setLightboxOpen(true);
-   };
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length === 0) return;
+    
+    if (selectedFiles.length > 1) {
+      toast.info(`Uploading ${selectedFiles.length} files...`);
+    }
+    
+    for (const file of selectedFiles) {
+      await uploadSingleFile(file);
+    }
+  };
+
+  const handleTranscribeFile = async (file: TaskFile) => {
+    if (!task) return;
+    
+    const isAudio = file.file_type?.startsWith('audio/');
+    const isVideo = file.file_type?.startsWith('video/');
+    
+    if (!isAudio && !isVideo) {
+      toast.error('Transcription is only available for audio and video files');
+      return;
+    }
+
+    setIsTranscribing(true);
+    setTranscribingFileId(file.id);
+
+    try {
+      toast.info('Transcribing file with Gemini AI...');
+      
+      // Fetch the file and convert to base64
+      const response = await fetch(file.file_url);
+      const blob = await response.blob();
+      
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Audio = reader.result as string;
+        
+        try {
+          const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+            body: { audio: base64Audio }
+          });
+
+          if (error) {
+            console.error('Transcription error:', error);
+            toast.error('Failed to transcribe file');
+            return;
+          }
+
+          const transcript = data?.text;
+          if (!transcript || transcript.trim() === '') {
+            toast.warning('No speech detected in the file');
+            return;
+          }
+
+          // Add transcript as a comment
+          const commentContent = `🎤 **Transcription of ${file.file_name}:**\n\n${transcript}`;
+          
+          await addComment.mutateAsync({
+            taskId: task.id,
+            authorName: 'AI Transcription',
+            content: commentContent,
+          });
+
+          await addHistory.mutateAsync({
+            taskId: task.id,
+            action: 'file_transcribed',
+            newValue: file.file_name,
+            changedBy: getAuthorName(),
+          });
+
+          toast.success('Transcription added to discussion!');
+        } catch (err) {
+          console.error('Transcription failed:', err);
+          toast.error('Transcription failed');
+        } finally {
+          setIsTranscribing(false);
+          setTranscribingFileId(null);
+        }
+      };
+
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      console.error('Failed to fetch file:', err);
+      toast.error('Failed to load file for transcription');
+      setIsTranscribing(false);
+      setTranscribingFileId(null);
+    }
+  };
+
+  const openLightbox = (index: number) => {
+    setSelectedFileIndex(index);
+    setLightboxOpen(true);
+  };
    
    const handleSendToCreative = (file: TaskFile) => {
      setSelectedFileForCreative(file);
@@ -445,52 +574,92 @@
              </div>
            </SheetHeader>
            
-           <ScrollArea className="flex-1 overflow-y-auto">
-             <div className="p-6 space-y-6">
-               {files.length > 0 && (
-                 <div>
-                   <div className="flex items-center gap-2 mb-3">
-                     <Paperclip className="h-4 w-4 text-muted-foreground" />
-                     <span className="text-sm font-medium">Files ({files.length})</span>
-                   </div>
-                   <InlineFilePreview files={files} currentIndex={inlineFileIndex} onNavigate={setInlineFileIndex} onOpenLightbox={() => openLightbox(inlineFileIndex)} onSendToCreative={handleSendToCreative} onAIReview={handleAIReview} isReviewing={isReviewing} reviewingFileId={reviewingFileId} />
-                   {files.length > 1 && (
-                     <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
-                       {files.map((file, index) => (
-                         <MiniThumbnail key={file.id} file={file} isActive={index === inlineFileIndex} onClick={() => setInlineFileIndex(index)} />
-                       ))}
-                       <button onClick={() => fileInputRef.current?.click()} disabled={uploadFile.isPending} className="w-12 h-12 rounded border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 hover:bg-muted/50 transition-all flex-shrink-0">
-                         {uploadFile.isPending ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Plus className="h-4 w-4 text-muted-foreground" />}
-                       </button>
-                     </div>
-                   )}
-                   {files.length === 1 && (
-                     <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadFile.isPending} className="mt-3">
-                       {uploadFile.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                       Add more files
-                     </Button>
-                   )}
-                 </div>
-               )}
-               
-               {files.length === 0 && (
-                 <div>
-                   <div className="flex items-center gap-2 mb-3">
-                     <Paperclip className="h-4 w-4 text-muted-foreground" />
-                     <span className="text-sm font-medium">Files</span>
-                   </div>
-                   <button onClick={() => fileInputRef.current?.click()} disabled={uploadFile.isPending} className="w-full h-24 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 hover:bg-muted/50 transition-all">
-                     {uploadFile.isPending ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
-                       <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                         <Plus className="h-6 w-6" />
-                         <span className="text-sm">Upload files</span>
-                       </div>
-                     )}
-                   </button>
-                 </div>
-               )}
-               
-               <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+            <ScrollArea className="flex-1 overflow-y-auto">
+              <div 
+                ref={dropZoneRef}
+                className={cn(
+                  "p-6 space-y-6 min-h-full transition-colors",
+                  isDragOver && "bg-primary/5 ring-2 ring-primary ring-inset"
+                )}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
+                {isDragOver && (
+                  <div className="absolute inset-4 flex items-center justify-center bg-background/80 rounded-lg border-2 border-dashed border-primary z-10 pointer-events-none">
+                    <div className="flex flex-col items-center gap-2 text-primary">
+                      <Upload className="h-8 w-8" />
+                      <span className="text-sm font-medium">Drop files here to upload</span>
+                    </div>
+                  </div>
+                )}
+                
+                {files.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Paperclip className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Files ({files.length})</span>
+                    </div>
+                    <InlineFilePreview 
+                      files={files} 
+                      currentIndex={inlineFileIndex} 
+                      onNavigate={setInlineFileIndex} 
+                      onOpenLightbox={() => openLightbox(inlineFileIndex)} 
+                      onSendToCreative={handleSendToCreative} 
+                      onAIReview={handleAIReview} 
+                      isReviewing={isReviewing} 
+                      reviewingFileId={reviewingFileId}
+                      onTranscribe={handleTranscribeFile}
+                      isTranscribing={isTranscribing}
+                      transcribingFileId={transcribingFileId}
+                    />
+                    {files.length > 1 && (
+                      <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+                        {files.map((file, index) => (
+                          <MiniThumbnail key={file.id} file={file} isActive={index === inlineFileIndex} onClick={() => setInlineFileIndex(index)} />
+                        ))}
+                        <button onClick={() => fileInputRef.current?.click()} disabled={uploadFile.isPending} className="w-12 h-12 rounded border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 hover:bg-muted/50 transition-all flex-shrink-0">
+                          {uploadFile.isPending ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Plus className="h-4 w-4 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    )}
+                    {files.length === 1 && (
+                      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadFile.isPending} className="mt-3">
+                        {uploadFile.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                        Add more files
+                      </Button>
+                    )}
+                  </div>
+                )}
+                
+                {files.length === 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Paperclip className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Files</span>
+                    </div>
+                    <button 
+                      onClick={() => fileInputRef.current?.click()} 
+                      disabled={uploadFile.isPending} 
+                      className={cn(
+                        "w-full h-24 rounded-lg border-2 border-dashed flex items-center justify-center transition-all",
+                        isDragOver 
+                          ? "border-primary bg-primary/10" 
+                          : "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/50"
+                      )}
+                    >
+                      {uploadFile.isPending ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : (
+                        <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                          <Upload className="h-6 w-6" />
+                          <span className="text-sm">Drop files here or click to upload</span>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                )}
+                
+                <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} multiple />
                
                <div>
                  <div className="flex items-center gap-2 mb-4">
