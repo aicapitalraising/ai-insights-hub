@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useClientByToken } from '@/hooks/useClients';
 import { TeamMemberProvider } from '@/contexts/TeamMemberContext';
 import { DateFilterProvider, useDateFilter } from '@/contexts/DateFilterContext';
@@ -28,7 +28,7 @@ import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { useQueryClient } from '@tanstack/react-query';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
-import { ExternalLink, ClipboardList, Smartphone, Layers, AlertCircle } from 'lucide-react';
+import { ExternalLink, ClipboardList, Smartphone, Layers, AlertCircle, Palette } from 'lucide-react';
 import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { VoiceRecordButton } from '@/components/voice/VoiceRecordButton';
 import { PipelineTab } from '@/components/pipeline/PipelineTab';
@@ -41,6 +41,7 @@ import { FundedInvestorsDrillDownModal } from '@/components/drilldown/FundedInve
 
 function PublicReportContent() {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const { startDate, endDate } = useDateFilter();
   const queryClient = useQueryClient();
   
@@ -285,6 +286,14 @@ function PublicReportContent() {
               Pipeline
             </Button>
           )}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate(`/public/${token}/creatives`)}
+          >
+            <Palette className="h-4 w-4 mr-1" />
+            Creatives
+          </Button>
           {customTabs.map((tab) => (
             <Button 
               key={tab.id}
