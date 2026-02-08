@@ -1,176 +1,335 @@
 
-# Re-engineer Performance Summary Table
+# Comprehensive App Review & Recommendations
 
-## Overview
+## Executive Summary
 
-Transform the Monthly/Weekly/Daily Performance Summary table from a **period-per-row** layout to a **transposed layout** where:
-- **Time periods appear as columns** across the top (TOTAL, Feb 2026, Jan 2026, etc.)
-- **Metrics appear as rows** down the left side (Ad Spend, Leads, CPL, Calls, etc.)
+This is a sophisticated **Capital Raising Dashboard** application built for an advertising agency managing multiple clients. The app tracks the full advertising funnel from ad spend through leads, calls, and funded investors. After thorough analysis, I've identified improvements across security, performance, user experience, code architecture, and feature gaps.
 
-This eliminates the need for horizontal scrolling since there are typically only 2-12 periods to display but 19+ metrics.
+---
 
-## Current vs New Layout
+## Application Architecture Overview
 
-**Current Layout (causes horizontal scrolling):**
 ```text
-| Month      | Ad Spend | Leads | CPL   | Calls | $/Call | Showed | ... (19 columns) |
-|------------|----------|-------|-------|-------|--------|--------|------------------|
-| TOTAL      | $0       | 972   | $0.00 | 184   | $0.00  | 110    | ...              |
-| Feb 2026   | $0       | 138   | $0.00 | 1     | $0.00  | 1      | ...              |
-| Jan 2026   | $0       | 834   | $0.00 | 183   | $0.00  | 109    | ...              |
++------------------+      +------------------+      +------------------+
+|    Frontend      |      |  Edge Functions  |      |     Supabase     |
+|   (React/Vite)   |<---->| (Deno Runtime)   |<---->|    Database      |
+|                  |      |                  |      |                  |
+| - 6 Main Pages   |      | - 20 Functions   |      | - 30+ Tables     |
+| - 50+ Components |      | - GHL/Meta Sync  |      | - RLS Policies   |
+| - 55+ Hooks      |      | - AI Analysis    |      | - Storage Buckets|
++------------------+      +------------------+      +------------------+
 ```
 
-**New Transposed Layout (vertical scrolling, no horizontal):**
-```text
-| Metric     | TOTAL  | Feb 2026 | Jan 2026 |
-|------------|--------|----------|----------|
-| Ad Spend   | $0     | $0       | $0       |
-| Leads      | 972    | 138      | 834      |
-| CPL        | $0.00  | $0.00    | $0.00    |
-| Calls      | 184    | 1        | 183      |
-| $/Call     | $0.00  | $0.00    | $0.00    |
-| Showed     | 110    | 1        | 109      |
-| Show %     | 59.8%  | 100%     | 59.6%    |
-| $/Show     | $0.00  | $0.00    | $0.00    |
-| ...        | ...    | ...      | ...      |
-```
+---
 
-## Implementation Changes
+## Priority 1: Critical Security Issues
 
-### 1. Define Metric Row Configuration
+### 1.1 Row Level Security (RLS) Vulnerabilities
+**Severity: CRITICAL**
 
-Create a structured array defining each metric row with:
-- Display label
-- Field key for data access
-- Formatting function (currency, percentage, number)
-- Whether it's editable
+The database linter found **119 security issues**:
+- 1 table with **RLS completely disabled**
+- Multiple tables with **overly permissive RLS policies** (`USING (true)`)
+
+**Impact:** Anyone with the Supabase anon key could read/modify all client data, API keys, and financial information.
+
+**Recommendation:** 
+- Enable RLS on all tables
+- Implement proper policies based on authenticated user/session
+- Consider adding a `user_id` or `agency_member_id` column to critical tables for proper access control
+
+### 1.2 Hardcoded Password Authentication
+**Severity: HIGH**
+
+The current authentication uses a **hardcoded password** (`const CORRECT_PASSWORD = 'HPA'`) stored directly in source code:
 
 ```typescript
-const METRIC_ROWS = [
-  { label: 'Ad Spend', key: 'adSpend', format: 'currency', editable: true },
-  { label: 'Leads', key: 'leads', format: 'number', editable: true },
-  { label: 'CPL', key: 'cpl', format: 'currency', editable: false },
-  { label: 'Calls', key: 'calls', format: 'number', editable: true },
-  { label: '$/Call', key: 'costPerCall', format: 'currency', editable: false },
-  // ... etc
-];
+// src/components/auth/PasswordGate.tsx
+const CORRECT_PASSWORD = 'HPA';
 ```
 
-### 2. Transpose Table Structure
+**Impact:** Password is visible in client-side JavaScript, easily discoverable.
 
-Transform the `<Table>` component:
-- **Header row**: Metric label + one column per period (TOTAL first, then periods)
-- **Body rows**: One row per metric, with values from each period
+**Recommendation:** 
+- Move to proper Supabase Auth with email/password or magic links
+- Alternatively, store password hash in `agency_settings` table and verify server-side
+- Implement rate limiting for login attempts
 
-### 3. Update Editable Cell Logic
+### 1.3 Session Storage for Authentication
+**Severity: MEDIUM**
 
-Adapt `renderEditableCell` to work in transposed context:
-- Pencil icon appears on hover for editable metric cells
-- Inline editing works the same way but positioned in transposed cell
-
-### 4. Styling Adjustments
-
-- **First column (Metric)**: Left-aligned, bold, sticky if needed
-- **TOTAL column**: Highlighted with `bg-muted/50` background
-- **Data columns**: Right-aligned, monospace font
-- Remove `overflow-x-auto` wrapper since horizontal scrolling is eliminated
-
-### 5. Mobile Responsiveness
-
-For very narrow screens (< 640px):
-- Consider limiting visible periods to last 3
-- Or keep current horizontal layout for daily view (many periods)
-
-## Visual Preview
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ Monthly Performance Summary                    [2026 ▼] [M] [W] [D] │
-│ Aggregated metrics by month for 2026                                │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Metric          │  TOTAL   │ Feb 2026 │ Jan 2026                   │
-│  ─────────────────────────────────────────────────                  │
-│  Ad Spend        │  $0      │  $0      │  $0                        │
-│  Leads           │  972     │  138     │  834                       │
-│  CPL             │  $0.00   │  $0.00   │  $0.00                     │
-│  Calls           │  184     │  1       │  183                       │
-│  $/Call          │  $0.00   │  $0.00   │  $0.00                     │
-│  Showed          │  110     │  1       │  109                       │
-│  Show %          │  59.8%   │  100%    │  59.6%                     │
-│  $/Show          │  $0.00   │  $0.00   │  $0.00                     │
-│  Reconnect       │  14      │  0       │  14                        │
-│  $/Recon         │  $0.00   │  $0.00   │  $0.00                     │
-│  Recon Showed    │  ...     │  ...     │  ...                       │
-│  $/R.Showed      │  ...     │  ...     │  ...                       │
-│  Commitments     │  ...     │  ...     │  ...                       │
-│  Commit $        │  ...     │  ...     │  ...                       │
-│  Funded #        │  ...     │  ...     │  ...                       │
-│  Funded $        │  ...     │  ...     │  ...                       │
-│  CPA             │  ...     │  ...     │  ...                       │
-│  CoC %           │  ...     │  ...     │  ...                       │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-## Technical Details
-
-### Files Modified
-- `src/components/dashboard/PeriodicStatsTable.tsx` - Complete table restructure
-
-### Key Code Structure
+Team member authentication state is stored in `sessionStorage`, which can be manipulated:
 
 ```typescript
-// Metric row definitions
-const METRIC_ROWS = [
-  { label: 'Ad Spend', key: 'adSpend', format: (v) => `$${v.toLocaleString()}`, editable: true, dbField: 'ad_spend' },
-  { label: 'Leads', key: 'leads', format: (v) => v.toLocaleString(), editable: true, dbField: 'leads' },
-  { label: 'CPL', key: 'cpl', format: (v) => `$${v.toFixed(2)}`, editable: false },
-  // ... 16 more metrics
-];
-
-// Table structure
-<Table>
-  <TableHeader>
-    <TableRow>
-      <TableHead>Metric</TableHead>
-      <TableHead className="bg-muted/50">TOTAL</TableHead>
-      {displayStats.map(period => (
-        <TableHead key={period.period}>{period.periodLabel}</TableHead>
-      ))}
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    {METRIC_ROWS.map(metric => (
-      <TableRow key={metric.key}>
-        <TableCell className="font-medium">{metric.label}</TableCell>
-        <TableCell className="bg-muted/50 font-semibold">
-          {metric.format(totals[metric.key])}
-        </TableCell>
-        {displayStats.map(period => (
-          <TableCell key={period.period}>
-            {metric.editable 
-              ? renderEditableCell(period, metric.key, period[metric.key], metric.format)
-              : metric.format(period[metric.key])
-            }
-          </TableCell>
-        ))}
-      </TableRow>
-    ))}
-  </TableBody>
-</Table>
+// Anyone could set these values in browser console
+sessionStorage.setItem(SESSION_MEMBER_ID, 'fake-id');
+sessionStorage.setItem(SESSION_MEMBER_ROLE, 'admin');
 ```
 
-### Preserving Features
-- Inline editing with pencil icon on hover (editable metrics only)
-- Year selector and period type toggle (Monthly/Weekly/Daily)
-- "Add missing month" functionality
-- TOTAL column with highlighted background
-- Funded $ row highlighted in green color
+**Recommendation:** Use signed JWT tokens validated server-side or migrate to Supabase Auth.
 
-## Benefits
+---
 
-1. **No horizontal scrolling** - All data visible without scrolling left/right
-2. **Better readability** - Metrics stack vertically in natural reading order
-3. **Easier comparison** - Compare same metric across periods horizontally
-4. **Scales better** - Works with 2 periods or 12 periods without layout changes
+## Priority 2: Performance Improvements
+
+### 2.1 Query Optimization - Missing Pagination
+**Severity: MEDIUM**
+
+Several hooks fetch all records without pagination:
+
+```typescript
+// src/hooks/useTasks.ts - fetches ALL tasks
+const { data, error } = await supabase
+  .from('tasks')
+  .select('*')
+  .order('created_at', { ascending: false });
+```
+
+**Impact:** As data grows, queries will become slow and may hit Supabase's 1000-row default limit.
+
+**Recommendation:** 
+- Implement cursor-based or offset pagination
+- Add filters by date range where applicable
+- Use React Query's infinite scroll capabilities
+
+### 2.2 Excessive Re-renders on Index Page
+**Severity: MEDIUM**
+
+The Index page fetches data from **13+ hooks** simultaneously:
+
+```typescript
+// src/pages/Index.tsx
+const { data: clients } = useClients();
+const { data: dailyMetrics } = useAllDailyMetrics(startDate, endDate);
+const { data: fundedInvestors } = useFundedInvestors();
+const { data: allLeads } = useLeads();
+const { data: meetings } = useMeetings();
+const { data: pendingTasks } = usePendingMeetingTasks();
+const { data: allCreatives } = useAllCreatives();
+// ... and more
+```
+
+**Recommendation:**
+- Implement data prefetching strategy
+- Use React Query's `staleTime` and `cacheTime` more aggressively
+- Consider combining related queries into single edge function calls
+- Add `Suspense` boundaries for loading states
+
+### 2.3 No Data Caching Strategy
+**Severity: LOW**
+
+The QueryClient uses default settings without optimized caching:
+
+```typescript
+const queryClient = new QueryClient();
+```
+
+**Recommendation:**
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      cacheTime: 1000 * 60 * 30, // 30 minutes
+      refetchOnWindowFocus: false,
+      retry: 2,
+    },
+  },
+});
+```
+
+---
+
+## Priority 3: User Experience Improvements
+
+### 3.1 Missing Error Boundaries on Main Pages
+**Severity: MEDIUM**
+
+While `PublicReport.tsx` uses `SectionErrorBoundary`, the protected pages (`Index.tsx`, `ClientDetail.tsx`) do not have error boundaries around their sections.
+
+**Impact:** A single component error could crash the entire page.
+
+**Recommendation:** Wrap major sections in `SectionErrorBoundary`:
+
+```typescript
+<SectionErrorBoundary sectionName="KPI Grid">
+  <KPIGrid metrics={aggregatedMetrics} />
+</SectionErrorBoundary>
+```
+
+### 3.2 Inconsistent Loading States
+**Severity: LOW**
+
+Some components use skeleton loaders, others use spinners, and some show nothing while loading.
+
+**Recommendation:** 
+- Standardize on skeleton loaders for content areas
+- Use consistent spinner component for actions
+- Add the custom `CashBagLoader` for full-page loads
+
+### 3.3 Mobile Responsiveness Gaps
+**Severity: MEDIUM**
+
+The 6-tab navigation on Index page doesn't handle mobile well:
+
+```typescript
+<TabsList className="grid w-full max-w-3xl grid-cols-6">
+```
+
+**Recommendation:**
+- Implement horizontal scroll for tabs on mobile
+- Consider a bottom navigation bar for mobile devices
+- Use the existing `use-mobile` hook to conditionally render layouts
+
+### 3.4 Missing Keyboard Navigation
+**Severity: LOW**
+
+The Kanban board and data tables lack keyboard accessibility.
+
+**Recommendation:**
+- Add keyboard shortcuts for common actions (N for new task, etc.)
+- Implement arrow key navigation in Kanban
+- Add focus management for modals
+
+---
+
+## Priority 4: Code Architecture Improvements
+
+### 4.1 Duplicate Type Definitions
+**Severity: LOW**
+
+Client type is defined in multiple places:
+
+```typescript
+// src/hooks/useClients.ts
+export interface Client { ... }
+
+// src/lib/types.ts  
+export interface Client { ... }
+```
+
+**Recommendation:** Centralize types in `src/types/` directory, using the auto-generated Supabase types as the source of truth.
+
+### 4.2 Large Page Components
+**Severity: MEDIUM**
+
+`Index.tsx` (330+ lines) and `ClientDetail.tsx` (570+ lines) are doing too much.
+
+**Recommendation:** Extract into smaller, focused components:
+- `<DashboardTabContent />`
+- `<ClientOverviewSection />`
+- `<ClientRecordsSection />`
+
+### 4.3 Inconsistent Error Handling
+**Severity: MEDIUM**
+
+Some hooks show toasts on error, others throw, and some silently fail:
+
+```typescript
+// Some hooks use toast
+toast.error('Failed to create task: ' + error.message);
+
+// Others just console.log
+console.error('Error fetching GHL contacts:', error);
+```
+
+**Recommendation:** 
+- Create a centralized error handling utility
+- Implement React Query's global `onError` handler
+- Add error logging service (Sentry/LogRocket)
+
+### 4.4 Edge Function Code Duplication
+**Severity: LOW**
+
+Multiple edge functions have duplicated CORS headers and Supabase client initialization.
+
+**Recommendation:** Create shared utilities in a `_shared/` folder:
+
+```typescript
+// supabase/functions/_shared/cors.ts
+export const corsHeaders = { ... };
+
+// supabase/functions/_shared/supabase.ts
+export const createSupabaseClient = () => { ... };
+```
+
+---
+
+## Priority 5: Feature Recommendations
+
+### 5.1 Realtime Updates
+**Current State:** Dashboard requires manual refresh to see new data.
+
+**Recommendation:** Enable Supabase Realtime for critical tables:
+- `daily_metrics` - for live KPI updates
+- `tasks` - for Kanban board
+- `creatives` - for approval notifications
+
+### 5.2 Audit Logging
+**Current State:** Limited activity tracking for team members.
+
+**Recommendation:** 
+- Expand `member_activity_log` to track all CRUD operations
+- Add "who changed what" visibility in client settings
+- Track all metric edits with before/after values
+
+### 5.3 Data Export Improvements
+**Current State:** Basic CSV export for daily metrics.
+
+**Recommendation:**
+- Add PDF report generation
+- Excel export with formatting
+- Scheduled email reports
+- Shareable report snapshots
+
+### 5.4 Webhook Health Monitoring
+**Current State:** Ad spend webhooks stopped without notification (as seen in your recent issue).
+
+**Recommendation:**
+- Create `webhook_health` table tracking last received timestamp per client
+- Alert when webhooks go silent for >24 hours
+- Add webhook test/ping functionality
+
+### 5.5 Multi-Tenant Role-Based Access
+**Current State:** All team members see all clients.
+
+**Recommendation:**
+- Implement pod-based client visibility
+- Add permission levels (viewer, editor, admin)
+- Client-specific access controls
+
+---
+
+## Quick Wins (Implement First)
+
+| Priority | Item | Effort | Impact |
+|----------|------|--------|--------|
+| 1 | Add Error Boundaries to Index.tsx | Low | High |
+| 2 | Move password to env/database | Low | High |
+| 3 | Add query caching defaults | Low | Medium |
+| 4 | Fix mobile tab navigation | Low | Medium |
+| 5 | Add webhook health alerts | Medium | High |
+
+---
+
+## Implementation Roadmap
+
+**Phase 1 (Week 1-2): Security Hardening**
+- Enable RLS on all tables
+- Move authentication to Supabase Auth
+- Implement proper session management
+
+**Phase 2 (Week 3-4): Performance & Stability**
+- Add error boundaries throughout
+- Implement query caching strategy
+- Add pagination to large data fetches
+
+**Phase 3 (Week 5-6): UX Polish**
+- Mobile responsiveness fixes
+- Loading state standardization
+- Keyboard accessibility
+
+**Phase 4 (Ongoing): Feature Enhancements**
+- Realtime updates
+- Advanced reporting
+- Webhook monitoring
