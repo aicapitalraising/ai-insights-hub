@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.sync-hubspot-contacts]
 verify_jwt = false
+
+[functions.external-data-api]
+verify_jwt = false
