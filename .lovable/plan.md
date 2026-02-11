@@ -1,41 +1,102 @@
 
 
-## Subtask Enhancements: Due Dates, Priorities, Assignees, Delete, and API Support
+## Full-Portfolio AI Agent with Token Usage Tracking
 
-### What will change
+### What This Does
+Build an AI agent that loads **every client's complete data** (metrics, leads, calls, funded investors, tasks, meetings, pipeline) into a single conversation context, with a live token usage bar showing how full the context window is. Model selection lets you switch between models with different context limits.
 
-1. **Subtask due dates and priorities** -- Each subtask row will show an inline priority badge and a due date, both editable via dropdowns/popovers directly on the row.
+### Important Note on Model Choice
+Grok (xAI) is not available through the platform's AI gateway. The best alternatives with the largest context windows are:
+- **Gemini 2.5 Pro** -- 1M token context (biggest available)
+- **Gemini 3 Pro Preview** -- next-gen reasoning
+- **GPT-5** -- strong reasoning, 128K context
 
-2. **Subtask assignees** -- Each subtask will have its own `MultiAssigneeSelector` (the same component used on parent tasks), so team members or pods can be assigned independently per subtask.
+Gemini 2.5 Pro at 1M tokens can hold data for dozens of clients simultaneously. The token bar will show usage against each model's limit.
 
-3. **Delete subtasks** -- The existing delete button (currently broken -- it calls `updateTask` instead of `deleteTask`) will be fixed to properly delete the subtask.
+### Changes
 
-4. **Expanded inline editing** -- Clicking a subtask title enters edit mode (already working). Priority and due date will be editable inline via small select/popover controls that appear on hover or always display.
+**1. New Edge Function: `ai-agent-full-context`**
+- Queries the database directly for ALL client data using the service role:
+  - `clients` (all records with status)
+  - `daily_metrics` (aggregated per client for the selected date range)
+  - `leads` (counts and recent entries per client)
+  - `calls` (counts, show rates, recent transcripts)
+  - `funded_investors` (counts and amounts per client)
+  - `tasks` (open tasks with assignees per client)
+  - `agency_meetings` (recent meetings with summaries)
+  - `pipeline_opportunities` (pipeline values per client)
+- Builds a comprehensive system prompt with all data
+- Estimates token count (characters / 4) and returns it alongside the stream
+- Routes through **Lovable AI Gateway** (`https://ai.gateway.lovable.dev/v1/chat/completions`) using `LOVABLE_API_KEY`
+- Supports model switching: `google/gemini-2.5-pro`, `google/gemini-3-pro-preview`, `google/gemini-3-flash-preview`, `openai/gpt-5`
+- Returns token estimate in a header (`X-Context-Tokens`) before streaming begins
 
-5. **API (external-data-api) support** -- The `task_assignees` table is already in the allowed tables list. Subtasks are already accessible via the `tasks` table (they have `parent_task_id` set). No API changes are needed -- external tools can already create/update/delete subtasks and their assignees through the existing CRUD endpoints.
+**2. Update `AIHubChat.tsx`**
+- Add new model options with context limits:
+  - Gemini 2.5 Pro (1M) -- default for full-portfolio analysis
+  - Gemini 3 Flash (1M)
+  - Gemini 3 Pro (1M)
+  - GPT-5 (128K)
+- Add **token usage bar** below the header:
+  - Shows `{usedTokens} / {maxTokens}` with a progress bar
+  - Color changes: green (under 50%), yellow (50-80%), red (over 80%)
+  - Updates after each message exchange
+  - Tooltip shows breakdown (system prompt tokens vs conversation tokens)
+- Route requests to new `ai-agent-full-context` function when "Full Portfolio" mode is active
+- Add a toggle/badge for "Full Portfolio Mode" that loads all data server-side vs the current client-side metrics injection
+
+**3. Update `AgencyAIChat.tsx` (floating chat)**
+- Add the same token usage bar
+- Add model selector with the expanded model list
+- When set to "All Clients", use the new full-context edge function
 
 ### Technical Details
 
-**Fix: Delete button (line 747)**
-- Change `updateTask.mutateAsync({ id: subtask.id })` to `deleteTask.mutateAsync(subtask.id)` so the trash icon actually deletes the subtask.
+**Edge function data assembly:**
+```text
+For each client:
+  - Name, status, ad spend, leads, calls, shows, CPL, CPC
+  - Funded investors count + total dollars + cost of capital
+  - Open tasks count + overdue count
+  - Recent meeting summaries (last 30 days)
+  - Pipeline stage distribution + total value
+  - Recent lead sources breakdown
 
-**Subtask row UI refactor (`TaskDetailPanel.tsx`)**
-Each subtask row will be expanded from a single-line layout to a richer layout:
-
+Estimated tokens for 20 clients: ~15K-30K tokens
+Estimated tokens for 50 clients: ~40K-80K tokens
+Gemini 2.5 Pro limit: 1,000,000 tokens (plenty of room)
 ```
-[check] Title (click to edit)    [Priority badge] [Due: Mar 15] [Assignee avatars] [Trash]
+
+**Token estimation logic:**
+```text
+systemPromptTokens = systemPrompt.length / 4
+conversationTokens = sum(messages.map(m => m.content.length / 4))
+totalTokens = systemPromptTokens + conversationTokens
+maxTokens = MODEL_LIMITS[selectedModel]  // e.g. 1000000 for gemini-2.5-pro
 ```
 
-- Priority: a small `Select` dropdown (low/medium/high) that updates via `updateTask`
-- Due date: a `Popover` with `Calendar` picker, same pattern as parent task
-- Assignee: render `MultiAssigneeSelector` with the subtask's ID
-- All controls compact (h-6/h-7) to keep rows tight
+**Token bar component:**
+```text
+[============================--------] 72% (720K / 1M tokens)
+      yellow bar at 72%
 
-**Subtask creation form enhancement**
-The "Add subtask" inline form will be expanded to optionally set priority and due date at creation time (default: inherit parent's priority, no due date).
+Colors:
+  < 50%  -> green (bg-green-500)
+  50-80% -> yellow (bg-yellow-500)  
+  > 80%  -> red (bg-red-500)
+```
 
-**Files to modify:**
-- `src/components/tasks/TaskDetailPanel.tsx` -- Main changes: fix delete, add priority/due date/assignee controls per subtask row, enhance creation form
-- No database migrations needed (tasks table already has `priority`, `due_date`, `parent_task_id` columns; `task_assignees` table already supports per-task assignments)
-- No edge function changes needed (external API already covers tasks and task_assignees tables)
+**Model limits map:**
+```text
+google/gemini-2.5-pro      -> 1,048,576
+google/gemini-3-pro-preview -> 1,048,576
+google/gemini-3-flash-preview -> 1,048,576
+openai/gpt-5               -> 128,000
+```
+
+**Files to create/edit:**
+- Create: `supabase/functions/ai-agent-full-context/index.ts`
+- Edit: `src/components/ai/AIHubChat.tsx` (token bar, model options, full-portfolio toggle)
+- Edit: `src/components/ai/AgencyAIChat.tsx` (token bar, model options)
+- Edit: `supabase/config.toml` (register new function with `verify_jwt = false`)
 
