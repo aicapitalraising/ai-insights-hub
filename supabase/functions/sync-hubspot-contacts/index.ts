@@ -550,17 +550,8 @@ async function recalculateRecentMetrics(
     startDate.setUTCDate(startDate.getUTCDate() - daysBack);
     startDate.setUTCHours(0, 0, 0, 0);
     
-    // Delete existing metrics for the date range
-    const startDateStr = startDate.toISOString().split('T')[0];
-    await supabase
-      .from('daily_metrics')
-      .delete()
-      .eq('client_id', clientId)
-      .gte('date', startDateStr);
-    
     // Iterate through each day
     const currentDate = new Date(startDate);
-    const metricsToInsert: any[] = [];
     
     while (currentDate <= today) {
       const dateStr = currentDate.toISOString().split('T')[0];
@@ -643,39 +634,39 @@ async function recalculateRecentMetrics(
         const commitmentCount = (fundedData || []).filter((f: any) => f.commitment_amount && f.commitment_amount > 0).length;
         
         if (totalValidLeads > 0 || (spamCount || 0) > 0 || (callsCount || 0) > 0 || (reconnectCount || 0) > 0 || (fundedCount || 0) > 0) {
-          metricsToInsert.push({
-            client_id: clientId,
-            date: dateStr,
-            leads: totalValidLeads,
-            spam_leads: spamCount || 0,
-            calls: callsCount || 0,
-            showed_calls: showedCount || 0,
-            reconnect_calls: reconnectCount || 0,
-            reconnect_showed: reconnectShowedCount || 0,
-            funded_investors: fundedCount || 0,
-            funded_dollars: fundedDollars,
-            commitments: commitmentCount,
-            commitment_dollars: commitmentDollars,
-            updated_at: new Date().toISOString(),
-          });
+          // Use upsert to preserve ad_spend, impressions, clicks, ctr from Meta sync
+          const { error: upsertError } = await supabase
+            .from('daily_metrics')
+            .upsert({
+              client_id: clientId,
+              date: dateStr,
+              leads: totalValidLeads,
+              spam_leads: spamCount || 0,
+              calls: callsCount || 0,
+              showed_calls: showedCount || 0,
+              reconnect_calls: reconnectCount || 0,
+              reconnect_showed: reconnectShowedCount || 0,
+              funded_investors: fundedCount || 0,
+              funded_dollars: fundedDollars,
+              commitments: commitmentCount,
+              commitment_dollars: commitmentDollars,
+              updated_at: new Date().toISOString(),
+            }, {
+              onConflict: 'client_id,date',
+              ignoreDuplicates: false,
+            });
+          
+          if (upsertError) {
+            result.errors.push(`Upsert error for ${dateStr}: ${upsertError.message}`);
+          } else {
+            result.daysUpdated++;
+          }
         }
       } catch (err) {
         result.errors.push(`Date ${dateStr}: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
       
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-    }
-    
-    if (metricsToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from('daily_metrics')
-        .insert(metricsToInsert);
-      
-      if (insertError) {
-        result.errors.push(`Insert error: ${insertError.message}`);
-      } else {
-        result.daysUpdated = metricsToInsert.length;
-      }
     }
     
     console.log(`[HubSpot] Recent metrics recalculation complete: ${result.daysUpdated} days updated`);
