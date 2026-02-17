@@ -24,7 +24,7 @@ async function fetchMeta(url: string, accessToken: string): Promise<MetaApiRespo
   return res.json();
 }
 
-async function fetchAllPages(url: string, accessToken: string, limit = 200): Promise<any[]> {
+async function fetchAllPages(url: string, accessToken: string, limit = 100): Promise<any[]> {
   const all: any[] = [];
   let nextUrl: string | undefined = `${url}&limit=${limit}`;
   while (nextUrl) {
@@ -32,7 +32,7 @@ async function fetchAllPages(url: string, accessToken: string, limit = 200): Pro
     if (res.error) throw new Error(res.error.message);
     if (res.data) all.push(...res.data);
     nextUrl = res.paging?.next;
-    if (all.length > 500) break; // safety cap
+    if (all.length > 1000) break; // safety cap
   }
   return all;
 }
@@ -158,10 +158,11 @@ Deno.serve(async (req) => {
     const adSetIdMap = new Map((dbAdSets || []).map((a: any) => [a.meta_adset_id, a.id]));
 
     // ── 3. Fetch Ads ──
-    const adFields = "id,name,status,effective_status,adset_id,campaign_id,creative{id,thumbnail_url,effective_object_story_id}";
+    const adFields = "id,name,status,effective_status,adset_id,campaign_id,creative{id,thumbnail_url}";
     const ads = await fetchAllPages(
       `${META_GRAPH_API_URL}/${adAccountId}/ads?fields=${adFields}`,
-      accessToken
+      accessToken,
+      50
     );
     console.log(`Fetched ${ads.length} ads`);
 
@@ -243,6 +244,40 @@ Deno.serve(async (req) => {
       console.error("Insights fetch error (non-fatal):", insightErr);
     }
 
+    // ── 5. Fetch Daily Breakdown and upsert into daily_metrics ──
+    let dailyRows = 0;
+    try {
+      const dailyFields = "spend,impressions,clicks,inline_link_click_ctr";
+      const dailyInsights = await fetchAllPages(
+        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=${dailyFields}&date_preset=last_30d&time_increment=1&level=account`,
+        accessToken
+      );
+      console.log(`Fetched ${dailyInsights.length} daily insight rows`);
+
+      for (const day of dailyInsights) {
+        const dateStr = day.date_start; // YYYY-MM-DD
+        if (!dateStr) continue;
+
+        const { error: upsertErr } = await supabase.from("daily_metrics").upsert({
+          client_id: clientId,
+          date: dateStr,
+          ad_spend: Number(day.spend) || 0,
+          impressions: Number(day.impressions) || 0,
+          clicks: Number(day.clicks) || 0,
+          ctr: Number(day.inline_link_click_ctr) || 0,
+        }, { onConflict: "client_id,date", ignoreDuplicates: false });
+
+        if (upsertErr) {
+          console.error(`Daily metrics upsert error for ${dateStr}:`, upsertErr.message);
+        } else {
+          dailyRows++;
+        }
+      }
+      console.log(`Upserted ${dailyRows} daily metric rows`);
+    } catch (dailyErr) {
+      console.error("Daily insights fetch error (non-fatal):", dailyErr);
+    }
+
     // Update sync timestamp
     await supabase.from("client_settings").upsert({
       client_id: clientId,
@@ -255,6 +290,7 @@ Deno.serve(async (req) => {
       campaigns: campaigns.length,
       adSets: adSets.length,
       ads: ads.length,
+      dailyMetrics: dailyRows,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("sync-meta-ads error:", error);
