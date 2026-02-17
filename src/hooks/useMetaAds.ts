@@ -65,19 +65,19 @@ export function useSyncMetaAds() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (clientId: string) => {
+    mutationFn: async ({ clientId, startDate, endDate }: { clientId: string; startDate?: string; endDate?: string }) => {
       const { data, error } = await supabase.functions.invoke('sync-meta-ads', {
-        body: { clientId },
+        body: { clientId, startDate, endDate },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Sync failed');
       return data;
     },
-    onSuccess: (data, clientId) => {
+    onSuccess: (data, { clientId }) => {
       queryClient.invalidateQueries({ queryKey: ['meta-campaigns', clientId] });
       queryClient.invalidateQueries({ queryKey: ['meta-ad-sets', clientId] });
       queryClient.invalidateQueries({ queryKey: ['meta-ads', clientId] });
-      toast.success(`Synced ${data.campaigns} campaigns, ${data.adSets} ad sets, ${data.ads} ads`);
+      toast.success(`Synced ${data.campaigns} campaigns, ${data.adSets} ad sets, ${data.ads} ads (${data.metaApiCalls} API calls)`);
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to sync Meta Ads');

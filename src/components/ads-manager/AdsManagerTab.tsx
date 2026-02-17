@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { RefreshCw, Loader2, BarChart3, Play, Image as ImageIcon } from 'lucide-react';
+import { RefreshCw, Loader2, BarChart3, Play, Image as ImageIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SortableTableHeader, SortConfig } from '@/components/dashboard/SortableTableHeader';
 import { useMetaCampaigns, useMetaAdSets, useMetaAds, useSyncMetaAds } from '@/hooks/useMetaAds';
 import { useClientSettings } from '@/hooks/useClientSettings';
+import { useDateFilter } from '@/contexts/DateFilterContext';
 import { formatDistanceToNow } from 'date-fns';
 
 interface AdsManagerTabProps {
@@ -17,7 +18,7 @@ interface AdsManagerTabProps {
 function StatusDot({ status }: { status: string | null }) {
   const s = (status || '').toUpperCase();
   const color = s === 'ACTIVE' ? 'bg-green-500' : s === 'PAUSED' ? 'bg-yellow-500' : 'bg-muted-foreground/40';
-  return <span className={`inline-block w-2 h-2 rounded-full ${color}`} />;
+  return <span className={`inline-block w-2.5 h-2.5 rounded-full ${color}`} />;
 }
 
 function fmt$(val: number | null) {
@@ -54,6 +55,43 @@ function useSort(defaultCol = 'spend') {
   return { sortConfig, onSort };
 }
 
+// Shared metric columns used across all three tables
+const METRIC_HEADERS = [
+  { column: 'spend', label: 'Spend' },
+  { column: 'impressions', label: 'Impr' },
+  { column: 'cpm', label: 'CPM' },
+  { column: 'clicks', label: 'Clicks' },
+  { column: 'ctr', label: 'CTR' },
+  { column: 'cpc', label: 'CPC' },
+  { column: 'attributed_leads', label: 'Leads' },
+  { column: 'cost_per_lead', label: 'CPL' },
+  { column: 'attributed_calls', label: 'Calls' },
+  { column: 'attributed_showed', label: 'Showed' },
+  { column: 'attributed_funded', label: 'Funded' },
+  { column: 'attributed_funded_dollars', label: 'Funded $' },
+  { column: 'cost_per_funded', label: 'CPA' },
+];
+
+function MetricCells({ row }: { row: any }) {
+  return (
+    <>
+      <TableCell className="text-right tabular-nums font-medium">{fmt$(row.spend)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtN(row.impressions)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmt$(row.cpm)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtN(row.clicks)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtPct(row.ctr)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmt$(row.cpc)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_leads)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmt$(row.cost_per_lead)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_calls)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_showed)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_funded)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmt$(row.attributed_funded_dollars)}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmt$(row.cost_per_funded)}</TableCell>
+    </>
+  );
+}
+
 export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
   const [activeTab, setActiveTab] = useState('campaigns');
   const [filterCampaignId, setFilterCampaignId] = useState<string | null>(null);
@@ -63,6 +101,7 @@ export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
   const { data: allAdSets = [], isLoading: asLoading } = useMetaAdSets(clientId);
   const { data: allAds = [], isLoading: adLoading } = useMetaAds(clientId);
   const { data: settings } = useClientSettings(clientId);
+  const { startDate, endDate } = useDateFilter();
   const syncMutation = useSyncMetaAds();
 
   const lastSync = (settings as any)?.meta_ads_last_sync
@@ -82,31 +121,41 @@ export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
   const filterCampaignName = filterCampaignId ? campaigns.find((c: any) => c.id === filterCampaignId)?.name : null;
   const filterAdSetName = filterAdSetId ? allAdSets.find((a: any) => a.id === filterAdSetId)?.name : null;
 
+  const handleSync = () => {
+    syncMutation.mutate({ clientId, startDate, endDate });
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold">Ads Manager</h2>
-          <Badge variant="outline" className="text-xs">{activeCampaigns.length} campaigns</Badge>
+          <h2 className="text-lg font-bold tracking-tight">Ads Manager</h2>
+          <Badge variant="outline" className="text-xs font-medium">{activeCampaigns.length} campaigns</Badge>
           {lastSync && <span className="text-xs text-muted-foreground">Synced {lastSync}</span>}
         </div>
-        <Button size="sm" onClick={() => syncMutation.mutate(clientId)} disabled={syncMutation.isPending}>
-          {syncMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          Sync Meta Ads
-        </Button>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs gap-1.5">
+            <Calendar className="h-3 w-3" />
+            {startDate} → {endDate}
+          </Badge>
+          <Button size="sm" onClick={handleSync} disabled={syncMutation.isPending}>
+            {syncMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Sync Meta Ads
+          </Button>
+        </div>
       </div>
 
       {/* Filter badges */}
       {(filterCampaignName || filterAdSetName) && (
         <div className="flex items-center gap-2 flex-wrap">
           {filterCampaignName && (
-            <Badge variant="secondary" className="cursor-pointer" onClick={() => { setFilterCampaignId(null); setFilterAdSetId(null); setActiveTab('campaigns'); }}>
+            <Badge variant="secondary" className="cursor-pointer hover:bg-destructive/10 transition-colors" onClick={() => { setFilterCampaignId(null); setFilterAdSetId(null); setActiveTab('campaigns'); }}>
               Campaign: {filterCampaignName} ✕
             </Badge>
           )}
           {filterAdSetName && (
-            <Badge variant="secondary" className="cursor-pointer" onClick={() => { setFilterAdSetId(null); setActiveTab('adsets'); }}>
+            <Badge variant="secondary" className="cursor-pointer hover:bg-destructive/10 transition-colors" onClick={() => { setFilterAdSetId(null); setActiveTab('adsets'); }}>
               Ad Set: {filterAdSetName} ✕
             </Badge>
           )}
@@ -142,45 +191,25 @@ function CampaignsTable({ data, isLoading, onSelect }: { data: any[]; isLoading:
   if (data.length === 0) return <EmptyState />;
 
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div className="rounded-lg border bg-card overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="font-bold text-sm min-w-[200px]">Campaign</TableHead>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="font-bold text-sm min-w-[320px] sticky left-0 bg-card z-10">Campaign</TableHead>
             <SortableTableHeader column="status" label="Status" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="spend" label="Spend" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="impressions" label="Impr" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cpm" label="CPM" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="clicks" label="Clicks" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="ctr" label="CTR" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cpc" label="CPC" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_leads" label="Leads" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cost_per_lead" label="CPL" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_calls" label="Calls" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_showed" label="Showed" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_funded" label="Funded" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_funded_dollars" label="Funded $" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cost_per_funded" label="CPA" sortConfig={sortConfig} onSort={onSort} />
+            {METRIC_HEADERS.map(h => (
+              <SortableTableHeader key={h.column} column={h.column} label={h.label} sortConfig={sortConfig} onSort={onSort} />
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {sorted.map((c: any) => (
-            <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelect(c.id)}>
-              <TableCell className="font-medium max-w-[250px] truncate">{c.name}</TableCell>
-              <TableCell className="text-right"><StatusDot status={c.status} /></TableCell>
-              <TableCell className="text-right">{fmt$(c.spend)}</TableCell>
-              <TableCell className="text-right">{fmtN(c.impressions)}</TableCell>
-              <TableCell className="text-right">{fmt$(c.cpm)}</TableCell>
-              <TableCell className="text-right">{fmtN(c.clicks)}</TableCell>
-              <TableCell className="text-right">{fmtPct(c.ctr)}</TableCell>
-              <TableCell className="text-right">{fmt$(c.cpc)}</TableCell>
-              <TableCell className="text-right">{fmtN(c.attributed_leads)}</TableCell>
-              <TableCell className="text-right">{fmt$(c.cost_per_lead)}</TableCell>
-              <TableCell className="text-right">{fmtN(c.attributed_calls)}</TableCell>
-              <TableCell className="text-right">{fmtN(c.attributed_showed)}</TableCell>
-              <TableCell className="text-right">{fmtN(c.attributed_funded)}</TableCell>
-              <TableCell className="text-right">{fmt$(c.attributed_funded_dollars)}</TableCell>
-              <TableCell className="text-right">{fmt$(c.cost_per_funded)}</TableCell>
+            <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onSelect(c.id)}>
+              <TableCell className="font-medium sticky left-0 bg-card z-10">
+                <span className="whitespace-normal break-words leading-snug">{c.name}</span>
+              </TableCell>
+              <TableCell className="text-center"><StatusDot status={c.status} /></TableCell>
+              <MetricCells row={c} />
             </TableRow>
           ))}
         </TableBody>
@@ -197,45 +226,25 @@ function AdSetsTable({ data, isLoading, onSelect }: { data: any[]; isLoading: bo
   if (data.length === 0) return <EmptyState />;
 
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div className="rounded-lg border bg-card overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="font-bold text-sm min-w-[200px]">Ad Set</TableHead>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="font-bold text-sm min-w-[320px] sticky left-0 bg-card z-10">Ad Set</TableHead>
             <SortableTableHeader column="effective_status" label="Status" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="spend" label="Spend" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="impressions" label="Impr" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cpm" label="CPM" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="clicks" label="Clicks" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="ctr" label="CTR" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cpc" label="CPC" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_leads" label="Leads" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cost_per_lead" label="CPL" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_calls" label="Calls" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_showed" label="Showed" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_funded" label="Funded" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="attributed_funded_dollars" label="Funded $" sortConfig={sortConfig} onSort={onSort} />
-            <SortableTableHeader column="cost_per_funded" label="CPA" sortConfig={sortConfig} onSort={onSort} />
+            {METRIC_HEADERS.map(h => (
+              <SortableTableHeader key={h.column} column={h.column} label={h.label} sortConfig={sortConfig} onSort={onSort} />
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {sorted.map((a: any) => (
-            <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelect(a.id)}>
-              <TableCell className="font-medium max-w-[250px] truncate">{a.name}</TableCell>
-              <TableCell className="text-right"><StatusDot status={a.effective_status || a.status} /></TableCell>
-              <TableCell className="text-right">{fmt$(a.spend)}</TableCell>
-              <TableCell className="text-right">{fmtN(a.impressions)}</TableCell>
-              <TableCell className="text-right">{fmt$(a.cpm)}</TableCell>
-              <TableCell className="text-right">{fmtN(a.clicks)}</TableCell>
-              <TableCell className="text-right">{fmtPct(a.ctr)}</TableCell>
-              <TableCell className="text-right">{fmt$(a.cpc)}</TableCell>
-              <TableCell className="text-right">{fmtN(a.attributed_leads)}</TableCell>
-              <TableCell className="text-right">{fmt$(a.cost_per_lead)}</TableCell>
-              <TableCell className="text-right">{fmtN(a.attributed_calls)}</TableCell>
-              <TableCell className="text-right">{fmtN(a.attributed_showed)}</TableCell>
-              <TableCell className="text-right">{fmtN(a.attributed_funded)}</TableCell>
-              <TableCell className="text-right">{fmt$(a.attributed_funded_dollars)}</TableCell>
-              <TableCell className="text-right">{fmt$(a.cost_per_funded)}</TableCell>
+            <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onSelect(a.id)}>
+              <TableCell className="font-medium sticky left-0 bg-card z-10">
+                <span className="whitespace-normal break-words leading-snug">{a.name}</span>
+              </TableCell>
+              <TableCell className="text-center"><StatusDot status={a.effective_status || a.status} /></TableCell>
+              <MetricCells row={a} />
             </TableRow>
           ))}
         </TableBody>
@@ -256,11 +265,11 @@ function AdsTable({ data, isLoading }: { data: any[]; isLoading: boolean }) {
 
   return (
     <>
-      <div className="rounded-md border overflow-x-auto">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="font-bold text-sm min-w-[280px]">Ad Creative</TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="font-bold text-sm min-w-[340px] sticky left-0 bg-card z-10">Ad Creative</TableHead>
               <SortableTableHeader column="effective_status" label="Status" sortConfig={sortConfig} onSort={onSort} />
               <SortableTableHeader column="spend" label="Spend" sortConfig={sortConfig} onSort={onSort} />
               <SortableTableHeader column="impressions" label="Impr" sortConfig={sortConfig} onSort={onSort} />
@@ -275,8 +284,8 @@ function AdsTable({ data, isLoading }: { data: any[]; isLoading: boolean }) {
               const creativeUrl = getCreativeUrl(a);
               const isVideo = a.media_type === 'video';
               return (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium max-w-[320px]">
+                <TableRow key={a.id} className="hover:bg-muted/50 transition-colors">
+                  <TableCell className="font-medium sticky left-0 bg-card z-10">
                     <div className="flex items-center gap-3">
                       {creativeUrl ? (
                         <div
@@ -296,18 +305,18 @@ function AdsTable({ data, isLoading }: { data: any[]; isLoading: boolean }) {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <span className="truncate block text-sm">{a.name}</span>
-                        {isVideo && <span className="text-xs text-muted-foreground">Video</span>}
+                        <span className="whitespace-normal break-words leading-snug text-sm">{a.name}</span>
+                        {isVideo && <span className="text-xs text-muted-foreground block mt-0.5">Video</span>}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right"><StatusDot status={a.effective_status || a.status} /></TableCell>
-                  <TableCell className="text-right">{fmt$(a.spend)}</TableCell>
-                  <TableCell className="text-right">{fmtN(a.impressions)}</TableCell>
-                  <TableCell className="text-right">{fmt$(a.cpm)}</TableCell>
-                  <TableCell className="text-right">{fmtN(a.clicks)}</TableCell>
-                  <TableCell className="text-right">{fmtPct(a.ctr)}</TableCell>
-                  <TableCell className="text-right">{fmt$(a.cpc)}</TableCell>
+                  <TableCell className="text-center"><StatusDot status={a.effective_status || a.status} /></TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">{fmt$(a.spend)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtN(a.impressions)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmt$(a.cpm)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtN(a.clicks)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtPct(a.ctr)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmt$(a.cpc)}</TableCell>
                 </TableRow>
               );
             })}
@@ -318,7 +327,7 @@ function AdsTable({ data, isLoading }: { data: any[]; isLoading: boolean }) {
       {/* Creative Preview Modal */}
       <Dialog open={!!previewAd} onOpenChange={() => setPreviewAd(null)}>
         <DialogContent className="max-w-lg">
-          <DialogTitle className="text-sm font-semibold truncate">{previewAd?.name}</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">{previewAd?.name}</DialogTitle>
           {previewAd && (
             <div className="space-y-3">
               {getCreativeUrl(previewAd) && (
