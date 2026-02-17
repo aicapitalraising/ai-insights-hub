@@ -57,9 +57,9 @@ async function fetchAllPages(url: string, accessToken: string, limit = 100, labe
   return all;
 }
 
-function getTimeRange(): string {
-  const since = "2026-01-01";
-  const until = new Date().toISOString().split("T")[0];
+function getTimeRange(startDate?: string, endDate?: string): string {
+  const since = startDate || "2026-01-01";
+  const until = endDate || new Date().toISOString().split("T")[0];
   return `time_range={"since":"${since}","until":"${until}"}`;
 }
 
@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { clientId } = await req.json();
+    const { clientId, startDate, endDate } = await req.json();
     if (!clientId) {
       return new Response(JSON.stringify({ success: false, error: "clientId is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -379,7 +379,7 @@ Deno.serve(async (req) => {
       const insightsFields = "campaign_id,impressions,clicks,spend,ctr,cpc,cpm";
       checkCallBudget("campaign-insights");
       const insights = await fetchAllPages(
-        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=${insightsFields}&level=campaign&${getTimeRange()}&time_increment=all_days`,
+        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=${insightsFields}&level=campaign&${getTimeRange(startDate, endDate)}&time_increment=all_days`,
         accessToken, 50, "campaign-insights"
       );
       for (const ins of insights) {
@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
 
       checkCallBudget("adset-insights");
       const adSetInsights = await fetchAllPages(
-        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=adset_id,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency&level=adset&${getTimeRange()}&time_increment=all_days`,
+        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=adset_id,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency&level=adset&${getTimeRange(startDate, endDate)}&time_increment=all_days`,
         accessToken, 50, "adset-insights"
       );
       for (const ins of adSetInsights) {
@@ -413,7 +413,7 @@ Deno.serve(async (req) => {
 
       checkCallBudget("ad-insights");
       const adInsights = await fetchAllPages(
-        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=ad_id,impressions,clicks,spend,ctr,cpc,cpm,reach,conversions,cost_per_action_type&level=ad&${getTimeRange()}&time_increment=all_days`,
+        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=ad_id,impressions,clicks,spend,ctr,cpc,cpm,reach,conversions,cost_per_action_type&level=ad&${getTimeRange(startDate, endDate)}&time_increment=all_days`,
         accessToken, 50, "ad-insights"
       );
       for (const ins of adInsights) {
@@ -441,7 +441,7 @@ Deno.serve(async (req) => {
       const dailyFields = "spend,impressions,clicks,inline_link_click_ctr";
       checkCallBudget("daily-insights");
       const dailyInsights = await fetchAllPages(
-        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=${dailyFields}&${getTimeRange()}&time_increment=1&level=account`,
+        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=${dailyFields}&${getTimeRange(startDate, endDate)}&time_increment=1&level=account`,
         accessToken, 100, "daily-insights"
       );
       console.log(`Fetched ${dailyInsights.length} daily insight rows`);
