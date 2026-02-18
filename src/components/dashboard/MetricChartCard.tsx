@@ -10,6 +10,7 @@ interface MetricChartCardProps {
   prefix?: string;
   suffix?: string;
   aggregation?: 'total' | 'average';
+  summaryValue?: number;
 }
 
 export function MetricChartCard({ 
@@ -19,7 +20,8 @@ export function MetricChartCard({
   color = 'hsl(var(--primary))',
   prefix = '',
   suffix = '',
-  aggregation = 'total'
+  aggregation = 'total',
+  summaryValue
 }: MetricChartCardProps) {
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) => 
@@ -34,14 +36,14 @@ export function MetricChartCard({
   }, [data, metricKey]);
 
   const aggregatedValue = useMemo(() => {
+    if (summaryValue !== undefined) return summaryValue;
     const total = chartData.reduce((sum, d) => sum + d.value, 0);
     if (aggregation === 'average') {
-      // For averages, only count days with non-zero values
       const nonZeroDays = chartData.filter(d => d.value > 0).length;
       return nonZeroDays > 0 ? total / nonZeroDays : 0;
     }
     return total;
-  }, [chartData, aggregation]);
+  }, [chartData, aggregation, summaryValue]);
 
   const formatValue = (val: number) => {
     if (prefix === '$') {

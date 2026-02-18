@@ -17,6 +17,19 @@ export function MetricChartsGrid({ dailyMetrics }: MetricChartsGridProps) {
     }));
   }, [dailyMetrics]);
 
+  // Calculate correct ratio summaries from totals (not average of daily ratios)
+  const ratioSummaries = useMemo(() => {
+    const totalSpend = dailyMetrics.reduce((sum, m) => sum + Number(m.ad_spend || 0), 0);
+    const totalLeads = dailyMetrics.reduce((sum, m) => sum + (m.leads || 0), 0);
+    const totalCalls = dailyMetrics.reduce((sum, m) => sum + (m.calls || 0), 0);
+    const totalShowed = dailyMetrics.reduce((sum, m) => sum + (m.showed_calls || 0), 0);
+    return {
+      cpl: totalLeads > 0 ? totalSpend / totalLeads : 0,
+      costPerCall: totalCalls > 0 ? totalSpend / totalCalls : 0,
+      costPerShow: totalShowed > 0 ? totalSpend / totalShowed : 0,
+    };
+  }, [dailyMetrics]);
+
   return (
     <section className="border-2 border-border bg-card p-4">
       <h3 className="font-bold text-lg mb-1">Performance Trends</h3>
@@ -43,6 +56,7 @@ export function MetricChartsGrid({ dailyMetrics }: MetricChartsGridProps) {
           color="hsl(var(--chart-3))"
           prefix="$"
           aggregation="average"
+          summaryValue={ratioSummaries.cpl}
         />
         <MetricChartCard 
           title="Calls" 
@@ -57,6 +71,7 @@ export function MetricChartsGrid({ dailyMetrics }: MetricChartsGridProps) {
           color="hsl(var(--chart-5))"
           prefix="$"
           aggregation="average"
+          summaryValue={ratioSummaries.costPerCall}
         />
         <MetricChartCard 
           title="Showed" 
@@ -71,6 +86,7 @@ export function MetricChartsGrid({ dailyMetrics }: MetricChartsGridProps) {
           color="hsl(var(--chart-1))"
           prefix="$"
           aggregation="average"
+          summaryValue={ratioSummaries.costPerShow}
         />
         <MetricChartCard 
           title="Reconnect Calls" 
