@@ -83,8 +83,8 @@ serve(async (req) => {
       const formattedSubscriptions = subscriptions.data.map((sub: any) => ({
         id: sub.id,
         status: sub.status,
-        current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        current_period_start: sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null,
+        current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
         items: sub.items.data.map((item: any) => ({
           price_id: item.price.id,
           product_id: typeof item.price.product === 'string' ? item.price.product : item.price.product?.id,
