@@ -42,6 +42,9 @@ export interface ClientSettings {
   hubspot_reconnect_meeting_types?: string[] | null;
   hubspot_last_contacts_sync?: string | null;
   hubspot_last_deals_sync?: string | null;
+  // Stripe billing
+  stripe_customer_id?: string | null;
+  stripe_email?: string | null;
 }
 
 export interface KPIThresholds {

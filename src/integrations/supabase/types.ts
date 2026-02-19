@@ -836,6 +836,8 @@ export type Database = {
           pixel_verification_frequency: string | null
           public_link_password: string | null
           reconnect_calendar_ids: string[] | null
+          stripe_customer_id: string | null
+          stripe_email: string | null
           total_raise_amount: number | null
           tracked_calendar_ids: string[] | null
           updated_at: string
@@ -898,6 +900,8 @@ export type Database = {
           pixel_verification_frequency?: string | null
           public_link_password?: string | null
           reconnect_calendar_ids?: string[] | null
+          stripe_customer_id?: string | null
+          stripe_email?: string | null
           total_raise_amount?: number | null
           tracked_calendar_ids?: string[] | null
           updated_at?: string
@@ -960,6 +964,8 @@ export type Database = {
           pixel_verification_frequency?: string | null
           public_link_password?: string | null
           reconnect_calendar_ids?: string[] | null
+          stripe_customer_id?: string | null
+          stripe_email?: string | null
           total_raise_amount?: number | null
           tracked_calendar_ids?: string[] | null
           updated_at?: string

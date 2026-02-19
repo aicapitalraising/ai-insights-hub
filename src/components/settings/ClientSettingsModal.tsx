@@ -1038,6 +1038,48 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
             <div className="border-t-2 border-border pt-6 mt-6">
               <MeetGeekIntegrationSection clientId={client.id} settings={settings} />
             </div>
+
+            {/* Stripe Billing Section */}
+            <div className="border-t-2 border-border pt-6 mt-6">
+              <div>
+                <h4 className="font-medium mb-1 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Stripe Billing
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Link this client to their Stripe customer for subscription tracking and invoicing
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Stripe Billing Email</Label>
+                  <Input
+                    value={(settings as any)?.stripe_email || ''}
+                    onChange={async (e) => {
+                      await updateSettings.mutateAsync({
+                        client_id: client.id,
+                        stripe_email: e.target.value || null,
+                      } as any);
+                    }}
+                    placeholder="billing@client.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stripe Customer ID</Label>
+                  <Input
+                    value={(settings as any)?.stripe_customer_id || ''}
+                    onChange={async (e) => {
+                      await updateSettings.mutateAsync({
+                        client_id: client.id,
+                        stripe_customer_id: e.target.value || null,
+                      } as any);
+                    }}
+                    placeholder="cus_xxxxxxxxxxxxx"
+                  />
+                  <p className="text-xs text-muted-foreground">Takes priority over email if set</p>
+                </div>
+              </div>
+            </div>
           </TabsContent>
           
           <TabsContent value="webhooks" className="mt-4">

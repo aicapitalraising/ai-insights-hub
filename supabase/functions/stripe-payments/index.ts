@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -18,89 +16,59 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    const { email, clientId, action } = await req.json();
-    console.log(`Stripe payments request: action=${action}, email=${email}, clientId=${clientId}`);
+    const { email, clientId, action, customerId, amount, currency, description, daysUntilDue, lineItems } = await req.json();
+    console.log(`Stripe request: action=${action}, email=${email}, customerId=${customerId}`);
 
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Email is required" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
-    }
-
+    // ── get-customer-payments (existing) ──
     if (action === "get-customer-payments") {
-      // Find customer by email
-      const customers = await stripe.customers.list({ email, limit: 1 });
-      
-      if (customers.data.length === 0) {
-        console.log(`No Stripe customer found for email: ${email}`);
+      if (!email && !customerId) {
         return new Response(
-          JSON.stringify({ 
-            customer: null, 
-            payments: [], 
-            subscriptions: [],
-            totalPaid: 0,
-            mrr: 0 
-          }),
+          JSON.stringify({ customer: null, payments: [], subscriptions: [], totalPaid: 0, mrr: 0 }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
         );
       }
 
-      const customer = customers.data[0];
-      console.log(`Found Stripe customer: ${customer.id} for email: ${email}`);
+      let customer: any = null;
+      if (customerId) {
+        try { customer = await stripe.customers.retrieve(customerId); } catch (_) {}
+      }
+      if (!customer && email) {
+        const customers = await stripe.customers.list({ email, limit: 1 });
+        customer = customers.data[0] || null;
+      }
 
-      // Get payment intents for this customer
-      const paymentIntents = await stripe.paymentIntents.list({
-        customer: customer.id,
-        limit: 100,
-      });
+      if (!customer || customer.deleted) {
+        return new Response(
+          JSON.stringify({ customer: null, payments: [], subscriptions: [], totalPaid: 0, mrr: 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
 
-      // Get successful charges
-      const charges = await stripe.charges.list({
-        customer: customer.id,
-        limit: 100,
-      });
+      const [charges, subscriptions] = await Promise.all([
+        stripe.charges.list({ customer: customer.id, limit: 100 }),
+        stripe.subscriptions.list({ customer: customer.id, status: 'active', limit: 10 }),
+      ]);
 
-      // Get active subscriptions
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customer.id,
-        status: 'active',
-        limit: 10,
-      });
-
-      // Calculate total paid amount (from successful charges)
       const totalPaid = charges.data
-        .filter((charge: any) => charge.status === 'succeeded' && !charge.refunded)
-        .reduce((sum: number, charge: any) => sum + charge.amount, 0) / 100; // Convert from cents
+        .filter((c: any) => c.status === 'succeeded' && !c.refunded)
+        .reduce((sum: number, c: any) => sum + c.amount, 0) / 100;
 
-      // Calculate MRR from active subscriptions
       let mrr = 0;
       for (const sub of subscriptions.data) {
         for (const item of sub.items.data) {
           const price = item.price;
           if (price.recurring) {
             let monthlyAmount = price.unit_amount || 0;
-            
-            // Normalize to monthly
             switch (price.recurring.interval) {
-              case 'day':
-                monthlyAmount = monthlyAmount * 30;
-                break;
-              case 'week':
-                monthlyAmount = monthlyAmount * 4;
-                break;
-              case 'year':
-                monthlyAmount = monthlyAmount / 12;
-                break;
-              // month is already monthly
+              case 'day': monthlyAmount *= 30; break;
+              case 'week': monthlyAmount *= 4; break;
+              case 'year': monthlyAmount /= 12; break;
             }
-            
             mrr += (monthlyAmount * (item.quantity || 1)) / 100;
           }
         }
       }
 
-      // Format payments for response
       const payments = charges.data.map((charge: any) => ({
         id: charge.id,
         amount: charge.amount / 100,
@@ -112,7 +80,6 @@ serve(async (req) => {
         refunded: charge.refunded,
       }));
 
-      // Format subscriptions for response
       const formattedSubscriptions = subscriptions.data.map((sub: any) => ({
         id: sub.id,
         status: sub.status,
@@ -128,8 +95,6 @@ serve(async (req) => {
         })),
       }));
 
-      console.log(`Found ${payments.length} payments, ${subscriptions.data.length} subscriptions for customer ${customer.id}`);
-
       return new Response(
         JSON.stringify({
           customer: {
@@ -143,6 +108,119 @@ serve(async (req) => {
           totalPaid,
           mrr,
         }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // ── search-customer ──
+    if (action === "search-customer") {
+      if (!email) {
+        return new Response(
+          JSON.stringify({ customer: null }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      const customer = customers.data[0] || null;
+      return new Response(
+        JSON.stringify({
+          customer: customer ? {
+            id: customer.id,
+            email: customer.email,
+            name: customer.name,
+            created: new Date(customer.created * 1000).toISOString(),
+          } : null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // ── create-invoice ──
+    if (action === "create-invoice") {
+      if (!customerId) {
+        return new Response(
+          JSON.stringify({ error: "customerId is required" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+
+      const invoiceData: any = {
+        customer: customerId,
+        collection_method: 'send_invoice',
+        days_until_due: daysUntilDue || 30,
+        auto_advance: true,
+      };
+      if (description) invoiceData.description = description;
+
+      const invoice = await stripe.invoices.create(invoiceData);
+
+      // Add line items
+      if (lineItems && Array.isArray(lineItems)) {
+        for (const item of lineItems) {
+          await stripe.invoiceItems.create({
+            customer: customerId,
+            invoice: invoice.id,
+            amount: Math.round((item.amount || 0) * 100),
+            currency: item.currency || currency || 'usd',
+            description: item.description || 'Service charge',
+          });
+        }
+      } else if (amount) {
+        await stripe.invoiceItems.create({
+          customer: customerId,
+          invoice: invoice.id,
+          amount: Math.round(amount * 100),
+          currency: currency || 'usd',
+          description: description || 'Service charge',
+        });
+      }
+
+      // Finalize and send
+      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+      await stripe.invoices.sendInvoice(finalizedInvoice.id);
+
+      console.log(`Invoice ${finalizedInvoice.id} created and sent for customer ${customerId}`);
+
+      return new Response(
+        JSON.stringify({
+          invoice: {
+            id: finalizedInvoice.id,
+            number: finalizedInvoice.number,
+            amount_due: (finalizedInvoice.amount_due || 0) / 100,
+            status: finalizedInvoice.status,
+            hosted_invoice_url: finalizedInvoice.hosted_invoice_url,
+            due_date: finalizedInvoice.due_date ? new Date(finalizedInvoice.due_date * 1000).toISOString() : null,
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // ── list-invoices ──
+    if (action === "list-invoices") {
+      if (!customerId) {
+        return new Response(
+          JSON.stringify({ invoices: [] }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+
+      const invoices = await stripe.invoices.list({ customer: customerId, limit: 50 });
+
+      const formattedInvoices = invoices.data.map((inv: any) => ({
+        id: inv.id,
+        number: inv.number,
+        amount_due: (inv.amount_due || 0) / 100,
+        amount_paid: (inv.amount_paid || 0) / 100,
+        status: inv.status,
+        created: new Date(inv.created * 1000).toISOString(),
+        due_date: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
+        hosted_invoice_url: inv.hosted_invoice_url,
+        invoice_pdf: inv.invoice_pdf,
+      }));
+
+      return new Response(
+        JSON.stringify({ invoices: formattedInvoices }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }

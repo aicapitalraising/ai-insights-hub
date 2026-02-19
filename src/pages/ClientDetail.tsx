@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, ClipboardList, Phone, Users, BarChart3, Video, Smartphone, Layers, Megaphone } from 'lucide-react';
+import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, ClipboardList, Phone, Users, BarChart3, Video, Smartphone, Layers, Megaphone, CreditCard } from 'lucide-react';
 import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
 import { CallsDrillDownModal } from '@/components/drilldown/CallsDrillDownModal';
 import { AdSpendDrillDownModal } from '@/components/drilldown/AdSpendDrillDownModal';
@@ -33,6 +33,7 @@ import { DataAuditSection } from '@/components/dashboard/DataAuditSection';
 import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { PipelineTab } from '@/components/pipeline/PipelineTab';
 import { AdsManagerTab } from '@/components/ads-manager/AdsManagerTab';
+import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
 import { useClient } from '@/hooks/useClients';
 import { useDailyMetrics, useFundedInvestors } from '@/hooks/useMetrics';
 import { useSourceAggregatedMetrics } from '@/hooks/useSourceMetrics';
@@ -365,6 +366,14 @@ export default function ClientDetail() {
             <Megaphone className="h-4 w-4 mr-1" />
             Ads Manager
           </Button>
+          <Button 
+            variant={activeTab === 'billing' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setActiveTab('billing')}
+          >
+            <CreditCard className="h-4 w-4 mr-1" />
+            Billing
+          </Button>
           {customTabs.map((tab) => (
             <div key={tab.id} className="relative group">
               <Button 
@@ -525,6 +534,12 @@ export default function ClientDetail() {
         {activeTab === 'ads-manager' && (
           <SectionErrorBoundary sectionName="Ads Manager">
             <AdsManagerTab clientId={client.id} />
+          </SectionErrorBoundary>
+        )}
+        {/* Billing Tab */}
+        {activeTab === 'billing' && (
+          <SectionErrorBoundary sectionName="Billing">
+            <ClientBillingTab clientId={client.id} clientName={client.name} />
           </SectionErrorBoundary>
         )}
         {customTabs.map((tab) => (
