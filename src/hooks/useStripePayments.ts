@@ -40,17 +40,22 @@ export interface StripeCustomerData {
   mrr: number;
 }
 
-export function useStripePayments(email: string | null | undefined) {
+export function useStripePayments(emailOrCustomerId: string | null | undefined) {
   return useQuery({
-    queryKey: ['stripe-payments', email],
+    queryKey: ['stripe-payments', emailOrCustomerId],
     queryFn: async (): Promise<StripeCustomerData> => {
-      if (!email) {
+      if (!emailOrCustomerId) {
         return { customer: null, payments: [], subscriptions: [], totalPaid: 0, mrr: 0 };
       }
 
-      const { data, error } = await supabase.functions.invoke('stripe-payments', {
-        body: { email, action: 'get-customer-payments' },
-      });
+      const body: any = { action: 'get-customer-payments' };
+      if (emailOrCustomerId.startsWith('cus_')) {
+        body.customerId = emailOrCustomerId;
+      } else {
+        body.email = emailOrCustomerId;
+      }
+
+      const { data, error } = await supabase.functions.invoke('stripe-payments', { body });
 
       if (error) {
         console.error('Stripe payments error:', error);
@@ -59,8 +64,8 @@ export function useStripePayments(email: string | null | undefined) {
 
       return data;
     },
-    enabled: !!email,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    enabled: !!emailOrCustomerId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
