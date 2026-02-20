@@ -30,6 +30,7 @@ import { cn, addBusinessDays } from '@/lib/utils';
 import { useCreateTask, useAgencyMembers, AgencyMember } from '@/hooks/useTasks';
 import { useAgencyPods } from '@/hooks/useAgencyPods';
 import { useSetTaskAssignees } from '@/hooks/useTaskAssignees';
+import { useCreateNotification } from './NotificationsTab';
 import { Client } from '@/hooks/useClients';
 import { Badge } from '@/components/ui/badge';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
@@ -45,6 +46,7 @@ interface CreateTaskModalProps {
 export function CreateTaskModal({ open, onOpenChange, clients, defaultClientId, isPublicView = false }: CreateTaskModalProps) {
   const createTask = useCreateTask();
   const setTaskAssignees = useSetTaskAssignees();
+  const createNotification = useCreateNotification();
   const { data: agencyMembers = [] } = useAgencyMembers();
   const { data: pods = [] } = useAgencyPods();
   const { currentMember } = useTeamMember();
@@ -149,6 +151,28 @@ export function CreateTaskModal({ open, onOpenChange, clients, defaultClientId, 
           taskId: taskData.id,
           memberIds: [selectedMemberId],
           podIds: [],
+        });
+      }
+      
+      // Notify all assigned members about the new task
+      const assignedMemberIds: string[] = [];
+      if (selectedPodId) {
+        const podMembers = getMembersForPod(selectedPodId);
+        assignedMemberIds.push(...podMembers.map(m => m.id));
+      } else if (selectedMemberId) {
+        assignedMemberIds.push(selectedMemberId);
+      }
+      
+      const creatorName = currentMember?.name || (isPublicView ? 'Client' : 'System');
+      const stageName = stage === 'in_progress' ? 'In Progress' : stage === 'client_tasks' ? 'Client Tasks' : stage === 'todo' ? 'To-Do' : stage === 'review' ? 'Review' : stage === 'revisions' ? 'Revisions' : stage === 'stuck' ? 'Stuck' : stage;
+      
+      for (const memberId of assignedMemberIds) {
+        if (currentMember?.id === memberId) continue;
+        await createNotification.mutateAsync({
+          taskId: taskData.id,
+          memberId,
+          triggeredBy: creatorName,
+          message: `${creatorName} assigned you a new task "${title.trim()}" in ${stageName}`,
         });
       }
     }
@@ -269,6 +293,7 @@ export function CreateTaskModal({ open, onOpenChange, clients, defaultClientId, 
                 <SelectContent>
                   <SelectItem value="client_tasks">Client Tasks</SelectItem>
                   <SelectItem value="todo">To-Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="stuck">Stuck</SelectItem>
                   <SelectItem value="review">Review</SelectItem>
                   <SelectItem value="revisions">Revisions</SelectItem>
