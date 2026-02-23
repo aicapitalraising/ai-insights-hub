@@ -2660,6 +2660,50 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_accuracy_log: {
+        Row: {
+          actual_count: number
+          auto_fixed: boolean
+          check_date: string
+          client_id: string
+          created_at: string
+          discrepancy: number
+          expected_count: number
+          id: string
+          metric_type: string
+        }
+        Insert: {
+          actual_count?: number
+          auto_fixed?: boolean
+          check_date: string
+          client_id: string
+          created_at?: string
+          discrepancy?: number
+          expected_count?: number
+          id?: string
+          metric_type: string
+        }
+        Update: {
+          actual_count?: number
+          auto_fixed?: boolean
+          check_date?: string
+          client_id?: string
+          created_at?: string
+          discrepancy?: number
+          expected_count?: number
+          id?: string
+          metric_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_accuracy_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_logs: {
         Row: {
           client_id: string
