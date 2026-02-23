@@ -86,3 +86,9 @@ verify_jwt = false
 
 [functions.sync-hubspot-all-clients]
 verify_jwt = false
+
+[functions.recalculate-daily-metrics]
+verify_jwt = false
+
+[functions.daily-accuracy-check]
+verify_jwt = false

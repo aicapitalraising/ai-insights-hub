@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Client } from '@/hooks/useClients';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,11 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Activity, Settings2, Calendar, Users, TrendingUp, Save, ArrowUpDown } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Activity, Settings2, Calendar, Users, TrendingUp, Save, ArrowUpDown, ShieldCheck } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 interface ClientSyncInfo {
   id: string;
@@ -108,6 +108,31 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   
   const queryClient = useQueryClient();
   const [scaleSortDir, setScaleSortDir] = useState<'asc' | 'desc' | null>(null);
+
+  // Accuracy health query — get yesterday's discrepancies
+  const { data: accuracyData } = useQuery({
+    queryKey: ['accuracy-health'],
+    queryFn: async () => {
+      const yesterday = new Date();
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      const checkDate = yesterday.toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('sync_accuracy_log')
+        .select('*')
+        .eq('check_date', checkDate)
+        .order('created_at', { ascending: false });
+      
+      if (error) return { discrepancies: 0, autoFixed: 0, lastCheck: null };
+      
+      return {
+        discrepancies: data?.length || 0,
+        autoFixed: data?.filter((d: any) => d.auto_fixed).length || 0,
+        lastCheck: data?.[0]?.created_at || null,
+      };
+    },
+    refetchInterval: 5 * 60 * 1000, // 5 min
+  });
 
   function formatCount(n: number): string {
     if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
@@ -316,6 +341,39 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
             <CardTitle className="text-base">API Sync Status</CardTitle>
+            
+            {/* Accuracy Health Indicator */}
+            {accuracyData && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 ml-2">
+                    <ShieldCheck className={`h-4 w-4 ${
+                      accuracyData.discrepancies === 0 
+                        ? 'text-chart-2' 
+                        : accuracyData.autoFixed === accuracyData.discrepancies 
+                          ? 'text-chart-4' 
+                          : 'text-destructive'
+                    }`} />
+                    <Badge 
+                      variant={accuracyData.discrepancies === 0 ? 'default' : accuracyData.autoFixed === accuracyData.discrepancies ? 'secondary' : 'destructive'}
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {accuracyData.discrepancies === 0 ? 'Accurate' : `${accuracyData.discrepancies} fixed`}
+                    </Badge>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-xs space-y-1">
+                    <p><strong>Daily Accuracy Check</strong></p>
+                    <p>Yesterday: {accuracyData.discrepancies === 0 ? 'No discrepancies' : `${accuracyData.discrepancies} discrepancies, ${accuracyData.autoFixed} auto-fixed`}</p>
+                    {accuracyData.lastCheck && (
+                      <p>Last check: {formatDistanceToNow(new Date(accuracyData.lastCheck), { addSuffix: true })}</p>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
             <div className="ml-auto flex items-center gap-2">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CheckCircle className="h-3 w-3 text-chart-2" /> Healthy

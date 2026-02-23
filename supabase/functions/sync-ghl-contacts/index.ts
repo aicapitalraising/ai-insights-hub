@@ -947,9 +947,10 @@ async function syncPipelineOpportunitiesIncremental(
       
       // Check if this is a funded stage
       if (stageId && fundedStageIds.includes(stageId)) {
+        // Always use contactId for dedup consistency with tag-based path
         const externalId = contactId || opp.id;
         
-        // Check if funded_investor already exists
+        // Check if funded_investor already exists (by contactId)
         const { data: existing } = await supabase
           .from('funded_investors')
           .select('id')
@@ -2228,6 +2229,7 @@ async function syncPipelineOpportunitiesAndFunded(
           console.log(`Found funded opportunity: ${opp.id} in stage ${stageName}`);
           
           // Create funded_investor record
+          // Always use contactId for dedup consistency with tag-based path
           const externalId = contactId || opp.id;
           
           // Check if already exists
@@ -2748,22 +2750,8 @@ async function recalculateRecentMetrics(
     startDate.setUTCDate(startDate.getUTCDate() - daysBack);
     startDate.setUTCHours(0, 0, 0, 0);
     
-    // Delete existing metrics for the date range
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const { error: deleteError } = await supabase
-      .from('daily_metrics')
-      .delete()
-      .eq('client_id', clientId)
-      .gte('date', startDateStr);
-    
-    if (deleteError) {
-      console.error('Error clearing recent daily_metrics:', deleteError);
-      result.errors.push(`Failed to clear recent metrics: ${deleteError.message}`);
-    }
-    
-    // Iterate through each day
+    // Iterate through each day and UPSERT (preserving ad spend columns)
     const currentDate = new Date(startDate);
-    const metricsToInsert: any[] = [];
     
     while (currentDate <= today) {
       const dateStr = currentDate.toISOString().split('T')[0];
@@ -2853,9 +2841,10 @@ async function recalculateRecentMetrics(
         const commitmentDollars = (fundedData || []).reduce((sum: number, f: any) => sum + (f.commitment_amount || 0), 0);
         const commitmentCount = (fundedData || []).filter((f: any) => f.commitment_amount && f.commitment_amount > 0).length;
         
-        // Add row if there's any activity at all
-        if (totalValidLeads > 0 || (spamCount || 0) > 0 || (callsCount || 0) > 0 || (reconnectCount || 0) > 0 || (fundedCount || 0) > 0) {
-          metricsToInsert.push({
+        // UPSERT — only CRM columns, preserving ad_spend/impressions/clicks/ctr
+        const { error: upsertError } = await supabase
+          .from('daily_metrics')
+          .upsert({
             client_id: clientId,
             date: dateStr,
             leads: totalValidLeads,
@@ -2869,27 +2858,21 @@ async function recalculateRecentMetrics(
             commitments: commitmentCount,
             commitment_dollars: commitmentDollars,
             updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'client_id,date',
+            ignoreDuplicates: false,
           });
+        
+        if (upsertError) {
+          result.errors.push(`Upsert error for ${dateStr}: ${upsertError.message}`);
+        } else {
+          result.daysUpdated++;
         }
       } catch (err) {
         result.errors.push(`Date ${dateStr}: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
       
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-    }
-    
-    // Insert all metrics
-    if (metricsToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from('daily_metrics')
-        .insert(metricsToInsert);
-      
-      if (insertError) {
-        result.errors.push(`Insert error: ${insertError.message}`);
-        console.error('Metrics insert error:', insertError);
-      } else {
-        result.daysUpdated = metricsToInsert.length;
-      }
     }
     
     console.log(`Recent metrics recalculation complete: ${result.daysUpdated} days updated`);
