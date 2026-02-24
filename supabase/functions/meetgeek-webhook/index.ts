@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fallback to agency-level settings
+    // Fallback to agency-level settings or env secret
     if (!meetgeekApiKey) {
       const { data: settings } = await supabase
         .from('agency_settings')
@@ -132,6 +132,12 @@ Deno.serve(async (req) => {
       if (settings?.meetgeek_api_key) {
         meetgeekApiKey = settings.meetgeek_api_key;
         meetgeekWebhookSecret = settings.meetgeek_webhook_secret || '';
+      } else {
+        meetgeekApiKey = Deno.env.get('MEETGEEK_API_KEY') || '';
+      }
+      // Auto-detect region from key prefix
+      if (meetgeekApiKey.startsWith('eu-')) {
+        meetgeekRegion = 'eu';
       }
     }
 
@@ -348,15 +354,27 @@ async function syncRecentMeetings(supabase: any, apiKey: string, baseUrl: string
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${apiKey}` },
       });
-      if (!response.ok) throw new Error(`MeetGeek API error: ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`MeetGeek API error: ${response.status} - ${errText}`);
+        throw new Error(`MeetGeek API error: ${response.status}`);
+      }
 
       const data = await response.json();
-      const meetings = data.meetings || data.data || [];
+      const meetings = data.meetings || data.data || data.results || [];
       if (meetings.length === 0) break;
+
+      // Normalize field names (API may use meeting_id/timestamp_start_utc or id/start_time)
+      const normalized = meetings.map((m: any) => ({
+        ...m,
+        id: m.id || m.meeting_id,
+        start_time: m.start_time || m.timestamp_start_utc,
+        end_time: m.end_time || m.timestamp_end_utc,
+      }));
 
       // Filter by since date if provided
       let reachedOlder = false;
-      for (const m of meetings) {
+      for (const m of normalized) {
         const mDate = new Date(m.start_time || m.created_at || 0);
         if (sinceDate && mDate < sinceDate) {
           reachedOlder = true;
@@ -473,11 +491,13 @@ async function processMeeting(supabase: any, apiKey: string, baseUrl: string, me
     const uniqueActionItems = deduplicateActionItems(allActionItems);
 
     let durationMinutes = meeting.duration;
-    if (meeting.start_time && meeting.end_time) {
-      durationMinutes = Math.round((new Date(meeting.end_time).getTime() - new Date(meeting.start_time).getTime()) / 60000);
+    const startTime = meeting.start_time || meeting.timestamp_start_utc;
+    const endTime = meeting.end_time || meeting.timestamp_end_utc;
+    if (startTime && endTime) {
+      durationMinutes = Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
     }
 
-    const meetingDate = meeting.start_time || new Date().toISOString();
+    const meetingDate = startTime || new Date().toISOString();
     const matchedClientId = forClientId || await matchClientByTitle(supabase, meeting.title || '');
 
     // Store in agency_meetings
