@@ -36,10 +36,10 @@ export async function detectAspectRatio(file: File): Promise<string> {
  */
 export function categorizeRatio(ratio: number): string {
   if (ratio >= 1.7) return '16:9';     // Landscape (1.78 is exactly 16:9)
-  if (ratio > 1.1 && ratio < 1.7) return '4:5'; // Slightly wide but not full landscape
-  if (ratio >= 0.9 && ratio <= 1.1) return '1:1'; // Square (tolerance for slight variations)
-  if (ratio > 0.5 && ratio < 0.9) return '4:5';   // Portrait feed format
-  return '9:16';                        // Tall portrait (stories/reels format)
+  if (ratio > 1.1 && ratio < 1.7) return '16:9'; // Wide landscape
+  if (ratio >= 0.9 && ratio <= 1.1) return '1:1'; // Square
+  if (ratio >= 0.7 && ratio < 0.9) return '4:5';  // Portrait feed format (0.8 is exactly 4:5)
+  return '9:16';                        // Tall portrait (stories/reels format, 0.5625)
 }
 
 /**

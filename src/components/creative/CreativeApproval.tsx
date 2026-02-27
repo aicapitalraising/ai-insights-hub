@@ -695,8 +695,19 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   );
 }
 
+// Helper to get aspect ratio CSS class for card containers
+function getCardAspectClass(aspectRatio: string | null | undefined): string {
+  switch (aspectRatio) {
+    case '16:9': return 'aspect-video';
+    case '9:16': return 'aspect-[9/16] max-h-[500px]';
+    case '1:1': return 'aspect-square';
+    case '4:5': return 'aspect-[4/5]';
+    default: return 'aspect-[4/5]';
+  }
+}
+
 // Inline video player component for card grid
-function InlineVideoPlayer({ src }: { src: string }) {
+function InlineVideoPlayer({ src, aspectRatio }: { src: string; aspectRatio?: string | null }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -718,7 +729,7 @@ function InlineVideoPlayer({ src }: { src: string }) {
       <video 
         ref={videoRef}
         src={src}
-        className="w-full h-full object-contain bg-black/5"
+        className="w-full h-full object-contain"
         loop
         playsInline
         muted
@@ -781,16 +792,16 @@ function CreativeCard({
             {creative.status.charAt(0).toUpperCase() + creative.status.slice(1)}
           </Badge>
           
-          <div className="aspect-[4/5] bg-muted relative overflow-hidden">
+          <div className={`${getCardAspectClass(creative.aspect_ratio)} bg-muted relative overflow-hidden`}>
             {creative.type === 'image' && creative.file_url ? (
               <img 
                 src={creative.file_url} 
                 alt={creative.title}
-                className="w-full h-full object-contain bg-black/5 cursor-pointer"
+                className="w-full h-full object-contain cursor-pointer"
                 onClick={onPreview}
               />
             ) : creative.type === 'video' && creative.file_url ? (
-              <InlineVideoPlayer src={creative.file_url} />
+              <InlineVideoPlayer src={creative.file_url} aspectRatio={creative.aspect_ratio} />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center cursor-pointer" onClick={onPreview}>
                 {getTypeIcon(creative.type)}
