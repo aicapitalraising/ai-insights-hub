@@ -123,15 +123,15 @@ Deno.serve(async (req) => {
             .gte("booked_at", dayStart)
             .lte("booked_at", dayEnd);
 
-          // ── Showed calls by scheduled_at (actual appointment date) ──
+          // ── Showed calls by booked_at (same date axis as calls) ──
           const { count: showedCount } = await supabase
             .from("calls")
             .select("*", { count: "exact", head: true })
             .eq("client_id", client.id)
             .eq("showed", true)
             .neq("is_reconnect", true)
-            .gte("scheduled_at", dayStart)
-            .lte("scheduled_at", dayEnd);
+            .gte("booked_at", dayStart)
+            .lte("booked_at", dayEnd);
 
           // ── Calls scheduled for that day: by scheduled_at ──
           const { count: callsScheduledCount } = await supabase
@@ -151,15 +151,15 @@ Deno.serve(async (req) => {
             .gte("booked_at", dayStart)
             .lte("booked_at", dayEnd);
 
-          // ── Reconnect showed by scheduled_at ──
+          // ── Reconnect showed by booked_at (same date axis as reconnect calls) ──
           const { count: reconnectShowedCount } = await supabase
             .from("calls")
             .select("*", { count: "exact", head: true })
             .eq("client_id", client.id)
             .eq("is_reconnect", true)
             .eq("showed", true)
-            .gte("scheduled_at", dayStart)
-            .lte("scheduled_at", dayEnd);
+            .gte("booked_at", dayStart)
+            .lte("booked_at", dayEnd);
 
           // ── Funded investors: by funded_at (stage change date) ──
           const { data: fundedData, count: fundedCount } = await supabase
