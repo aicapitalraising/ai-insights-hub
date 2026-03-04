@@ -26,9 +26,11 @@ export function useClientSourceMetrics(startDate?: string, endDate?: string) {
   return useQuery({
     queryKey: ['client-source-metrics', startDate, endDate],
     queryFn: async () => {
+      // Pass plain date strings (YYYY-MM-DD) — the RPC uses ::date cast
+      // to ensure UTC-date-level filtering regardless of client timezone
       const params: Record<string, string | null> = {
-        p_start_date: startDate ? new Date(startDate + 'T00:00:00').toISOString() : null,
-        p_end_date: endDate ? (() => { const d = new Date(endDate + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString(); })() : null,
+        p_start_date: startDate || null,
+        p_end_date: endDate || null,
       };
 
       const { data, error } = await supabase.rpc('get_client_source_metrics', params);
