@@ -222,24 +222,42 @@ async function attributeCRMData(supabase: any, clientId: string, startDate?: str
 
   for (const lead of leads || []) {
     const isSpam = !!lead.is_spam;
-    // Don't skip spam leads anymore — we attribute them separately
 
     let attributed = false;
 
     // Campaign level — match by campaign_name or utm_campaign
     const campaignName = lead.campaign_name || lead.utm_campaign;
-    if (campaignName && campaignByName.has(campaignName)) {
-      addStats(campaignStats, campaignName, lead.id, isSpam);
-      attributed = true;
+    if (campaignName) {
+      // Pass 1: Exact name match
+      if (campaignByName.has(campaignName)) {
+        addStats(campaignStats, campaignName, lead.id, isSpam);
+        attributed = true;
+      }
+      // Pass 2: campaignName might be a numeric meta_campaign_id (from UTM params)
+      else if (campaignByMetaId.has(campaignName)) {
+        const matchedCampaign = campaignByMetaId.get(campaignName);
+        addStats(campaignStats, matchedCampaign.name, lead.id, isSpam);
+        attributed = true;
+      }
     }
 
     // Ad set level — match by ad_set_name
-    if (lead.ad_set_name && adSetByName.has(lead.ad_set_name)) {
-      addStats(adSetStats, lead.ad_set_name, lead.id, isSpam);
-      attributed = true;
+    if (lead.ad_set_name) {
+      if (adSetByName.has(lead.ad_set_name)) {
+        addStats(adSetStats, lead.ad_set_name, lead.id, isSpam);
+        attributed = true;
+      }
+      // Fallback: ad_set_name might be a numeric meta_adset_id
+      else {
+        const matchedAdSet = (metaAdSets || []).find((as: any) => as.meta_adset_id === lead.ad_set_name);
+        if (matchedAdSet) {
+          addStats(adSetStats, matchedAdSet.name, lead.id, isSpam);
+          attributed = true;
+        }
+      }
     }
 
-    // Ad level — Fix 2: only UTM direct match + single-ad-per-set fallback
+    // Ad level — UTM direct match + single-ad-per-set fallback
     let matchedAdId: string | null = null;
 
     // Pass 1: Direct match via ad_id field (from UTM params / utm_content)
@@ -251,12 +269,12 @@ async function attributeCRMData(supabase: any, clientId: string, startDate?: str
 
     // Pass 2: Single-ad-per-set fallback — ONLY when exactly one active ad in the set
     if (!matchedAdId && lead.ad_set_name) {
-      const matchedAdSet = adSetByName.get(lead.ad_set_name);
+      const matchedAdSet = adSetByName.get(lead.ad_set_name) || 
+        (metaAdSets || []).find((as: any) => as.meta_adset_id === lead.ad_set_name);
       if (matchedAdSet) {
         const adsInSet = adsByAdSetId.get(matchedAdSet.id) || [];
         if (adsInSet.length === 1) {
           matchedAdId = adsInSet[0].id;
-          console.log(`Single-ad fallback: attributed lead ${lead.id} to ad ${adsInSet[0].name}`);
         }
       }
     }

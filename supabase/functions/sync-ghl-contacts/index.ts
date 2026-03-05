@@ -671,6 +671,9 @@ async function syncContactToDatabase(
   const opportunityStage = opportunity?.stageName || opportunity?.pipelineStageName || null;
   const opportunityStageId = opportunity?.pipelineStageId || null;
   const opportunityValue = opportunity?.monetaryValue ?? opportunity?.monetary_value ?? 0;
+  
+  // Extract pipeline value from opportunity or custom fields
+  const pipelineValue = extractPipelineValue(contact, opportunity);
 
   // --- NORMALIZE SOURCE ---
   // Apply source normalization to utm_source
@@ -698,6 +701,7 @@ async function syncContactToDatabase(
     opportunity_stage: opportunityStage,
     opportunity_stage_id: opportunityStageId,
     opportunity_value: opportunityValue,
+    pipeline_value: pipelineValue,
     updated_at: new Date().toISOString(),
   };
 
@@ -729,6 +733,7 @@ async function syncContactToDatabase(
     opportunity_stage: opportunityStage,
     opportunity_stage_id: opportunityStageId,
     opportunity_value: opportunityValue,
+    pipeline_value: pipelineValue,
     is_spam: isBadLead,
     ghl_synced_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -1120,7 +1125,7 @@ async function syncClientContacts(
   let hasMore = true;
   let startAfterId: string | undefined;
   let totalProcessed = 0;
-  const MAX_CONTACTS = syncTimeline ? 500 : 1000; // Limit when syncing timeline to avoid timeout
+  const MAX_CONTACTS = syncTimeline ? 500 : 5000; // Higher limit for regular sync to capture all contacts
   
   // Calculate cutoff date if sinceDateDays is specified
   const cutoffDate = sinceDateDays ? new Date(Date.now() - sinceDateDays * 24 * 60 * 60 * 1000) : null;
