@@ -1125,7 +1125,7 @@ async function syncClientContacts(
   let hasMore = true;
   let startAfterId: string | undefined;
   let totalProcessed = 0;
-  const MAX_CONTACTS = syncTimeline ? 500 : 1000; // Limit when syncing timeline to avoid timeout
+  const MAX_CONTACTS = syncTimeline ? 500 : 5000; // Higher limit for regular sync to capture all contacts
   
   // Calculate cutoff date if sinceDateDays is specified
   const cutoffDate = sinceDateDays ? new Date(Date.now() - sinceDateDays * 24 * 60 * 60 * 1000) : null;
