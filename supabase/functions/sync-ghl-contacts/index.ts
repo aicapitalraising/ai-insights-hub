@@ -2218,9 +2218,9 @@ async function syncPipelineOpportunitiesAndFunded(
   
   try {
     while (hasMore) {
-      let url = `${GHL_BASE_URL}/opportunities/?locationId=${client.ghl_location_id}&pipelineId=${pipelineId}&limit=100`;
+      let url = `${GHL_BASE_URL}/opportunities/search?location_id=${client.ghl_location_id}&pipeline_id=${pipelineId}&limit=100`;
       if (startAfterId) {
-        url += `&startAfterId=${startAfterId}`;
+        url += `&startAfter=${startAfterId}&startAfterId=${startAfterId}`;
       }
       
       const response = await fetch(url, { method: 'GET', headers });
@@ -3016,12 +3016,16 @@ serve(async (req) => {
         'Version': '2021-07-28',
       };
       
-      // Test contacts endpoint
+      // Test contacts endpoint using POST /contacts/search (v2)
       let contactsResult = { success: false, error: '' };
       try {
         const contactsRes = await fetch(
-          `${GHL_BASE_URL}/contacts/?locationId=${client.ghl_location_id}&limit=1`,
-          { method: 'GET', headers }
+          `${GHL_BASE_URL}/contacts/search`,
+          { 
+            method: 'POST', 
+            headers,
+            body: JSON.stringify({ locationId: client.ghl_location_id, pageLimit: 1, page: 1 })
+          }
         );
         if (contactsRes.ok) {
           contactsResult = { success: true, error: '' };

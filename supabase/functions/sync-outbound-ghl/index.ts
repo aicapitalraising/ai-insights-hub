@@ -42,18 +42,31 @@ async function findOrCreateContact(
   identifier: string
 ): Promise<string | null> {
   try {
-    // Search by phone or email
+    // Search by phone or email using POST /contacts/search (v2 recommended)
     const isEmail = identifier.includes('@');
-    const searchParam = isEmail ? `email=${encodeURIComponent(identifier)}` : `phone=${encodeURIComponent(identifier)}`;
+    
+    const searchBody: Record<string, any> = {
+      locationId,
+      pageLimit: 1,
+      page: 1,
+    };
+    if (isEmail) {
+      searchBody.email = identifier;
+    } else {
+      searchBody.phone = identifier;
+    }
     
     const searchResponse = await fetch(
-      `${GHL_BASE_URL}/contacts/?locationId=${locationId}&${searchParam}&limit=1`,
+      `${GHL_BASE_URL}/contacts/search`,
       {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Version': '2021-07-28',
+          'Content-Type': 'application/json',
           'Accept': 'application/json'
-        }
+        },
+        body: JSON.stringify(searchBody)
       }
     );
 
