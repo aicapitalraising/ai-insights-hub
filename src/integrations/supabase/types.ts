@@ -886,6 +886,7 @@ export type Database = {
           meta_ads_last_sync_date: string | null
           meta_ads_sync_enabled: boolean | null
           meta_ads_sync_streak: number
+          metric_labels: Json | null
           monthly_ad_spend_target: number | null
           mrr: number | null
           pixel_notification_email: string | null
@@ -951,6 +952,7 @@ export type Database = {
           meta_ads_last_sync_date?: string | null
           meta_ads_sync_enabled?: boolean | null
           meta_ads_sync_streak?: number
+          metric_labels?: Json | null
           monthly_ad_spend_target?: number | null
           mrr?: number | null
           pixel_notification_email?: string | null
@@ -1016,6 +1018,7 @@ export type Database = {
           meta_ads_last_sync_date?: string | null
           meta_ads_sync_enabled?: boolean | null
           meta_ads_sync_streak?: number
+          metric_labels?: Json | null
           monthly_ad_spend_target?: number | null
           mrr?: number | null
           pixel_notification_email?: string | null
