@@ -570,56 +570,83 @@ export function PeriodicStatsTable({ clientId, dailyMetrics: externalMetrics }: 
           )}
 
           {/* Transposed Table: Metrics as rows, Periods as columns */}
-          <div className="overflow-x-auto -mx-2">
-            <Table className="text-sm">
-              <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="font-bold whitespace-nowrap sticky left-0 bg-card z-10 w-[100px] py-2 px-2 text-left">
-                    Metric
-                  </TableHead>
-                  <TableHead className="font-bold text-right whitespace-nowrap bg-muted/30 py-2 px-3">
-                    TOTAL
-                  </TableHead>
-                  {displayStats.map(period => (
-                    <TableHead key={period.period} className="font-bold text-right whitespace-nowrap py-2 px-3">
-                      {period.periodLabel}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {METRIC_ROWS.map((metric) => {
-                  const totalValue = totals[metric.key] as number;
-                  const totalColorClass = metric.highlight ? 'text-success font-semibold' : getKpiColorClass(metric, totalValue);
-                  
-                  return (
-                    <TableRow key={metric.key} className={metric.highlight ? 'bg-success/5' : ''}>
-                      <TableCell className="font-medium whitespace-nowrap sticky left-0 bg-card z-10 py-1.5 px-2 text-left">
-                        {metric.label}
-                      </TableCell>
-                      <TableCell className="text-right bg-muted/30 py-1.5 px-3 font-semibold">
-                        <span className={totalColorClass}>
-                          {metric.format(totalValue)}
-                        </span>
-                      </TableCell>
-                      {displayStats.map(period => {
-                        const value = period[metric.key] as number;
-                        const colorClass = metric.highlight ? 'text-success font-semibold' : getKpiColorClass(metric, value);
-                        
-                        return (
-                          <TableCell key={period.period} className="text-right py-1.5 px-3">
-                            {metric.editable 
-                              ? renderEditableCell(period, metric, value)
-                              : <span className={colorClass}>{metric.format(value)}</span>
-                            }
-                          </TableCell>
-                        );
-                      })}
+          <div className="relative overflow-hidden -mx-2">
+            {/* Frozen columns (Metric + TOTAL) */}
+            <div className="flex">
+              <div className="shrink-0 z-20 border-r border-border shadow-[2px_0_4px_-2px_hsl(var(--border))]">
+                <Table className="text-sm">
+                  <TableHeader>
+                    <TableRow className="border-b">
+                      <TableHead className="font-bold whitespace-nowrap bg-card w-[120px] py-2 px-3 text-left">
+                        Metric
+                      </TableHead>
+                      <TableHead className="font-bold text-center whitespace-nowrap bg-muted/30 min-w-[110px] py-2 px-3">
+                        TOTAL
+                      </TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {METRIC_ROWS.map((metric) => {
+                      const totalValue = totals[metric.key] as number;
+                      const totalColorClass = metric.highlight ? 'text-success font-semibold' : getKpiColorClass(metric, totalValue);
+                      
+                      return (
+                        <TableRow key={metric.key} className={metric.highlight ? 'bg-success/5' : ''}>
+                          <TableCell className="font-medium whitespace-nowrap bg-card py-1.5 px-3 text-left">
+                            {metric.label}
+                          </TableCell>
+                          <TableCell className="text-center bg-muted/30 py-1.5 px-3 font-semibold">
+                            <span className={totalColorClass}>
+                              {metric.format(totalValue)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Scrollable period columns */}
+              <div className="overflow-x-auto flex-1">
+                <Table className="text-sm">
+                  <TableHeader>
+                    <TableRow className="border-b">
+                      {displayStats.map((period, i) => (
+                        <TableHead
+                          key={period.period}
+                          className={`font-bold text-center whitespace-nowrap py-2 px-4 min-w-[110px] ${i < displayStats.length - 1 ? 'border-r border-border/50' : ''}`}
+                        >
+                          {period.periodLabel}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {METRIC_ROWS.map((metric) => (
+                      <TableRow key={metric.key} className={metric.highlight ? 'bg-success/5' : ''}>
+                        {displayStats.map((period, i) => {
+                          const value = period[metric.key] as number;
+                          const colorClass = metric.highlight ? 'text-success font-semibold' : getKpiColorClass(metric, value);
+                          
+                          return (
+                            <TableCell
+                              key={period.period}
+                              className={`text-center py-1.5 px-4 min-w-[110px] ${i < displayStats.length - 1 ? 'border-r border-border/50' : ''}`}
+                            >
+                              {metric.editable 
+                                ? renderEditableCell(period, metric, value)
+                                : <span className={colorClass}>{metric.format(value)}</span>
+                              }
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           </div>
         </>
       )}
