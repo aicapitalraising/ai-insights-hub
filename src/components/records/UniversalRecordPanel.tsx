@@ -157,6 +157,21 @@ export function UniversalRecordPanel({
   
   const isSyncInProgress = isSyncing(ghlContactId || '') || isSyncingPipelines;
 
+  // Lead enrichment
+  const { data: enrichment, isLoading: enrichmentLoading } = useLeadEnrichment(clientId, ghlContactId);
+  const enrichMutation = useEnrichLead();
+  
+  const handleEnrich = () => {
+    if (!ghlContactId) return;
+    enrichMutation.mutate({
+      client_id: clientId,
+      lead_id: linkedLead?.id,
+      external_id: ghlContactId,
+      phone: contactPhone || undefined,
+      email: contactEmail || undefined,
+    });
+  };
+
   // Extract common data
   const contactName = record.contact_name || record.name || linkedLead?.name || 'Unknown Contact';
   const contactEmail = record.contact_email || record.email || linkedLead?.email;
