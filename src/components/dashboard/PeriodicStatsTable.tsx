@@ -598,7 +598,7 @@ export function PeriodicStatsTable({ clientId, dailyMetrics: externalMetrics }: 
                       return (
                         <TableRow key={metric.key} className={metric.highlight ? 'bg-success/5' : ''}>
                           <TableCell className="font-medium whitespace-nowrap bg-card py-1.5 px-3 text-left">
-                            {metric.label}
+                            {metricLabels[metric.key] || metric.label}
                           </TableCell>
                           <TableCell className="text-center bg-muted/30 py-1.5 px-3 font-semibold">
                             <span className={totalColorClass}>
