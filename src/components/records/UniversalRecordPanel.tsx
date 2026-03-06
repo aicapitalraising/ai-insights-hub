@@ -1,4 +1,6 @@
 import { User, Mail, Phone, DollarSign, Calendar, Tag, ExternalLink, Hash, Globe, FileText, ChevronDown, Link2, StickyNote, Clock, Target, RefreshCw, Loader2 } from 'lucide-react';
+import { useLeadEnrichment, useEnrichLead } from '@/hooks/useLeadEnrichment';
+import { EnrichmentSection } from '@/components/records/EnrichmentSection';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -90,6 +92,7 @@ export function UniversalRecordPanel({
     opportunity: true,
     attribution: true,
     questions: true,
+    enrichment: true,
     ghl: false,
     timeline: true,
   });
@@ -153,6 +156,21 @@ export function UniversalRecordPanel({
   };
   
   const isSyncInProgress = isSyncing(ghlContactId || '') || isSyncingPipelines;
+
+  // Lead enrichment
+  const { data: enrichment, isLoading: enrichmentLoading } = useLeadEnrichment(clientId, ghlContactId);
+  const enrichMutation = useEnrichLead();
+  
+  const handleEnrich = () => {
+    if (!ghlContactId) return;
+    enrichMutation.mutate({
+      client_id: clientId,
+      lead_id: linkedLead?.id,
+      external_id: ghlContactId,
+      phone: contactPhone || undefined,
+      email: contactEmail || undefined,
+    });
+  };
 
   // Extract common data
   const contactName = record.contact_name || record.name || linkedLead?.name || 'Unknown Contact';
@@ -473,6 +491,22 @@ export function UniversalRecordPanel({
                   })}
                 </CollapsibleContent>
               </Collapsible>
+              <Separator />
+            </>
+          )}
+
+          {/* Lead Enrichment */}
+          {!isPublicView && (
+            <>
+              <EnrichmentSection
+                enrichment={enrichment}
+                isLoading={enrichmentLoading}
+                isEnriching={enrichMutation.isPending}
+                onEnrich={handleEnrich}
+                canEnrich={!!(contactPhone || contactEmail)}
+                isOpen={sectionsOpen.enrichment}
+                onToggle={() => toggleSection('enrichment')}
+              />
               <Separator />
             </>
           )}
