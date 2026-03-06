@@ -1108,19 +1108,23 @@ async function syncClientContacts(
   const reconnectCalendarIds: string[] = settings?.reconnect_calendar_ids || [];
   
   // Fetch opportunities to match with contacts for funded investor creation
-  // Wrapped in try-catch so pipeline failures don't block contact/calendar sync
+  // For lightweight daily lead sync, skip heavy pipeline fetches.
   const opportunityByContactId = new Map<string, GHLOpportunity>();
-  try {
-    const opportunities = await fetchGHLOpportunities(client.ghl_api_key, client.ghl_location_id);
-    for (const opp of opportunities) {
-      if (opp.contactId) {
-        opportunityByContactId.set(opp.contactId, opp);
+  if (!lightweightLeadSync) {
+    try {
+      const opportunities = await fetchGHLOpportunities(client.ghl_api_key, client.ghl_location_id);
+      for (const opp of opportunities) {
+        if (opp.contactId) {
+          opportunityByContactId.set(opp.contactId, opp);
+        }
       }
+      console.log(`Fetched ${opportunities.length} opportunities for ${client.name}`);
+    } catch (err) {
+      console.error(`Failed to fetch opportunities for ${client.name}, continuing without pipeline data:`, err);
+      result.errors.push(`Pipeline fetch failed (non-blocking): ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
-    console.log(`Fetched ${opportunities.length} opportunities for ${client.name}`);
-  } catch (err) {
-    console.error(`Failed to fetch opportunities for ${client.name}, continuing without pipeline data:`, err);
-    result.errors.push(`Pipeline fetch failed (non-blocking): ${err instanceof Error ? err.message : 'Unknown error'}`);
+  } else {
+    console.log(`Lightweight lead sync enabled for ${client.name}: skipping opportunities/calendar/metrics phases`);
   }
   
   let hasMore = true;
