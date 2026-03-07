@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Filter, Users, Phone, TrendingUp, PhoneCall, X, MapPin, DollarSign, Building2 } from 'lucide-react';
+import { ArrowLeft, Download, Filter, Users, Phone, TrendingUp, PhoneCall, X, MapPin, DollarSign, Building2, Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +55,8 @@ export default function DatabaseView() {
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [enrichedFilter, setEnrichedFilter] = useState<'all' | 'enriched' | 'not_enriched'>('all');
+  const [isBulkEnriching, setIsBulkEnriching] = useState(false);
   const [amountMinFilter, setAmountMinFilter] = useState('');
   const [amountMaxFilter, setAmountMaxFilter] = useState('');
 
