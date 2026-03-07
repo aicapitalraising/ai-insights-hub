@@ -450,7 +450,39 @@ export default function DatabaseView() {
               setOpen={setSourceOpen}
             />
 
-            {/* Amount range (funded tab) */}
+            {/* Enriched filter */}
+            <Select value={enrichedFilter} onValueChange={(v: any) => { setEnrichedFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-40 h-9">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Records</SelectItem>
+                <SelectItem value="enriched">Enriched Only</SelectItem>
+                <SelectItem value="not_enriched">Not Enriched</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Bulk enrich button */}
+            {unenrichedFundedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isBulkEnriching}
+                onClick={handleBulkEnrich}
+                className="gap-1.5"
+              >
+                {isBulkEnriching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Enrich {unenrichedFundedCount.toLocaleString()} Unenriched
+              </Button>
+            )}
+
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Amount:</span>
               <Input
