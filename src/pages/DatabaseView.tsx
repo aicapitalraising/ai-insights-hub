@@ -199,8 +199,15 @@ export default function DatabaseView() {
     if (stateFilter.length > 0 || incomeFilter.length > 0) {
       data = data.filter(l => passesEnrichmentFilter(l.id));
     }
+    if (enrichedFilter !== 'all') {
+      data = data.filter(l => {
+        const enrich = enrichmentByLeadId.get(l.id);
+        const isEnriched = !!(enrich?.state || enrich?.household_income || enrich?.company_name || enrich?.credit_range);
+        return enrichedFilter === 'enriched' ? isEnriched : !isEnriched;
+      });
+    }
     return data;
-  }, [allLeads, searchQuery, sourceFilter, stateFilter, incomeFilter, enrichmentByLeadId]);
+  }, [allLeads, searchQuery, sourceFilter, stateFilter, incomeFilter, enrichedFilter, enrichmentByLeadId]);
 
   // Filter calls
   const filteredCalls = useMemo(() => {
