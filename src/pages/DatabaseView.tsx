@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Filter, Users, Phone, TrendingUp, PhoneCall, X, MapPin, DollarSign, Building2 } from 'lucide-react';
+import { ArrowLeft, Download, Filter, Users, Phone, TrendingUp, PhoneCall, X, MapPin, DollarSign, Building2, Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +55,8 @@ export default function DatabaseView() {
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [enrichedFilter, setEnrichedFilter] = useState<'all' | 'enriched' | 'not_enriched'>('all');
+  const [isBulkEnriching, setIsBulkEnriching] = useState(false);
   const [amountMinFilter, setAmountMinFilter] = useState('');
   const [amountMaxFilter, setAmountMaxFilter] = useState('');
 
@@ -155,7 +158,7 @@ export default function DatabaseView() {
     setSearchQuery('');
   };
 
-  const hasAttributeFilters = stateFilter.length > 0 || incomeFilter.length > 0 || sourceFilter.length > 0 || amountMinFilter || amountMaxFilter;
+  const hasAttributeFilters = stateFilter.length > 0 || incomeFilter.length > 0 || sourceFilter.length > 0 || amountMinFilter || amountMaxFilter || enrichedFilter !== 'all';
 
   const clearAllFilters = () => {
     setStateFilter([]);
@@ -163,6 +166,7 @@ export default function DatabaseView() {
     setSourceFilter([]);
     setAmountMinFilter('');
     setAmountMaxFilter('');
+    setEnrichedFilter('all');
   };
 
   // Helper: check if a lead passes enrichment-based attribute filters
@@ -195,8 +199,15 @@ export default function DatabaseView() {
     if (stateFilter.length > 0 || incomeFilter.length > 0) {
       data = data.filter(l => passesEnrichmentFilter(l.id));
     }
+    if (enrichedFilter !== 'all') {
+      data = data.filter(l => {
+        const enrich = enrichmentByLeadId.get(l.id);
+        const isEnriched = !!(enrich?.state || enrich?.household_income || enrich?.company_name || enrich?.credit_range);
+        return enrichedFilter === 'enriched' ? isEnriched : !isEnriched;
+      });
+    }
     return data;
-  }, [allLeads, searchQuery, sourceFilter, stateFilter, incomeFilter, enrichmentByLeadId]);
+  }, [allLeads, searchQuery, sourceFilter, stateFilter, incomeFilter, enrichedFilter, enrichmentByLeadId]);
 
   // Filter calls
   const filteredCalls = useMemo(() => {
@@ -257,6 +268,13 @@ export default function DatabaseView() {
     if (stateFilter.length > 0 || incomeFilter.length > 0) {
       data = data.filter(f => passesFundedEnrichmentFilter(f));
     }
+    if (enrichedFilter !== 'all') {
+      data = data.filter(f => {
+        const enrich = getEnrichmentForFunded(f);
+        const isEnriched = !!(enrich?.state || enrich?.household_income || enrich?.company_name || enrich?.credit_range);
+        return enrichedFilter === 'enriched' ? isEnriched : !isEnriched;
+      });
+    }
     const minAmount = amountMinFilter ? Number(amountMinFilter) : null;
     const maxAmount = amountMaxFilter ? Number(amountMaxFilter) : null;
     if (minAmount !== null) {
@@ -266,7 +284,30 @@ export default function DatabaseView() {
       data = data.filter(f => Number(f.funded_amount) <= maxAmount);
     }
     return data;
-  }, [allFunded, searchQuery, stateFilter, incomeFilter, amountMinFilter, amountMaxFilter, enrichmentByLeadId, enrichmentByExternalId]);
+  }, [allFunded, searchQuery, stateFilter, incomeFilter, amountMinFilter, amountMaxFilter, enrichedFilter, enrichmentByLeadId, enrichmentByExternalId]);
+
+  // Count unenriched funded investors
+  const unenrichedFundedCount = useMemo(() => {
+    return allFunded.filter(f => {
+      const enrich = getEnrichmentForFunded(f);
+      return !(enrich?.state || enrich?.household_income || enrich?.company_name || enrich?.credit_range);
+    }).length;
+  }, [allFunded, enrichmentByLeadId, enrichmentByExternalId]);
+
+  const handleBulkEnrich = async () => {
+    setIsBulkEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-all-funded', {
+        body: { client_id: '5cef9f3f-7e82-4dd6-a407-23f5fd853c8b' },
+      });
+      if (error) throw error;
+      toast.success(`Enrichment started for ${data?.total || 'all'} unenriched records`);
+    } catch (err: any) {
+      toast.error(`Enrichment failed: ${err.message}`);
+    } finally {
+      setIsBulkEnriching(false);
+    }
+  };
 
   // Get current data based on tab
   const getCurrentData = () => {
@@ -416,7 +457,39 @@ export default function DatabaseView() {
               setOpen={setSourceOpen}
             />
 
-            {/* Amount range (funded tab) */}
+            {/* Enriched filter */}
+            <Select value={enrichedFilter} onValueChange={(v: any) => { setEnrichedFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-40 h-9">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Records</SelectItem>
+                <SelectItem value="enriched">Enriched Only</SelectItem>
+                <SelectItem value="not_enriched">Not Enriched</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Bulk enrich button */}
+            {unenrichedFundedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isBulkEnriching}
+                onClick={handleBulkEnrich}
+                className="gap-1.5"
+              >
+                {isBulkEnriching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Enrich {unenrichedFundedCount.toLocaleString()} Unenriched
+              </Button>
+            )}
+
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Amount:</span>
               <Input
@@ -465,6 +538,11 @@ export default function DatabaseView() {
               {(amountMinFilter || amountMaxFilter) && (
                 <Badge variant="outline" className="gap-1 cursor-pointer" onClick={() => { setAmountMinFilter(''); setAmountMaxFilter(''); }}>
                   💵 {amountMinFilter ? `$${Number(amountMinFilter).toLocaleString()}` : '$0'} – {amountMaxFilter ? `$${Number(amountMaxFilter).toLocaleString()}` : '∞'} <X className="h-3 w-3" />
+                </Badge>
+              )}
+              {enrichedFilter !== 'all' && (
+                <Badge variant="outline" className="gap-1 cursor-pointer" onClick={() => setEnrichedFilter('all')}>
+                  ✨ {enrichedFilter === 'enriched' ? 'Enriched' : 'Not Enriched'} <X className="h-3 w-3" />
                 </Badge>
               )}
             </div>
