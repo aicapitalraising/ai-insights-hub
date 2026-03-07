@@ -57,61 +57,38 @@ export default function DatabaseView() {
   const [amountMinFilter, setAmountMinFilter] = useState('');
   const [amountMaxFilter, setAmountMaxFilter] = useState('');
 
-  // Fetch ALL leads (no date filter)
+  // Fetch ALL leads (no date filter) — up to 100k
   const { data: allLeads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['all-leads-db'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5000);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => fetchAllRows<any>((sb) =>
+      sb.from('leads').select('*').order('created_at', { ascending: false })
+    ),
   });
 
-  // Fetch ALL calls (no date filter)
+  // Fetch ALL calls (no date filter) — up to 100k
   const { data: allCalls = [], isLoading: callsLoading } = useQuery({
     queryKey: ['all-calls-db'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('calls')
-        .select('*, leads(name, email, phone)')
-        .order('created_at', { ascending: false })
-        .limit(5000);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => fetchAllRows<any>((sb) =>
+      sb.from('calls').select('*, leads(name, email, phone)').order('created_at', { ascending: false })
+    ),
   });
 
   const showedCalls = useMemo(() => allCalls.filter(c => c.showed), [allCalls]);
 
-  // Fetch ALL funded investors (no date filter)
+  // Fetch ALL funded investors (no date filter) — up to 20k
   const { data: allFunded = [], isLoading: fundedLoading } = useQuery({
     queryKey: ['all-funded-db'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('funded_investors')
-        .select('*, leads(name, email, phone)')
-        .order('funded_at', { ascending: false })
-        .limit(5000);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => fetchAllRows<any>((sb) =>
+      sb.from('funded_investors').select('*, leads(name, email, phone)').order('funded_at', { ascending: false })
+    ),
   });
 
-  // Fetch enrichment data for attribute filtering
+  // Fetch ALL enrichment data (for attribute filtering + display)
   const { data: enrichmentData = [] } = useQuery({
     queryKey: ['all-enrichment-db'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lead_enrichment')
-        .select('lead_id, state, household_income, city, company_name, credit_range')
-        .limit(5000);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => fetchAllRows<any>((sb) =>
+      sb.from('lead_enrichment').select('lead_id, external_id, state, household_income, city, company_name, credit_range, first_name, last_name, gender, birth_date, address, zip, linkedin_url, company_title, enriched_phones, enriched_emails, vehicles')
+    ),
   });
 
   // Build enrichment lookup by lead_id
