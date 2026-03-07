@@ -24,13 +24,25 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Get all lead_enrichment records that haven't been enriched yet
-    const { data: pendingRecords, error } = await supabase
-      .from('lead_enrichment')
-      .select('external_id, first_name, last_name, enriched_phones, enriched_emails, city, state, zip, address, source')
-      .eq('client_id', client_id)
-      .in('source', ['bulk-import-pending', 'bulk-import'])
-      .limit(10000);
+    // Get all lead_enrichment records that haven't been enriched yet - paginate
+    const allRecords: any[] = [];
+    let offset = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: page, error: pageErr } = await supabase
+        .from('lead_enrichment')
+        .select('external_id, first_name, last_name, enriched_phones, enriched_emails, city, state, zip, address, source')
+        .eq('client_id', client_id)
+        .in('source', ['bulk-import-pending', 'bulk-import'])
+        .range(offset, offset + pageSize - 1);
+      if (pageErr) throw pageErr;
+      if (!page || page.length === 0) break;
+      allRecords.push(...page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    const pendingRecords = allRecords;
+    const error = null;
 
     if (error) throw error;
 
