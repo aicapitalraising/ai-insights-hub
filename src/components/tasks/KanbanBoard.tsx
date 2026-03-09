@@ -539,7 +539,7 @@ export function KanbanBoard({ tasks, clients, clientId, isPublicView = false }: 
 
             const stats = [
               { label: 'This Week', value: thisWeekTasks.length, color: 'text-foreground' },
-              { label: 'In Progress', value: inProgressCount, color: 'text-foreground' },
+              { label: 'Due Today', value: dueTodayCount, color: dueTodayCount > 0 ? 'text-orange-500' : 'text-foreground' },
               { label: 'Total', value: totalCount, color: 'text-foreground' },
               { label: 'Completion', value: `${completionRate}%`, color: 'text-foreground' },
               { label: 'Overdue', value: overdueCount, color: overdueCount > 0 ? 'text-destructive' : 'text-foreground' },
