@@ -36,8 +36,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV } from '@/lib/exportUtils';
 import { fetchAllRows } from '@/lib/fetchAllRows';
+import { CSVImportModal, ImportType } from '@/components/import/CSVImportModal';
 
 const PAGE_SIZE = 150;
+const AGENCY_CLIENT_ID = '5cef9f3f-7e82-4dd6-a407-23f5fd853c8b';
 
 export default function DatabaseView() {
   const navigate = useNavigate();
