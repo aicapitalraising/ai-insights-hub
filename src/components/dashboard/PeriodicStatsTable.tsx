@@ -606,7 +606,7 @@ export function PeriodicStatsTable({ clientId, dailyMetrics: externalMetrics }: 
                         <TableCell className="font-medium whitespace-nowrap bg-card py-1.5 px-3 text-left sticky left-0 z-20 shadow-[2px_0_4px_-2px_hsl(var(--border))]">
                           {metricLabels[metric.key] || metric.label}
                         </TableCell>
-                        <TableCell className="text-center bg-muted/30 py-1.5 px-3 font-semibold sticky left-[120px] z-20 shadow-[2px_0_4px_-2px_hsl(var(--border))]">
+                        <TableCell className="text-center bg-muted py-1.5 px-3 font-semibold sticky left-[120px] z-20 shadow-[2px_0_4px_-2px_hsl(var(--border))]">
                           <span className={totalColorClass}>
                             {metric.format(totalValue)}
                           </span>
