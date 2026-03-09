@@ -535,7 +535,7 @@ export function KanbanBoard({ tasks, clients, clientId, isPublicView = false }: 
               if (!t.due_date) return false;
               return isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date));
             }).length;
-            const recurringCount = filteredTasks.filter(t => t.recurrence_pattern && t.recurrence_pattern !== 'none').length;
+            const recurringCount = filteredTasks.filter(t => t.recurrence_type && t.recurrence_type !== 'none').length;
 
             const stats = [
               { label: 'This Week', value: thisWeekTasks.length, color: 'text-foreground' },
