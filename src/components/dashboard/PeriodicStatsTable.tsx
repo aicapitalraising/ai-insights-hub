@@ -583,7 +583,7 @@ export function PeriodicStatsTable({ clientId, dailyMetrics: externalMetrics }: 
                     <TableHead className="font-bold whitespace-nowrap bg-card w-[120px] py-2 px-3 text-left sticky left-0 z-20 shadow-[2px_0_4px_-2px_hsl(var(--border))]">
                       Metric
                     </TableHead>
-                    <TableHead className="font-bold text-center whitespace-nowrap bg-muted/30 min-w-[110px] py-2 px-3 sticky left-[120px] z-20 shadow-[2px_0_4px_-2px_hsl(var(--border))]">
+                    <TableHead className="font-bold text-center whitespace-nowrap bg-muted min-w-[110px] py-2 px-3 sticky left-[120px] z-20 shadow-[2px_0_4px_-2px_hsl(var(--border))]">
                       TOTAL
                     </TableHead>
                     {displayStats.map((period, i) => (
