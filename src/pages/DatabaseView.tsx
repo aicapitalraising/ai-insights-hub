@@ -721,75 +721,79 @@ export default function DatabaseView() {
 
                   {/* Calls Tab */}
                   <TabsContent value="calls" className="mt-0">
-                    <ScrollArea className="h-[500px]">
+                    <div className="overflow-x-auto border border-border rounded">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-b-2">
-                            <TableHead>Client</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Outcome</TableHead>
-                            <TableHead>Type</TableHead>
+                          <TableRow className="border-b">
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Client</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Date</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Contact</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Email</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Phone</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Status</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Outcome</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Type</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {paginatedData.map((call: any) => (
-                            <TableRow key={call.id} className="hover:bg-muted/50">
-                              <TableCell><Badge variant="outline">{getClientName(call.client_id)}</Badge></TableCell>
-                              <TableCell className="font-mono text-sm tabular-nums">
-                                {call.scheduled_at ? new Date(call.scheduled_at).toLocaleString() : '-'}
+                            <TableRow key={call.id} className="hover:bg-muted/50 border-b h-7">
+                              <TableCell className="text-[11px] py-0.5 px-2"><Badge variant="outline" className="text-[10px] px-1 py-0">{getClientName(call.client_id)}</Badge></TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2 font-mono tabular-nums whitespace-nowrap">
+                                {call.scheduled_at ? new Date(call.scheduled_at).toLocaleDateString() : '-'}
                               </TableCell>
-                              <TableCell className="font-medium">{call.leads?.name || 'Unknown'}</TableCell>
-                              <TableCell>{call.leads?.phone || '-'}</TableCell>
-                              <TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2 font-medium whitespace-nowrap">{call.leads?.name || 'Unknown'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2">{call.leads?.email || call.contact_email || '-'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{call.leads?.phone || call.contact_phone || '-'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2">
                                 {call.showed ? (
-                                  <Badge className="bg-green-600">Showed</Badge>
+                                  <Badge className="bg-chart-2/20 text-chart-2 border-chart-2/30 text-[10px] px-1 py-0">Showed</Badge>
                                 ) : (
-                                  <Badge variant="secondary">No Show</Badge>
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0">No Show</Badge>
                                 )}
                               </TableCell>
-                              <TableCell>{call.outcome || '-'}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{call.is_reconnect ? 'Reconnect' : 'Initial'}</Badge>
+                              <TableCell className="text-[11px] py-0.5 px-2">{call.outcome || '-'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2">
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">{call.is_reconnect ? 'Reconnect' : 'Initial'}</Badge>
                               </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
-                    </ScrollArea>
+                    </div>
                   </TabsContent>
 
                   {/* Showed Calls Tab */}
                   <TabsContent value="showed" className="mt-0">
-                    <ScrollArea className="h-[500px]">
+                    <div className="overflow-x-auto border border-border rounded">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-b-2">
-                            <TableHead>Client</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Outcome</TableHead>
-                            <TableHead>Summary</TableHead>
-                            <TableHead>Quality</TableHead>
+                          <TableRow className="border-b">
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Client</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Date</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Contact</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Email</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Phone</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Outcome</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Summary</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Quality</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {paginatedData.map((call: any) => (
-                            <TableRow key={call.id} className="hover:bg-muted/50">
-                              <TableCell><Badge variant="outline">{getClientName(call.client_id)}</Badge></TableCell>
-                              <TableCell className="font-mono text-sm tabular-nums">
-                                {call.scheduled_at ? new Date(call.scheduled_at).toLocaleString() : '-'}
+                            <TableRow key={call.id} className="hover:bg-muted/50 border-b h-7">
+                              <TableCell className="text-[11px] py-0.5 px-2"><Badge variant="outline" className="text-[10px] px-1 py-0">{getClientName(call.client_id)}</Badge></TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2 font-mono tabular-nums whitespace-nowrap">
+                                {call.scheduled_at ? new Date(call.scheduled_at).toLocaleDateString() : '-'}
                               </TableCell>
-                              <TableCell className="font-medium">{call.leads?.name || 'Unknown'}</TableCell>
-                              <TableCell>{call.leads?.phone || '-'}</TableCell>
-                              <TableCell>{call.outcome || '-'}</TableCell>
-                              <TableCell className="max-w-xs truncate">{call.summary || '-'}</TableCell>
-                              <TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2 font-medium whitespace-nowrap">{call.leads?.name || 'Unknown'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2">{call.leads?.email || call.contact_email || '-'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{call.leads?.phone || call.contact_phone || '-'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2">{call.outcome || '-'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2 max-w-[200px] truncate">{call.summary || '-'}</TableCell>
+                              <TableCell className="text-[11px] py-0.5 px-2">
                                 {call.quality_score ? (
-                                  <Badge variant={call.quality_score >= 7 ? 'default' : 'secondary'}>
+                                  <Badge variant={call.quality_score >= 7 ? 'default' : 'secondary'} className="text-[10px] px-1 py-0">
                                     {call.quality_score}/10
                                   </Badge>
                                 ) : '-'}
@@ -798,27 +802,27 @@ export default function DatabaseView() {
                           ))}
                         </TableBody>
                       </Table>
-                    </ScrollArea>
+                    </div>
                   </TabsContent>
 
                   {/* Funded Tab */}
                   <TabsContent value="funded" className="mt-0">
-                    <ScrollArea className="h-[500px]">
+                    <div className="overflow-x-auto border border-border rounded">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-b-2">
-                            <TableHead>Client</TableHead>
-                            <TableHead>Funded Date</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>State</TableHead>
-                            <TableHead>City</TableHead>
-                            <TableHead>Income</TableHead>
-                            <TableHead>Company</TableHead>
-                            <TableHead>Credit</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="text-right">Days to Fund</TableHead>
+                          <TableRow className="border-b">
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Client</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Funded Date</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Name</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Email</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Phone</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">State</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">City</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Income</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Company</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Credit</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap text-right">Amount</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap text-right">Days to Fund</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -827,23 +831,23 @@ export default function DatabaseView() {
                             const email = investor.leads?.email || (enrich?.enriched_emails?.[0] as any)?.email || '-';
                             const phone = investor.leads?.phone || (enrich?.enriched_phones?.[0] as any)?.phone || '-';
                             return (
-                              <TableRow key={investor.id} className="hover:bg-muted/50">
-                                <TableCell><Badge variant="outline">{getClientName(investor.client_id)}</Badge></TableCell>
-                                <TableCell className="font-mono text-sm tabular-nums">
+                              <TableRow key={investor.id} className="hover:bg-muted/50 border-b h-7">
+                                <TableCell className="text-[11px] py-0.5 px-2"><Badge variant="outline" className="text-[10px] px-1 py-0">{getClientName(investor.client_id)}</Badge></TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 font-mono tabular-nums whitespace-nowrap">
                                   {new Date(investor.funded_at).toLocaleDateString()}
                                 </TableCell>
-                                <TableCell className="font-medium">{investor.name || 'Unknown'}</TableCell>
-                                <TableCell className="text-xs">{email}</TableCell>
-                                <TableCell className="text-xs">{phone}</TableCell>
-                                <TableCell className="text-xs">{enrich?.state || '-'}</TableCell>
-                                <TableCell className="text-xs">{enrich?.city || '-'}</TableCell>
-                                <TableCell className="text-xs">{enrich?.household_income || '-'}</TableCell>
-                                <TableCell className="text-xs">{enrich?.company_name || '-'}</TableCell>
-                                <TableCell className="text-xs">{enrich?.credit_range || '-'}</TableCell>
-                                <TableCell className="text-right font-mono text-chart-2 tabular-nums">
+                                <TableCell className="text-[11px] py-0.5 px-2 font-medium whitespace-nowrap">{investor.name || 'Unknown'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">{email}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{phone}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">{enrich?.state || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">{enrich?.city || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">{enrich?.household_income || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">{enrich?.company_name || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">{enrich?.credit_range || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 text-right font-mono text-chart-2 tabular-nums">
                                   ${Number(investor.funded_amount).toLocaleString()}
                                 </TableCell>
-                                <TableCell className="text-right font-mono tabular-nums">
+                                <TableCell className="text-[11px] py-0.5 px-2 text-right font-mono tabular-nums">
                                   {investor.time_to_fund_days || '-'}
                                 </TableCell>
                               </TableRow>
@@ -851,7 +855,7 @@ export default function DatabaseView() {
                           })}
                         </TableBody>
                       </Table>
-                    </ScrollArea>
+                    </div>
                   </TabsContent>
                 </>
               )}
@@ -884,6 +888,14 @@ export default function DatabaseView() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Import Modal */}
+      <CSVImportModal
+        clientId={AGENCY_CLIENT_ID}
+        importType={importType}
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+      />
     </div>
   );
 }
