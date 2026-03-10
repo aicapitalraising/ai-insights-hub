@@ -35,6 +35,15 @@ const ghlFieldLabels: Record<string, string> = {
   'KuGBAp7FfYwkyKDxqhI6': 'LinkedIn Profile',
   'UMvhwPXbDAzEgkEfutux': '1031 Exchange Amount',
   'mHvcHd1wvwyvoJHim3Eb': 'Property Status',
+  // Call disposition & AI analysis fields
+  'nwXgYLXyibMPgTlUFzbp': 'Call Disposition',
+  'ZHjm3krQalEyLCltxthZ': 'Call Sentiment',
+  '6zEzvZabX0i0mOnVlSfT': 'Interest Level',
+  'PsZ0FxJYrBk7FJftONUS': 'Follow-Up Action',
+  'aCCb99z3kv7KENtzlGqI': 'Call Summary',
+  'MQ1DUMtIXwVKWPkHJyJi': 'Call Date/Time',
+  'CN54sE9RqSmrgu9ZbwQK': 'Call Duration Notes',
+  'Z73Jrsio3H1hf5BddjXl': 'Callback Requested',
 };
 
 // UTM-related field IDs to filter out
