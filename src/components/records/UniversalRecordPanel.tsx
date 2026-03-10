@@ -491,10 +491,19 @@ export function UniversalRecordPanel({
                   {filteredQuestions.map((q: any, idx: number) => {
                     const questionKey = String(q.question || '');
                     const displayLabel = ghlFieldLabels[questionKey] || questionKey;
+                    const answerStr = String(q.answer);
+                    const isUrl = answerStr.startsWith('http://') || answerStr.startsWith('https://');
+                    const isLongText = answerStr.length > 100;
                     return (
                       <div key={idx} className="bg-muted/50 p-2 rounded">
                         <p className="text-muted-foreground text-xs">{displayLabel}</p>
-                        <p className="font-medium text-sm">{String(q.answer)}</p>
+                        {isUrl ? (
+                          <a href={answerStr} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm break-all">
+                            {answerStr}
+                          </a>
+                        ) : (
+                          <p className={`font-medium text-sm ${isLongText ? 'whitespace-pre-wrap' : ''}`}>{answerStr}</p>
+                        )}
                       </div>
                     );
                   })}
