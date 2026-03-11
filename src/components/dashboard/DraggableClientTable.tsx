@@ -396,11 +396,6 @@ export function DraggableClientTable({
                       {client.name}
                     </TableCell>
 
-                    {/* MRR */}
-                    <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
-                      {computed.mrr > 0 ? formatCurrencyShort(computed.mrr) : <span className="text-muted-foreground">-</span>}
-                    </TableCell>
-
                     {/* Meta Spend */}
                     <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
                       {formatCurrency(m.totalAdSpend || 0)}
