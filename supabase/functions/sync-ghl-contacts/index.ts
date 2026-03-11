@@ -2138,6 +2138,9 @@ async function syncAllContactsUnlimited(
     result.errors.push(`Pipeline fetch failed (non-blocking): ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
   
+  // Fetch custom field definitions once for this client
+  const fieldNameMap = await fetchGHLCustomFieldDefinitions(client.ghl_api_key, client.ghl_location_id);
+  
   let hasMore = true;
   let startAfterId: string | undefined;
   let totalProcessed = 0;
