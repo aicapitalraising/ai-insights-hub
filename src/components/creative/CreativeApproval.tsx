@@ -96,8 +96,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     : creatives.filter(c => c.status === activeTab);
 
   const handleLaunch = (creative: Creative) => {
-    updateStatus.mutate({ id: creative.id, status: 'launched' as any, clientId, creativeTitle: creative.title });
-    toast.success('Creative launched!');
+    updateStatus.mutate({ id: creative.id, status: 'launched', clientId, creativeTitle: creative.title });
   };
 
   const handleUpload = async () => {
