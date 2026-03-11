@@ -100,19 +100,32 @@ export function KanbanBoard({ tasks, clients, clientId, isPublicView = false }: 
   const { currentMember } = useTeamMember();
    const [searchParams, setSearchParams] = useSearchParams();
    
-   // Handle deep link to specific task
-   useEffect(() => {
-     const taskId = searchParams.get('task');
-     if (taskId && tasks.length > 0) {
-       const task = tasks.find(t => t.id === taskId);
-       if (task) {
-         setSelectedTask(task);
-         // Clear the query param after opening
-         searchParams.delete('task');
-         setSearchParams(searchParams, { replace: true });
-       }
-     }
-   }, [searchParams, tasks, setSearchParams]);
+    // Handle deep link to specific task
+    useEffect(() => {
+      const taskId = searchParams.get('task');
+      if (taskId && tasks.length > 0) {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          setSelectedTask(task);
+          // Clear the query param after opening
+          searchParams.delete('task');
+          setSearchParams(searchParams, { replace: true });
+        }
+      }
+    }, [searchParams, tasks, setSearchParams]);
+
+    // Listen for open-task events (e.g. after duplicating)
+    useEffect(() => {
+      const handler = (e: Event) => {
+        const taskId = (e as CustomEvent).detail?.taskId;
+        if (taskId && tasks.length > 0) {
+          const task = tasks.find(t => t.id === taskId);
+          if (task) setSelectedTask(task);
+        }
+      };
+      window.addEventListener('open-task', handler);
+      return () => window.removeEventListener('open-task', handler);
+    }, [tasks]);
   
   // Initialize "My Tasks" filter based on logged-in member
   useEffect(() => {

@@ -680,14 +680,27 @@ const getHistoryIcon = (action: string) => {
                       )}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyTaskUrl}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy Link
-                  </Button>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={handleCopyTaskUrl}
+                   >
+                     <Copy className="h-4 w-4 mr-2" />
+                     Copy Link
+                   </Button>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={handleDuplicateTask}
+                     disabled={createTask.isPending}
+                   >
+                     {createTask.isPending ? (
+                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                     ) : (
+                       <Copy className="h-4 w-4 mr-2" />
+                     )}
+                     Duplicate
+                   </Button>
                   <Button
                     variant={task.stage === 'done' ? 'secondary' : 'outline'}
                     size="sm"
