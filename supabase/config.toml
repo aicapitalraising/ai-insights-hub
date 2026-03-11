@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.enrich-lead-retargetiq]
 verify_jwt = false
+
+[functions.fathom-webhook]
+verify_jwt = false
