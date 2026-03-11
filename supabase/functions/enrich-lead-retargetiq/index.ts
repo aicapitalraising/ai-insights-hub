@@ -97,7 +97,7 @@ async function lookupByEmail(apiKey: string, slug: string, email: string): Promi
       return {
         identity: data.data.identities[0],
         allIdentities: data.data.identities,
-        companies: data.data.identities[0]?.companies || [],
+        companies: collectAllCompanies(data.data.identities),
         method: 'email',
         rawResponse: data.data,
       };
