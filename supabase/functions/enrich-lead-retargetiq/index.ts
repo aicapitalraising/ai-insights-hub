@@ -13,6 +13,47 @@ interface EnrichResult {
   rawResponse: any;
 }
 
+function collectAllCompanies(identities: any[]): any[] {
+  const seen = new Set<string>();
+  const all: any[] = [];
+  for (const id of identities) {
+    // Identity-level company fields
+    if (id.companyName || id.company) {
+      const key = `${id.companyName || id.company}|${id.title || ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        all.push({
+          company: id.companyName || id.company,
+          title: id.title || id.jobTitle || null,
+          industry: id.industry || null,
+          linkedin: id.linkedin || id.linkedinUrl || null,
+          revenue: id.revenue || null,
+          employeeCount: id.employeeCount || id.employees || null,
+          website: id.companyWebsite || id.website || null,
+          phone: id.companyPhone || null,
+          address: id.companyAddress || null,
+          city: id.companyCity || null,
+          state: id.companyState || null,
+          zip: id.companyZip || null,
+        });
+      }
+    }
+    // Nested companies array
+    for (const c of (id.companies || [])) {
+      const key = `${c.company || c.name || ''}|${c.title || ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        all.push({
+          ...c,
+          company: c.company || c.name || null,
+          linkedin: c.linkedin || c.linkedinUrl || null,
+        });
+      }
+    }
+  }
+  return all;
+}
+
 async function lookupByPhone(apiKey: string, slug: string, phone: string): Promise<EnrichResult | null> {
   const cleanPhone = phone.replace(/\D/g, '');
   if (cleanPhone.length < 10) return null;
@@ -31,7 +72,7 @@ async function lookupByPhone(apiKey: string, slug: string, phone: string): Promi
       return {
         identity: data.data.identities[0],
         allIdentities: data.data.identities,
-        companies: data.data.identities[0]?.companies || [],
+        companies: collectAllCompanies(data.data.identities),
         method: 'phone',
         rawResponse: data.data,
       };
@@ -56,7 +97,7 @@ async function lookupByEmail(apiKey: string, slug: string, email: string): Promi
       return {
         identity: data.data.identities[0],
         allIdentities: data.data.identities,
-        companies: data.data.identities[0]?.companies || [],
+        companies: collectAllCompanies(data.data.identities),
         method: 'email',
         rawResponse: data.data,
       };
@@ -88,7 +129,7 @@ async function lookupByAddress(apiKey: string, slug: string, params: any): Promi
       return {
         identity: data.data.identities[0],
         allIdentities: data.data.identities,
-        companies: data.data.identities[0]?.companies || [],
+        companies: collectAllCompanies(data.data.identities),
         method: 'address',
         rawResponse: data.data,
       };
@@ -102,6 +143,7 @@ function mergeResults(results: EnrichResult[], knownFirstName?: string, knownLas
 
   // Collect all unique identities across all results
   const identityMap = new Map<string, any>();
+  const companySeen = new Set<string>();
   const allCompanies: any[] = [];
   const methods: string[] = [];
   const rawResponses: any[] = [];
@@ -128,8 +170,11 @@ function mergeResults(results: EnrichResult[], knownFirstName?: string, knownLas
         identityMap.set(key, merged);
       }
     }
+    // Merge companies with full deduplication
     for (const c of r.companies) {
-      if (!allCompanies.find(ec => ec.company === c.company && ec.title === c.title)) {
+      const key = `${c.company || ''}|${c.title || ''}`;
+      if (!companySeen.has(key)) {
+        companySeen.add(key);
         allCompanies.push(c);
       }
     }
@@ -542,9 +587,9 @@ Deno.serve(async (req) => {
       zip: identity.zip || null,
       gender: identity.gender === 'M' ? 'Male' : identity.gender === 'F' ? 'Female' : identity.gender || null,
       birth_date: identity.birthDate || null,
-      company_name: merged.companies[0]?.company || null,
-      company_title: merged.companies[0]?.title || null,
-      linkedin_url: merged.companies[0]?.linkedin || null,
+      company_name: merged.companies[0]?.company || identity.companyName || identity.company || null,
+      company_title: merged.companies[0]?.title || identity.title || identity.jobTitle || null,
+      linkedin_url: merged.companies[0]?.linkedin || identity.linkedin || identity.linkedinUrl || null,
       enriched_phones: identity.phones || [],
       enriched_emails: identity.emails || [],
       vehicles: identity.vehicles || [],
