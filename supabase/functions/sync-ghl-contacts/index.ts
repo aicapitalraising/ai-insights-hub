@@ -1147,6 +1147,8 @@ async function syncClientContacts(
   // Calculate cutoff date if sinceDateDays is specified
   const cutoffDate = sinceDateDays ? new Date(Date.now() - sinceDateDays * 24 * 60 * 60 * 1000) : null;
   
+  // Fetch custom field definitions once for this client
+  const fieldNameMap = await fetchGHLCustomFieldDefinitions(client.ghl_api_key, client.ghl_location_id);
 
   // Track contacts that need timeline sync
   const contactsForTimeline: string[] = [];
