@@ -152,6 +152,14 @@ export function DraggableClientTable({
       const bottleneck = computeBottleneck(leadToBooked, bookedToShowed, showedToFunded);
       const metaSync = getMetaSyncStatus(s, client);
       const mrr = (s as any)?.mrr || 0;
+      // Calculate effective daily ad spend target
+      const dailyTarget = (() => {
+        if (!s) return 0;
+        if (s.daily_ad_spend_target && s.daily_ad_spend_target > 0) return s.daily_ad_spend_target;
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        return (s.monthly_ad_spend_target || 0) / daysInMonth;
+      })();
 
       return {
         client,
@@ -163,6 +171,7 @@ export function DraggableClientTable({
           bottleneck,
           metaSync,
           mrr,
+          dailyTarget,
         },
       };
     });
