@@ -806,7 +806,6 @@ const getHistoryIcon = (action: string) => {
                     <Label className="text-xs text-muted-foreground">Assigned to</Label>
                     <MultiAssigneeSelector
                       taskId={task.id}
-                      agencyMembers={agencyMembers}
                       isPublicView={isPublicView}
                     />
                   </div>
