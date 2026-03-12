@@ -22,7 +22,7 @@ export interface Creative {
   headline: string | null;
   body_copy: string | null;
   cta_text: string | null;
-  status: 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched';
+  status: 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched';
   comments: CreativeComment[];
   aspect_ratio: string | null;
   created_at: string;
