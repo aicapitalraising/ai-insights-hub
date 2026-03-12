@@ -92,6 +92,7 @@ export function CreativesTab() {
 
   const statusCounts = {
     all: creativesWithClients.length,
+    draft: creativesWithClients.filter(c => c.status === 'draft').length,
     pending: creativesWithClients.filter(c => c.status === 'pending').length,
     approved: creativesWithClients.filter(c => c.status === 'approved').length,
     launched: creativesWithClients.filter(c => c.status === 'launched').length,
