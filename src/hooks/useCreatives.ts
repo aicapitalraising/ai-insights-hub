@@ -22,7 +22,7 @@ export interface Creative {
   headline: string | null;
   body_copy: string | null;
   cta_text: string | null;
-  status: 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched';
+  status: 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched';
   comments: CreativeComment[];
   aspect_ratio: string | null;
   created_at: string;
@@ -46,7 +46,7 @@ export function useCreatives(clientId?: string) {
         ...item,
         type: item.type as 'image' | 'video' | 'copy',
         platform: (item.platform as 'meta' | 'tiktok' | 'youtube' | 'google') || 'meta',
-        status: item.status as 'pending' | 'approved' | 'revisions' | 'rejected',
+        status: item.status as 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched',
         comments: (item.comments as unknown as CreativeComment[]) || [],
         aspect_ratio: (item as any).aspect_ratio || null,
       })) as Creative[];
@@ -133,7 +133,7 @@ export function useCreateCreative() {
           headline: creative.headline || null,
           body_copy: creative.body_copy || null,
           cta_text: creative.cta_text || null,
-          status: creative.status || 'pending',
+          status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
           comments: creative.comments || [],
           aspect_ratio: creative.aspect_ratio || null,
         })
@@ -212,7 +212,7 @@ export function useUpdateCreativeStatus() {
       creativeTitle
     }: { 
       id: string; 
-      status: 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched'; 
+      status: 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched'; 
       clientId: string;
       creativeTitle?: string;
     }) => {

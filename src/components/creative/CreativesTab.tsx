@@ -92,6 +92,7 @@ export function CreativesTab() {
 
   const statusCounts = {
     all: creativesWithClients.length,
+    draft: creativesWithClients.filter(c => c.status === 'draft').length,
     pending: creativesWithClients.filter(c => c.status === 'pending').length,
     approved: creativesWithClients.filter(c => c.status === 'approved').length,
     launched: creativesWithClients.filter(c => c.status === 'launched').length,
@@ -101,6 +102,7 @@ export function CreativesTab() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'draft': return 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400';
       case 'pending': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
       case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'launched': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
@@ -213,6 +215,7 @@ export function CreativesTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="launched">Launched</SelectItem>

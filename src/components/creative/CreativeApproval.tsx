@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { useParams } from 'react-router-dom';
 import { 
   useCreatives, 
   useCreateCreative, 
@@ -11,6 +12,7 @@ import {
   Creative,
   CreativeComment 
 } from '@/hooks/useCreatives';
+import { useClient } from '@/hooks/useClients';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +41,9 @@ import {
   Pause,
   Eye,
   Clock,
-  Sparkles
+  Sparkles,
+  Link,
+  SendHorizontal
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -50,7 +54,9 @@ interface CreativeApprovalProps {
 }
 
 export function CreativeApproval({ clientId, clientName, isPublicView = false }: CreativeApprovalProps) {
-  const { data: creatives = [], isLoading } = useCreatives(clientId);
+  const { data: allCreatives = [], isLoading } = useCreatives(clientId);
+  const { clientId: routeClientId } = useParams<{ clientId: string }>();
+  const { data: client } = useClient(routeClientId || clientId);
   const createCreative = useCreateCreative();
   const updateStatus = useUpdateCreativeStatus();
   const addComment = useAddCreativeComment();
@@ -59,6 +65,11 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   
   // Check if this is an agency upload (team member logged in and not public view)
   const isAgencyUpload = !!currentMember && !isPublicView;
+  
+  // Public view: filter out draft creatives (not yet approved by agency)
+  const creatives = isPublicView 
+    ? allCreatives.filter(c => c.status !== 'draft')
+    : allCreatives;
   
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
@@ -84,6 +95,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
 
   const statusCounts = {
     all: creatives.length,
+    draft: creatives.filter(c => c.status === 'draft').length,
     pending: creatives.filter(c => c.status === 'pending').length,
     approved: creatives.filter(c => c.status === 'approved').length,
     launched: creatives.filter(c => c.status === 'launched').length,
@@ -94,6 +106,22 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   const filteredCreatives = activeTab === 'all' 
     ? creatives 
     : creatives.filter(c => c.status === activeTab);
+
+  const handleSendToClient = (creative: Creative) => {
+    updateStatus.mutate({ id: creative.id, status: 'pending', clientId, creativeTitle: creative.title });
+    toast.success('Creative sent to client for approval');
+  };
+
+  const handleCopyApprovalLink = () => {
+    const publicToken = client?.public_token;
+    if (!publicToken) {
+      toast.error('No public link configured for this client. Set up a public token first.');
+      return;
+    }
+    const url = `${window.location.origin}/public/${publicToken}/creatives`;
+    navigator.clipboard.writeText(url);
+    toast.success('Creative approval link copied to clipboard');
+  };
 
   const handleLaunch = (creative: Creative) => {
     updateStatus.mutate({ id: creative.id, status: 'launched', clientId, creativeTitle: creative.title });
@@ -126,7 +154,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         headline: newCreative.headline || null,
         body_copy: newCreative.body_copy || null,
         cta_text: newCreative.cta_text || null,
-        status: 'pending',
+        status: isAgencyUpload ? 'draft' : 'pending',
         comments: [],
         aspect_ratio: aspectRatio,
         isAgencyUpload, // Pass the agency flag for AI spelling check
@@ -183,7 +211,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
             headline: null,
             body_copy: null,
             cta_text: null,
-            status: 'pending',
+            status: isAgencyUpload ? 'draft' : 'pending',
             comments: [],
             aspect_ratio: aspectRatio,
             isAgencyUpload, // Pass the agency flag for AI spelling check
@@ -231,6 +259,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'draft': return 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400';
       case 'pending': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
       case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'launched': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
@@ -271,7 +300,14 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
             Upload and manage creative assets for {clientName}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Copy Approval Link - agency only */}
+          {!isPublicView && (
+            <Button variant="outline" size="sm" onClick={handleCopyApprovalLink}>
+              <Link className="h-4 w-4 mr-2" />
+              Copy Approval Link
+            </Button>
+          )}
           {/* Bulk Upload - available for public view too */}
           <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
             <DialogTrigger asChild>
@@ -490,7 +526,13 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
       
       <CardContent>
         {/* Status Summary Cards */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className={`grid ${isPublicView ? 'grid-cols-4' : 'grid-cols-5'} gap-3 mb-6`}>
+          {!isPublicView && (
+            <div className="bg-slate-50 dark:bg-slate-900/20 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-slate-600">{statusCounts.draft}</p>
+              <p className="text-xs text-slate-700 dark:text-slate-400">Draft</p>
+            </div>
+          )}
           <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-amber-600">{statusCounts.pending}</p>
             <p className="text-xs text-amber-700 dark:text-amber-400">Pending</p>
@@ -513,6 +555,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
+            {!isPublicView && <TabsTrigger value="draft">Draft</TabsTrigger>}
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
             <TabsTrigger value="launched">Launched</TabsTrigger>
@@ -541,6 +584,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                     onPreview={() => setSelectedCreative(creative)}
                     onStatusChange={handleStatusChange}
                     onLaunch={() => handleLaunch(creative)}
+                    onSendToClient={() => handleSendToClient(creative)}
                     onAddComment={handleAddComment}
                     onDelete={() => deleteCreative.mutate({ id: creative.id, clientId })}
                     commentText={cardComments[creative.id] || ''}
@@ -593,7 +637,19 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 flex-wrap border-t pt-4">
-                    {selectedCreative.status !== 'launched' && (
+                    {selectedCreative.status === 'draft' && !isPublicView && (
+                      <Button
+                        className="bg-primary hover:bg-primary/90"
+                        onClick={() => {
+                          handleSendToClient(selectedCreative);
+                          setSelectedCreative(null);
+                        }}
+                      >
+                        <SendHorizontal className="h-4 w-4 mr-1" />
+                        Send to Client
+                      </Button>
+                    )}
+                    {selectedCreative.status !== 'launched' && selectedCreative.status !== 'draft' && (
                       <>
                         {selectedCreative.status === 'approved' && !isPublicView && (
                           <Button
@@ -764,7 +820,7 @@ function InlineVideoPlayer({ src, aspectRatio }: { src: string; aspectRatio?: st
 // Creative card with inline actions
 function CreativeCard({ 
   creative, clientName, clientId, isPublicView, getStatusColor, getTypeIcon,
-  onPreview, onStatusChange, onLaunch, onDelete, commentText, onCommentTextChange, addCommentMutation
+  onPreview, onStatusChange, onLaunch, onSendToClient, onDelete, commentText, onCommentTextChange, addCommentMutation
 }: {
   creative: Creative;
   clientName: string;
@@ -775,6 +831,7 @@ function CreativeCard({
   onPreview: () => void;
   onStatusChange: (c: Creative, s: 'approved' | 'revisions' | 'rejected') => void;
   onLaunch: () => void;
+  onSendToClient: () => void;
   onAddComment: (c: Creative) => void;
   onDelete: () => void;
   commentText: string;
@@ -844,7 +901,17 @@ function CreativeCard({
 
         {/* Action buttons row */}
         <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
-          {creative.status !== 'launched' && (
+          {creative.status === 'draft' && !isPublicView && (
+            <Button
+              size="sm"
+              className="h-7 text-xs gap-1 bg-primary hover:bg-primary/90"
+              onClick={onSendToClient}
+            >
+              <SendHorizontal className="h-3 w-3" />
+              Send to Client
+            </Button>
+          )}
+          {creative.status !== 'launched' && creative.status !== 'draft' && (
             <>
               {creative.status === 'approved' && !isPublicView && (
                 <Button
