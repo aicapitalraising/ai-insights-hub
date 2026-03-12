@@ -767,30 +767,30 @@ const getHistoryIcon = (action: string) => {
                )}
 
                <div className="space-y-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Description</Label>
-                  {isEditingDescription ? (
-                    <Textarea
-                      value={editedDescription}
-                      onChange={(e) => setEditedDescription(e.target.value)}
-                      onBlur={handleSaveDescription}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          setEditedDescription(task.description || '');
-                          setIsEditingDescription(false);
-                        }
-                      }}
-                      rows={3}
-                      placeholder="Add a description..."
-                      className="mt-1"
-                      autoFocus
-                    />
-                  ) : (
-                    <p onClick={() => setIsEditingDescription(true)} className="text-sm mt-1 cursor-pointer hover:bg-muted/50 rounded p-2 -mx-2 transition-colors min-h-[40px]">
-                      {task.description || <span className="text-muted-foreground italic">Click to add description...</span>}
-                    </p>
-                  )}
-                </div>
+                 <div className="w-[85%]">
+                   <Label className="text-xs text-muted-foreground">Description</Label>
+                   {isEditingDescription ? (
+                     <Textarea
+                       value={editedDescription}
+                       onChange={(e) => setEditedDescription(e.target.value)}
+                       onBlur={handleSaveDescription}
+                       onKeyDown={(e) => {
+                         if (e.key === 'Escape') {
+                           setEditedDescription(task.description || '');
+                           setIsEditingDescription(false);
+                         }
+                       }}
+                       rows={3}
+                       placeholder="Add a description..."
+                       className="mt-1"
+                       autoFocus
+                     />
+                   ) : (
+                     <p onClick={() => setIsEditingDescription(true)} className="text-sm mt-1 cursor-pointer hover:bg-muted/50 rounded p-2 -mx-2 transition-colors min-h-[40px] whitespace-pre-wrap break-words">
+                       {task.description || <span className="text-muted-foreground italic">Click to add description...</span>}
+                     </p>
+                   )}
+                 </div>
                </div>
 
                <div className="grid grid-cols-2 gap-4">
