@@ -390,6 +390,12 @@ const Index = () => {
             <SectionErrorBoundary sectionName="Data Health">
               <DataHealthCard />
             </SectionErrorBoundary>
+            {/* Master Meta Token */}
+            {currentMember?.role === 'admin' && (
+              <SectionErrorBoundary sectionName="Master Meta Token">
+                <MasterMetaTokenCard />
+              </SectionErrorBoundary>
+            )}
 
           </TabsContent>
 
