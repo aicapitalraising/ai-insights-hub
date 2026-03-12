@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SortableTableHeader, SortConfig } from '@/components/dashboard/SortableTableHeader';
 import { useMetaCampaigns, useMetaAdSets, useMetaAds, useSyncMetaAds } from '@/hooks/useMetaAds';
 import { useFetchAdMediaHD } from '@/hooks/useAdMediaHD';
+import { useRunAttribution } from '@/hooks/useRunAttribution';
 import { useClientSettings } from '@/hooks/useClientSettings';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useDateFilter } from '@/contexts/DateFilterContext';
