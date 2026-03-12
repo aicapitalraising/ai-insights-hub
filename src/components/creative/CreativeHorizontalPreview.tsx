@@ -239,9 +239,9 @@ export function CreativeHorizontalPreview({ creative, clientName }: CreativeHori
           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
         </div>
 
-        {/* Media - 4:5 container for feed */}
-        <div className="aspect-[4/5] bg-muted relative">
-          {renderMedia('instagram', '4:5')}
+        {/* Media - dynamic aspect ratio */}
+        <div className={`${feedAspect} bg-muted relative`}>
+          {renderMedia('instagram', feedContainerAspect)}
         </div>
 
         {/* CTA */}
