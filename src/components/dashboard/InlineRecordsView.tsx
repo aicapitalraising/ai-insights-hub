@@ -1109,123 +1109,86 @@ export function InlineRecordsView({
   };
 
   // Render call table row (reused across multiple tabs)
-  const renderCallRow = (call: Call, tabType: string) => (
+  const renderCallRow = (call: Call, tabType: string) => {
+    const linkedLead = call.lead_id ? leads.find(l => l.id === call.lead_id) : null;
+    const enrichment = getEnrichment(linkedLead || call);
+    
+    return (
     <TableRow
       key={call.id}
-      className={`cursor-pointer hover:bg-muted/50 ${
+      className={`${ROW_CLASS} cursor-pointer hover:bg-muted/50 ${
         selectedRecord?.id === call.id && selectedType === 'call'
           ? 'bg-primary/10'
           : ''
       }`}
       onClick={() => handleRecordClick(call, 'call')}
     >
-      <TableCell className="font-mono text-sm">
+      <TableCell className={`${CELL_CLASS} font-mono text-muted-foreground whitespace-nowrap`}>
         {call.scheduled_at
-          ? new Date(call.scheduled_at).toLocaleString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            })
+          ? new Date(call.scheduled_at).toLocaleDateString()
           : '-'}
       </TableCell>
-      <TableCell className="font-medium">{getCallDisplayName(call)}</TableCell>
-      <TableCell>
+      <TableCell className={`${CELL_CLASS} font-medium max-w-[120px] truncate`}>{getCallDisplayName(call)}</TableCell>
+      <TableCell className={`${CELL_CLASS} text-muted-foreground max-w-[130px] truncate`}>
+        {call.contact_email || linkedLead?.email || '-'}
+      </TableCell>
+      <TableCell className={`${CELL_CLASS} font-mono text-muted-foreground`}>
+        {call.contact_phone || linkedLead?.phone || '-'}
+      </TableCell>
+      <TableCell className={CELL_CLASS}>
         {call.showed ? (
-          <Badge className="bg-chart-2 text-chart-2-foreground">Showed</Badge>
+          <span className="text-chart-2 font-semibold">Showed</span>
         ) : (
-          <Badge variant="secondary">No Show</Badge>
+          <span className="text-destructive">No Show</span>
         )}
       </TableCell>
-      <TableCell>{call.outcome || '-'}</TableCell>
-      <TableCell className="font-mono text-sm">
-        {(call.booked_at || call.created_at) ? new Date(call.booked_at || call.created_at).toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        }) : '-'}</TableCell>
+      <TableCell className={`${CELL_CLASS} text-muted-foreground max-w-[80px] truncate`}>{call.outcome || '-'}</TableCell>
+      <TableCell className={`${CELL_CLASS} text-muted-foreground`}>
+        {enrichment?.state || '-'}
+      </TableCell>
+      <TableCell className={`${CELL_CLASS} font-mono text-primary`}>
+        {enrichment?.net_worth || '-'}
+      </TableCell>
+      <TableCell className={`${CELL_CLASS} font-mono`}>
+        {enrichment?.household_income || '-'}
+      </TableCell>
       {ghlLocationId && (
-        <TableCell>
-          {call.external_id && !call.external_id.startsWith('wh_') && !call.external_id.startsWith('manual-') ? (
-            <a 
-              href={getGHLContactUrl(ghlLocationId, call.external_id)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline flex items-center gap-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          ) : '-'}
-        </TableCell>
-      )}
-      {ghlLocationId && (
-        <TableCell>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className={`text-xs ${
-                !call.ghl_synced_at 
-                  ? 'text-muted-foreground' 
-                  : new Date(call.ghl_synced_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)
-                    ? 'text-amber-500'
-                    : 'text-chart-2'
-              }`}>
-                {formatLastSync(call.ghl_synced_at)}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-xs space-y-1">
-                <p><strong>Last Sync:</strong> {call.ghl_synced_at ? new Date(call.ghl_synced_at).toLocaleString() : 'Never'}</p>
-                <p><strong>GHL ID:</strong> {call.external_id || 'N/A'}</p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TableCell>
-      )}
-      {ghlLocationId && clientId && (
-        <TableCell>
-          {canSyncFromGHL(call.external_id, !!ghlLocationId) ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              disabled={isSyncing(call.external_id)}
-              onClick={(e) => handleSyncClick(e, call.external_id, 'call')}
-            >
-              {isSyncing(call.external_id) ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          ) : '-'}
+        <TableCell className={CELL_CLASS}>
+          <div className="flex items-center gap-0.5">
+            {call.external_id && !call.external_id.startsWith('wh_') && !call.external_id.startsWith('manual-') ? (
+              <a 
+                href={getGHLContactUrl(ghlLocationId, call.external_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            ) : '-'}
+          </div>
         </TableCell>
       )}
       {clientId && (
-        <TableCell className="text-right">
-          <div className="flex justify-end gap-1">
+        <TableCell className={`${CELL_CLASS} text-right`}>
+          <div className="flex justify-end gap-0.5">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-5 w-5"
               onClick={(e) => { e.stopPropagation(); openEditModal(call); }}
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-2.5 w-2.5" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive"
+                  className="h-5 w-5 text-destructive"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-2.5 w-2.5" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent onClick={(e) => e.stopPropagation()}>
@@ -1247,29 +1210,34 @@ export function InlineRecordsView({
         </TableCell>
       )}
     </TableRow>
-  );
+    );
+  };
 
   // Render call table (reused across multiple tabs)
   const renderCallTable = (callData: Call[], tabType: string) => (
-    <ScrollArea className="h-[400px]">
+    <ScrollArea className="h-[500px]">
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="border-b-2">
-            <TableHead>Scheduled</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Showed</TableHead>
-            <TableHead>Outcome</TableHead>
-            <TableHead>Booked</TableHead>
-            {ghlLocationId && <TableHead>GHL</TableHead>}
-            {ghlLocationId && <TableHead>Last Sync</TableHead>}
-            {ghlLocationId && clientId && <TableHead>Sync</TableHead>}
-            {clientId && <TableHead className="text-right">Actions</TableHead>}
+            <TableHead className={HEAD_CLASS}>Date</TableHead>
+            <TableHead className={HEAD_CLASS}>Name</TableHead>
+            <TableHead className={HEAD_CLASS}>Email</TableHead>
+            <TableHead className={HEAD_CLASS}>Phone</TableHead>
+            <TableHead className={HEAD_CLASS}>Status</TableHead>
+            <TableHead className={HEAD_CLASS}>Outcome</TableHead>
+            <TableHead className={HEAD_CLASS}>State</TableHead>
+            <TableHead className={HEAD_CLASS}>Net Worth</TableHead>
+            <TableHead className={HEAD_CLASS}>Income</TableHead>
+            {ghlLocationId && <TableHead className={HEAD_CLASS}>GHL</TableHead>}
+            {clientId && <TableHead className={`${HEAD_CLASS} text-right`}>Act</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {callData.map((call) => renderCallRow(call, tabType))}
         </TableBody>
       </Table>
+      </div>
     </ScrollArea>
   );
 
