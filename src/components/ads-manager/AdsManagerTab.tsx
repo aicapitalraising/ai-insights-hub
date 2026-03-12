@@ -219,6 +219,7 @@ export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
   const { data: settings } = useClientSettings(clientId);
   const { startDate, endDate } = useDateFilter();
   const syncMutation = useSyncMetaAds();
+  const attributionMutation = useRunAttribution();
 
   const currentRangeKey = `${startDate}_${endDate}`;
 
@@ -254,6 +255,10 @@ export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
   const handleSync = () => {
     lastSyncedRange.current = currentRangeKey;
     syncMutation.mutate({ clientId, startDate, endDate });
+  };
+
+  const handleAttribution = () => {
+    attributionMutation.mutate({ clientId, startDate, endDate });
   };
 
   return (
