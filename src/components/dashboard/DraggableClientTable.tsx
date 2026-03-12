@@ -404,6 +404,14 @@ export function DraggableClientTable({
                       {m.totalLeads || 0}
                     </TableCell>
 
+                    {/* CRM Leads (total including spam) */}
+                    <TableCell className={cn(
+                      "text-right font-mono tabular-nums text-[11px] py-0 px-1",
+                      (m.totalLeads || 0) > 0 && ((m.totalLeads || 0) + (m.spamLeads || 0)) !== (m.totalLeads || 0) && 'text-yellow-600 dark:text-yellow-500'
+                    )}>
+                      {(m.totalLeads || 0) + (m.spamLeads || 0)}
+                    </TableCell>
+
                     {/* CPL */}
                     <TableCell className={cn(
                       "text-right font-mono tabular-nums text-[11px] py-0 px-1",
