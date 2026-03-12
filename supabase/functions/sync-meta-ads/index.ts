@@ -594,6 +594,29 @@ Deno.serve(async (req) => {
       await supabase.from("meta_ads").upsert(rec, { onConflict: "client_id,meta_ad_id" });
     }
 
+    // ── Fetch HD video source URLs for video ads ──
+    let hdVideosFetched = 0;
+    for (const [metaAdId, videoId] of videoIdMap) {
+      try {
+        checkCallBudget("video-source");
+        const video = await fetchMeta(
+          `${META_GRAPH_API_URL}/${videoId}?fields=source`,
+          accessToken, `video-source-${metaAdId}`
+        );
+        if (video.source) {
+          await supabase.from("meta_ads")
+            .update({ video_source_url: video.source })
+            .eq("client_id", clientId)
+            .eq("meta_ad_id", metaAdId);
+          hdVideosFetched++;
+        }
+      } catch (videoErr) {
+        console.warn(`Failed to fetch video source for ${metaAdId}:`, videoErr);
+        break; // Stop if budget exhausted
+      }
+    }
+    console.log(`Fetched ${hdVideosFetched} HD video source URLs`);
+
     // ── 5. Fetch Per-Entity Insights ──
     try {
       const insightsFields = "campaign_id,impressions,clicks,spend,ctr,cpc,cpm";
