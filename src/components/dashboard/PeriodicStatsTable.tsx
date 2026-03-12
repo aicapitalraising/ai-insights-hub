@@ -446,13 +446,13 @@ export function PeriodicStatsTable({ clientId, dailyMetrics: externalMetrics }: 
     const colorClass = metric.highlight ? 'text-emerald-400 font-semibold' : getKpiColorClass(metric, value);
 
     return (
-      <div className="flex items-center justify-center gap-1 group">
+      <div className="relative flex items-center justify-center group">
         <span className={colorClass}>{metric.format(value)}</span>
         {clientId && metric.editable && (
           <Button
             size="icon"
             variant="ghost"
-            className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity absolute right-0"
             onClick={() => handleEditClick(periodStats.period, metric.key, value)}
           >
             <Pencil className="h-3 w-3" />
