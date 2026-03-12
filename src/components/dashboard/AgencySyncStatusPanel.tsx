@@ -96,6 +96,8 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   const [syncingLeads, setSyncingLeads] = useState<Set<string>>(new Set());
   const [syncingCalendar, setSyncingCalendar] = useState<Set<string>>(new Set());
   const [syncingPipeline, setSyncingPipeline] = useState<Set<string>>(new Set());
+  const [healthChecking, setHealthChecking] = useState<Set<string>>(new Set());
+  const [healthResults, setHealthResults] = useState<Record<string, any>>({});
   const [settingsClient, setSettingsClient] = useState<ClientSyncInfo | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   
