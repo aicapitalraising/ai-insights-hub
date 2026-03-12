@@ -399,15 +399,21 @@ export function DraggableClientTable({
                       {formatCurrency(m.totalAdSpend || 0)}
                     </TableCell>
 
-                    {/* Meta Leads */}
+                    {/* Meta Leads (valid non-spam with email+phone) */}
                     <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
                       {m.totalLeads || 0}
                     </TableCell>
 
-                    {/* CRM Leads (total including spam) */}
+                    {/* CRM Leads (all leads including spam — should be ≥ Meta Leads) */}
                     <TableCell className={cn(
                       "text-right font-mono tabular-nums text-[11px] py-0 px-1",
-                      (m.totalLeads || 0) > 0 && ((m.totalLeads || 0) + (m.spamLeads || 0)) !== (m.totalLeads || 0) && 'text-yellow-600 dark:text-yellow-500'
+                      (() => {
+                        const crmTotal = (m.totalLeads || 0) + (m.spamLeads || 0);
+                        const metaLeads = m.totalLeads || 0;
+                        if (crmTotal === 0 && metaLeads === 0) return 'text-muted-foreground';
+                        if (crmTotal >= metaLeads) return 'text-chart-2';
+                        return 'text-destructive font-semibold';
+                      })()
                     )}>
                       {(m.totalLeads || 0) + (m.spamLeads || 0)}
                     </TableCell>
