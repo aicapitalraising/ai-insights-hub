@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SortableTableHeader, SortConfig } from '@/components/dashboard/SortableTableHeader';
 import { useMetaCampaigns, useMetaAdSets, useMetaAds, useSyncMetaAds } from '@/hooks/useMetaAds';
 import { useFetchAdMediaHD } from '@/hooks/useAdMediaHD';
+import { useRunAttribution } from '@/hooks/useRunAttribution';
 import { useClientSettings } from '@/hooks/useClientSettings';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useDateFilter } from '@/contexts/DateFilterContext';
@@ -104,22 +105,22 @@ function MetricCells({ row }: { row: any }) {
   const spamCount = Number(row.attributed_spam_leads) || 0;
   return (
     <>
-      <TableCell className="text-right tabular-nums font-medium">{fmt$(row.spend)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmtN(row.impressions)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmt$(row.cpm)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmtN(row.clicks)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmtPct(row.ctr)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmt$(row.cpc)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_leads)}</TableCell>
-      <TableCell className={`text-right tabular-nums ${spamCount > 0 ? 'text-destructive font-semibold' : ''}`}>
+      <TableCell className="text-center tabular-nums font-medium">{fmt$(row.spend)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmtN(row.impressions)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmt$(row.cpm)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmtN(row.clicks)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmtPct(row.ctr)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmt$(row.cpc)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmtN(row.attributed_leads)}</TableCell>
+      <TableCell className={`text-center tabular-nums ${spamCount > 0 ? 'text-destructive font-semibold' : ''}`}>
         {spamCount > 0 ? spamCount : '—'}
       </TableCell>
-      <TableCell className="text-right tabular-nums">{fmt$(row.cost_per_lead)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_calls)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_showed)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmtN(row.attributed_funded)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmt$(row.attributed_funded_dollars)}</TableCell>
-      <TableCell className="text-right tabular-nums">{fmt$(row.cost_per_funded)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmt$(row.cost_per_lead)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmtN(row.attributed_calls)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmtN(row.attributed_showed)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmtN(row.attributed_funded)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmt$(row.attributed_funded_dollars)}</TableCell>
+      <TableCell className="text-center tabular-nums">{fmt$(row.cost_per_funded)}</TableCell>
     </>
   );
 }
@@ -218,6 +219,7 @@ export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
   const { data: settings } = useClientSettings(clientId);
   const { startDate, endDate } = useDateFilter();
   const syncMutation = useSyncMetaAds();
+  const attributionMutation = useRunAttribution();
 
   const currentRangeKey = `${startDate}_${endDate}`;
 
@@ -255,6 +257,10 @@ export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
     syncMutation.mutate({ clientId, startDate, endDate });
   };
 
+  const handleAttribution = () => {
+    attributionMutation.mutate({ clientId, startDate, endDate });
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -276,6 +282,10 @@ export function AdsManagerTab({ clientId }: AdsManagerTabProps) {
             <Calendar className="h-3 w-3" />
             {startDate} → {endDate}
           </Badge>
+          <Button size="sm" variant="outline" onClick={handleAttribution} disabled={attributionMutation.isPending}>
+            {attributionMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BarChart3 className="h-4 w-4 mr-2" />}
+            Run Attribution
+          </Button>
           <Button size="sm" onClick={handleSync} disabled={syncMutation.isPending}>
             {syncMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             Sync Meta Ads
