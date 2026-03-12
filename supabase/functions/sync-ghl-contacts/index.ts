@@ -487,6 +487,61 @@ function extractQuestionsFromCustomFields(customFields: Record<string, any>, fie
   return questions;
 }
 
+// Extract UTM parameters from questions array and return filtered questions without UTM entries
+function extractUtmFromQuestions(questions: any[]): {
+  filteredQuestions: any[];
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+} {
+  const utmKeys: Record<string, string> = {
+    'utm_source': 'utm_source',
+    'utm source': 'utm_source',
+    'UTM Source': 'utm_source',
+    'Utm Source': 'utm_source',
+    'utm_medium': 'utm_medium',
+    'utm medium': 'utm_medium',
+    'UTM Medium': 'utm_medium',
+    'Utm Medium': 'utm_medium',
+    'utm_campaign': 'utm_campaign',
+    'utm campaign': 'utm_campaign',
+    'UTM Campaign': 'utm_campaign',
+    'Utm Campaign': 'utm_campaign',
+    'utm_content': 'utm_content',
+    'utm content': 'utm_content',
+    'UTM Content': 'utm_content',
+    'Utm Content': 'utm_content',
+    'utm_term': 'utm_term',
+    'utm term': 'utm_term',
+    'UTM Term': 'utm_term',
+    'Utm Term': 'utm_term',
+  };
+
+  const result: Record<string, string> = {};
+  const filteredQuestions: any[] = [];
+
+  for (const q of questions) {
+    const questionText = String(q.question || '').trim();
+    const utmField = utmKeys[questionText] || utmKeys[questionText.toLowerCase()];
+    if (utmField && q.answer) {
+      result[utmField] = String(q.answer);
+    } else {
+      filteredQuestions.push(q);
+    }
+  }
+
+  return {
+    filteredQuestions,
+    utm_source: result.utm_source,
+    utm_medium: result.utm_medium,
+    utm_campaign: result.utm_campaign,
+    utm_content: result.utm_content,
+    utm_term: result.utm_term,
+  };
+}
+
 function extractCampaignAttribution(contact: GHLContact, customFields: Record<string, any>): {
   campaign_name: string | null;
   ad_set_name: string | null;
