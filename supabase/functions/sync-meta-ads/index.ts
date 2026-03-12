@@ -194,6 +194,14 @@ async function attributeCRMData(supabase: any, clientId: string, startDate?: str
   for (const c of metaCampaigns) {
     campaignByName.set(c.name, c);
   }
+  console.log(`Attribution debug: campaignByName has ${campaignByName.size} entries, sample keys: ${[...campaignByName.keys()].slice(0, 3).map(k => `"${k}"`).join(', ')}`);
+  
+  // Debug: count leads with campaign_name that SHOULD match
+  const matchableLeads = (leads || []).filter((l: any) => {
+    const cn = l.campaign_name || l.utm_campaign;
+    return cn && (campaignByName.has(cn) || campaignByMetaId?.has?.(cn));
+  });
+  console.log(`Attribution debug: ${matchableLeads.length} leads should match campaigns. Sample: ${matchableLeads.slice(0, 2).map((l: any) => `"${l.campaign_name || l.utm_campaign}"`).join(', ')}`);
 
   // Build ad set name -> db id mapping (exact match)
   const adSetByName = new Map<string, any>();
