@@ -211,7 +211,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
             headline: null,
             body_copy: null,
             cta_text: null,
-            status: 'pending',
+            status: isAgencyUpload ? 'draft' : 'pending',
             comments: [],
             aspect_ratio: aspectRatio,
             isAgencyUpload, // Pass the agency flag for AI spelling check
