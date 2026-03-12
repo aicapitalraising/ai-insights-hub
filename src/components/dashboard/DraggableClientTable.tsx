@@ -152,6 +152,14 @@ export function DraggableClientTable({
       const bottleneck = computeBottleneck(leadToBooked, bookedToShowed, showedToFunded);
       const metaSync = getMetaSyncStatus(s, client);
       const mrr = (s as any)?.mrr || 0;
+      // Calculate effective daily ad spend target
+      const dailyTarget = (() => {
+        if (!s) return 0;
+        if (s.daily_ad_spend_target && s.daily_ad_spend_target > 0) return s.daily_ad_spend_target;
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        return (s.monthly_ad_spend_target || 0) / daysInMonth;
+      })();
 
       return {
         client,
@@ -163,6 +171,7 @@ export function DraggableClientTable({
           bottleneck,
           metaSync,
           mrr,
+          dailyTarget,
         },
       };
     });
@@ -184,6 +193,7 @@ export function DraggableClientTable({
         case 'costPerCall': aVal = a.metrics.costPerCall || 0; bVal = b.metrics.costPerCall || 0; break;
         case 'costOfCapital': aVal = a.metrics.costOfCapital || 0; bVal = b.metrics.costOfCapital || 0; break;
         case 'mrr': aVal = a.computed.mrr; bVal = b.computed.mrr; break;
+        case 'dailyTarget': aVal = a.computed.dailyTarget; bVal = b.computed.dailyTarget; break;
         case 'crmLeads': aVal = (a.metrics.totalLeads || 0) + (a.metrics.spamLeads || 0); bVal = (b.metrics.totalLeads || 0) + (b.metrics.spamLeads || 0); break;
         case 'calls': aVal = a.metrics.totalCalls || 0; bVal = b.metrics.totalCalls || 0; break;
         case 'showed': aVal = a.metrics.showedCalls || 0; bVal = b.metrics.showedCalls || 0; break;
@@ -317,7 +327,8 @@ export function DraggableClientTable({
               <TableHead className="font-bold text-[11px] text-center py-0 px-1">BN</TableHead>
               <TableHead className="font-bold text-[11px] text-center py-0 px-1">Meta</TableHead>
               <TableHead className="font-bold text-[11px] text-center py-0 px-1">CRM</TableHead>
-              <SortableHeader column="mrr" label="MRR" sortConfig={sortConfig} onSort={handleSort} />
+              <SortableHeader column="dailyTarget" label="$/Day" sortConfig={sortConfig} onSort={handleSort} />
+              {isAdmin && <SortableHeader column="mrr" label="MRR" sortConfig={sortConfig} onSort={handleSort} />}
               <TableHead className="font-bold text-[11px] py-0 px-1 min-w-[70px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -505,10 +516,17 @@ export function DraggableClientTable({
                       )}
                     </TableCell>
 
-                    {/* MRR */}
+                    {/* Daily Ad Spend Target */}
                     <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
-                      {computed.mrr > 0 ? formatCurrencyShort(computed.mrr) : <span className="text-muted-foreground">-</span>}
+                      {computed.dailyTarget > 0 ? formatCurrency(computed.dailyTarget) : <span className="text-muted-foreground">-</span>}
                     </TableCell>
+
+                    {/* MRR - admin only */}
+                    {isAdmin && (
+                      <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
+                        {computed.mrr > 0 ? formatCurrencyShort(computed.mrr) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                    )}
 
                     {/* Actions */}
                     <TableCell className="py-0 px-1" onClick={(e) => e.stopPropagation()}>
