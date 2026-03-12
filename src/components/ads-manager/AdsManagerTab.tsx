@@ -498,7 +498,17 @@ function AdsTable({ data, isLoading, clientId }: { data: any[]; isLoading: boole
           </DialogTitle>
           {previewAd && (
             <div className="space-y-3">
-              {getCreativeUrl(previewAd) && (
+              {/* HD Video Player or Full-Res Image */}
+              {previewAd.video_source_url ? (
+                <div className="rounded-lg overflow-hidden border border-border bg-muted">
+                  <video
+                    src={previewAd.video_source_url}
+                    controls
+                    poster={previewAd.full_image_url || previewAd.image_url || previewAd.thumbnail_url}
+                    className="w-full max-h-[400px]"
+                  />
+                </div>
+              ) : getCreativeUrl(previewAd) ? (
                 <div className="rounded-lg overflow-hidden border border-border bg-muted">
                   <img
                     src={getCreativeUrl(previewAd)}
@@ -506,7 +516,7 @@ function AdsTable({ data, isLoading, clientId }: { data: any[]; isLoading: boole
                     className="w-full h-auto max-h-[400px] object-contain"
                   />
                 </div>
-              )}
+              ) : null}
 
               {/* Headline */}
               {previewAd.headline && (
@@ -540,20 +550,40 @@ function AdsTable({ data, isLoading, clientId }: { data: any[]; isLoading: boole
                 </div>
               </div>
 
-              {previewAd.media_type === 'video' && (
-                <p className="text-xs text-muted-foreground text-center">Video creative — showing thumbnail preview</p>
-              )}
-
-              {/* Create Variations button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2"
-                onClick={handleCreateVariationFromPreview}
-              >
-                <Wand2 className="h-3.5 w-3.5" />
-                Create Variations Task
-              </Button>
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                {getHDUrl(previewAd) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-2"
+                    onClick={() => window.open(getHDUrl(previewAd), '_blank')}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download HD
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-2"
+                    disabled={fetchHD.isPending}
+                    onClick={() => fetchHD.mutate({ clientId, adId: previewAd.id })}
+                  >
+                    {fetchHD.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Film className="h-3.5 w-3.5" />}
+                    Fetch HD
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 gap-2"
+                  onClick={handleCreateVariationFromPreview}
+                >
+                  <Wand2 className="h-3.5 w-3.5" />
+                  Create Variations
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
