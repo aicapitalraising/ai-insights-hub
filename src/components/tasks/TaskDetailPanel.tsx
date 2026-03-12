@@ -724,36 +724,62 @@ const getHistoryIcon = (action: string) => {
                     {deleteTask.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </Button>
                 </div>
-             </div>
-             
+              </div>
             </SheetHeader>
             
              <ScrollArea className="flex-1 overflow-y-auto">
                <div 
                  ref={dropZoneRef}
                  className={cn(
-                   "p-6 space-y-6 min-h-full transition-colors",
+                   "p-6 space-y-6 min-h-full transition-colors relative",
                    isDragOver && "bg-primary/5 ring-2 ring-primary ring-inset"
                  )}
+                 onDragEnter={handleDragEnter}
+                 onDragLeave={handleDragLeave}
+                 onDragOver={handleDragOver}
+                 onDrop={handleDrop}
+               >
 
-              {linkedMeeting && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Video className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">From meeting:</span>
-                  {linkedMeeting.meetgeek_url ? (
-                    <a href={linkedMeeting.meetgeek_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                      {linkedMeeting.title} <ExternalLink className="h-3 w-3" />
-                    </a>
+               {linkedMeeting && (
+                 <div className="flex items-center gap-2">
+                   <Video className="h-4 w-4 text-muted-foreground" />
+                   <span className="text-sm text-muted-foreground">From meeting:</span>
+                   {linkedMeeting.meetgeek_url ? (
+                     <a href={linkedMeeting.meetgeek_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                       {linkedMeeting.title} <ExternalLink className="h-3 w-3" />
+                     </a>
+                   ) : (
+                     <span className="text-sm">{linkedMeeting.title}</span>
+                   )}
+                 </div>
+               )}
+
+               <div className="space-y-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Description</Label>
+                  {isEditingDescription ? (
+                    <Textarea
+                      value={editedDescription}
+                      onChange={(e) => setEditedDescription(e.target.value)}
+                      onBlur={handleDescriptionSave}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setEditedDescription(task.description || '');
+                          setIsEditingDescription(false);
+                        }
+                      }}
+                      rows={3}
+                      placeholder="Add a description..."
+                      className="mt-1"
+                      autoFocus
+                    />
                   ) : (
-                    <span className="text-sm">{linkedMeeting.title}</span>
+                    <p onClick={() => setIsEditingDescription(true)} className="text-sm mt-1 cursor-pointer hover:bg-muted/50 rounded p-2 -mx-2 transition-colors min-h-[40px]">
+                      {task.description || <span className="text-muted-foreground italic">Click to add description...</span>}
+                    </p>
                   )}
                 </div>
-              )}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              >
+               </div>
                 {isDragOver && (
                   <div className="absolute inset-4 flex items-center justify-center bg-background/80 rounded-lg border-2 border-dashed border-primary z-10 pointer-events-none">
                     <div className="flex flex-col items-center gap-2 text-primary">
