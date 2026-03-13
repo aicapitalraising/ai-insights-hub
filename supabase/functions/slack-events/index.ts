@@ -587,7 +587,7 @@ Clients: ${clientNames}`,
 
   if (taskErr) {
     console.error("Failed to create task:", taskErr);
-    await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs,
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
       "❌ Failed to create the task. Please try again or contact your agency.");
     return;
   }
