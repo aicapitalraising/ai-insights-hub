@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const SLACK_GATEWAY_URL = "https://connector-gateway.lovable.dev/slack/api";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
