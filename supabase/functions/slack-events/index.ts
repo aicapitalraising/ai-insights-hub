@@ -17,14 +17,14 @@ serve(async (req) => {
   }
 
   const SLACK_SIGNING_SECRET = Deno.env.get("SLACK_SIGNING_SECRET");
-  const SLACK_BOT_TOKEN = Deno.env.get("SLACK_BOT_TOKEN");
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const SLACK_API_KEY = Deno.env.get("SLACK_API_KEY");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   if (!SLACK_SIGNING_SECRET) throw new Error("SLACK_SIGNING_SECRET not configured");
-  if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN not configured");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+  if (!SLACK_API_KEY) throw new Error("SLACK_API_KEY not configured");
 
   const rawBody = await req.text();
 
