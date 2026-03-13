@@ -55,10 +55,10 @@ export function aspectsMatch(containerAspect: string, contentAspect: string): bo
     return ['1:1', '4:5', '9:16'].includes(contentAspect);
   }
   
-  // Stories containers (9:16) should cover-fill with any content
-  // Real IG/FB stories always fill the frame, cropping as needed
+  // Stories containers (9:16) - only 9:16 content should cover-fill
+  // Non-native ratios (1:1, 16:9, 4:5) should contain to show full creative
   if (containerAspect === '9:16') {
-    return true;
+    return contentAspect === '9:16';
   }
   
   // Landscape containers (16:9) work well with landscape & square
