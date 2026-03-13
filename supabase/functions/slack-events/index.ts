@@ -383,14 +383,22 @@ RULES:
 - Always sign off responses with relevant emoji
 - Keep responses under 3000 characters for Slack readability`;
 
-    const aiResponse = await fetch(AI_GATEWAY, {
+    // Use Grok 4 fast reasoning via xAI API for full context window support
+    const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
+    if (!XAI_API_KEY) {
+      await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
+        "❌ xAI API key is not configured. Please add it in Agency Settings → API Keys.");
+      return;
+    }
+
+    const aiResponse = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${XAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "grok-4-fast",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userText },
