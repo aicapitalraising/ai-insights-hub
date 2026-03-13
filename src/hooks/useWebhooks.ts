@@ -33,6 +33,12 @@ export interface WebhookMapping {
   // Status fields
   statusField?: string;
   summaryField?: string;
+  // Question fields
+  zipCodeField?: string;
+  willingToRelocateField?: string;
+  relocateNYCField?: string;
+  salesExperienceField?: string;
+  outboundCallsField?: string;
 }
 
 export interface MappingFieldDefinition {
@@ -41,7 +47,7 @@ export interface MappingFieldDefinition {
   placeholder: string;
   expectedType: 'string' | 'number' | 'date';
   helperText?: string;
-  group?: 'contact' | 'utm' | 'value' | 'other';
+  group?: 'contact' | 'utm' | 'value' | 'other' | 'questions';
 }
 
 export interface WebhookDefinition {
