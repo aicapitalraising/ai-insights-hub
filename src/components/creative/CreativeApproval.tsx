@@ -43,7 +43,8 @@ import {
   Clock,
   Sparkles,
   Link,
-  SendHorizontal
+  SendHorizontal,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 
