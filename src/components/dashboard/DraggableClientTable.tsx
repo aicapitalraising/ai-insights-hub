@@ -414,6 +414,11 @@ export function DraggableClientTable({
                       {formatCurrency(m.totalAdSpend || 0)}
                     </TableCell>
 
+                    {/* Expected Spend ($/Day × days in range) */}
+                    <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
+                      {computed.dailyTarget > 0 ? formatCurrency(computed.dailyTarget * numberOfDays) : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+
                     {/* Meta Leads (valid non-spam with email+phone) */}
                     <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
                       {m.totalLeads || 0}
