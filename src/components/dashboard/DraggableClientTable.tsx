@@ -151,6 +151,17 @@ export function DraggableClientTable({
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: '', direction: null });
   const updateClient = useUpdateClient();
 
+  // Detect duplicate Meta ad account IDs
+  const duplicateMetaAccounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    clients.forEach(c => {
+      if (c.meta_ad_account_id) {
+        counts[c.meta_ad_account_id] = (counts[c.meta_ad_account_id] || 0) + 1;
+      }
+    });
+    return new Set(Object.keys(counts).filter(k => counts[k] > 1));
+  }, [clients]);
+
   const clientsWithComputedValues = useMemo(() => {
     return clients.map(client => {
       const m = metrics[client.id] || {} as AggregatedMetrics;
