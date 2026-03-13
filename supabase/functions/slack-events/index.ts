@@ -685,7 +685,7 @@ async function handleListTasks(
     `_Type \`@HPA create task: [request]\` to add a new task_`,
   ].join("\n");
 
-  await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs, message);
+  await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, message);
 }
 
 // -------------------------------------------------------------------
