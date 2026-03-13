@@ -511,13 +511,23 @@ function extractQuestionsFromCustomFields(customFields: Record<string, any>, fie
   const skipFields = new Set([
     'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
     'campaign_name', 'ad_set_name', 'ad_id', 'assigned_user', 'source',
-    'Campaign Tracker', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'UTM Content', 'UTM Term'
+    'Campaign Tracker', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'UTM Content', 'UTM Term',
+  ]);
+  // Also skip by resolved name (case-insensitive)
+  const skipNamesLower = new Set([
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+    'campaign tracker', 'utm source', 'utm medium', 'utm campaign', 'utm content', 'utm term',
+    'campaign_name', 'ad_set_name', 'ad_id', 'assigned_user',
   ]);
   
   for (const [key, value] of Object.entries(customFields)) {
     if (value !== null && value !== undefined && value !== '' && !skipFields.has(key)) {
       // Resolve human-readable name: check fieldNameMap, then fallback to key
-      const displayName = (fieldNameMap && (fieldNameMap[key] || fieldNameMap[key])) || key;
+      const displayName = (fieldNameMap && fieldNameMap[key]) || key;
+      
+      // Skip UTM/campaign fields by resolved name
+      if (skipNamesLower.has(displayName.toLowerCase())) continue;
+      
       questions.push({
         question: displayName,
         answer: value,
