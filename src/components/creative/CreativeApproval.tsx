@@ -977,6 +977,28 @@ function CreativeCard({
               </Button>
             </>
           )}
+          {/* Download button on card */}
+          {creative.file_url && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                const link = document.createElement('a');
+                link.href = creative.file_url!;
+                link.download = creative.title || 'creative';
+                link.target = '_blank';
+                link.rel = 'noreferrer';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+            >
+              <Download className="h-3 w-3" />
+              Download
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="sm"
