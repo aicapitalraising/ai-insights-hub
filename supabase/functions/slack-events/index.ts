@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const SLACK_GATEWAY_URL = "https://connector-gateway.lovable.dev/slack/api";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -16,14 +17,14 @@ serve(async (req) => {
   }
 
   const SLACK_SIGNING_SECRET = Deno.env.get("SLACK_SIGNING_SECRET");
-  const SLACK_BOT_TOKEN = Deno.env.get("SLACK_BOT_TOKEN");
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const SLACK_API_KEY = Deno.env.get("SLACK_API_KEY");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   if (!SLACK_SIGNING_SECRET) throw new Error("SLACK_SIGNING_SECRET not configured");
-  if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN not configured");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+  if (!SLACK_API_KEY) throw new Error("SLACK_API_KEY not configured");
 
   const rawBody = await req.text();
 
@@ -67,8 +68,8 @@ serve(async (req) => {
     // Only handle app_mention events
     if (event.type === "app_mention") {
       const processingPromise = handleMention(event, {
-        SLACK_BOT_TOKEN,
         LOVABLE_API_KEY,
+        SLACK_API_KEY,
         SUPABASE_URL,
         SUPABASE_SERVICE_ROLE_KEY,
       });
@@ -88,8 +89,8 @@ serve(async (req) => {
 // Core handler for @HPA mentions
 // -------------------------------------------------------------------
 interface Env {
-  SLACK_BOT_TOKEN: string;
   LOVABLE_API_KEY: string;
+  SLACK_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
 }
@@ -102,7 +103,7 @@ async function handleMention(event: any, env: Env) {
   const slackUserId = event.user;
 
   // Post a thinking indicator
-  const thinkingMsg = await postSlackMessage(env.SLACK_BOT_TOKEN, channelId, threadTs, "🤔 Thinking...");
+  const thinkingMsg = await postSlackMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channelId, threadTs, "🤔 Thinking...");
 
   // Look up which client this channel belongs to (if any)
   const { data: settingsRows } = await supabase
@@ -114,7 +115,7 @@ async function handleMention(event: any, env: Env) {
   const scopedClientId = settingsRows?.[0]?.client_id || null;
 
   // Look up the Slack user's identity
-  const slackUser = await getSlackUserInfo(env.SLACK_BOT_TOKEN, slackUserId);
+  const slackUser = await getSlackUserInfo(env.LOVABLE_API_KEY, env.SLACK_API_KEY, slackUserId);
   const userEmail = slackUser?.profile?.email || null;
   const userName = slackUser?.real_name || slackUser?.name || "User";
 
@@ -400,7 +401,7 @@ RULES:
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI gateway error:", aiResponse.status, errText);
-      await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs,
+      await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
         "❌ Sorry, I couldn't process your question right now. Please try again.");
       return;
     }
@@ -408,10 +409,10 @@ RULES:
     const aiData = await aiResponse.json();
     const answer = aiData.choices?.[0]?.message?.content || "I couldn't generate an answer.";
 
-    await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs, answer);
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, answer);
   } catch (err) {
     console.error("handleAIQuery error:", err);
-    await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs,
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
       "❌ An error occurred while processing your request. Please try again.");
   }
 }
@@ -489,7 +490,7 @@ Clients: ${clientNames}`,
     }
 
     if (!clientId) {
-      await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs,
+      await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
         "⚠️ I couldn't determine which client this task is for. Please mention the client name in your request, or use this command in a client-specific channel.");
       return;
     }
@@ -546,7 +547,7 @@ Clients: ${clientNames}`,
 
   if (!response.ok) {
     console.error("AI task generation failed:", await response.text());
-    await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs,
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
       "❌ Sorry, I couldn't generate the task. Please try again.");
     return;
   }
@@ -586,7 +587,7 @@ Clients: ${clientNames}`,
 
   if (taskErr) {
     console.error("Failed to create task:", taskErr);
-    await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs,
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
       "❌ Failed to create the task. Please try again or contact your agency.");
     return;
   }
@@ -613,7 +614,7 @@ Clients: ${clientNames}`,
     `🔗 <${taskLink}|View Task in Dashboard>`,
   ].join("\n");
 
-  await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs, readback);
+  await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, readback);
 }
 
 // -------------------------------------------------------------------
@@ -639,7 +640,7 @@ async function handleListTasks(
 
   if (!tasks || tasks.length === 0) {
     const scope = scopedClientId ? "this client" : "any client";
-    await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs,
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
       `📋 No open tasks for ${scope} right now. Type \`@HPA create task: [your request]\` to create one!`);
     return;
   }
@@ -684,7 +685,7 @@ async function handleListTasks(
     `_Type \`@HPA create task: [request]\` to add a new task_`,
   ].join("\n");
 
-  await updateOrPostMessage(env.SLACK_BOT_TOKEN, channel, thread, thinkingTs, message);
+  await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, message);
 }
 
 // -------------------------------------------------------------------
@@ -692,13 +693,13 @@ async function handleListTasks(
 // -------------------------------------------------------------------
 
 /** Update the "thinking" message with the real answer, or post new if no thinking msg */
-async function updateOrPostMessage(token: string, channel: string, threadTs: string, thinkingTs?: string, text?: string) {
+async function updateOrPostMessage(lovableKey: string, slackKey: string, channel: string, threadTs: string, thinkingTs?: string, text?: string) {
   if (thinkingTs) {
-    // Update the thinking message with the real answer
-    const res = await fetch("https://slack.com/api/chat.update", {
+    const res = await fetch(`${SLACK_GATEWAY_URL}/chat.update`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": slackKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -711,19 +712,19 @@ async function updateOrPostMessage(token: string, channel: string, threadTs: str
     const data = await res.json();
     if (!data.ok) {
       console.error("Failed to update Slack message:", data.error);
-      // Fallback: post new message
-      return postSlackMessage(token, channel, threadTs, text || "");
+      return postSlackMessage(lovableKey, slackKey, channel, threadTs, text || "");
     }
     return data;
   }
-  return postSlackMessage(token, channel, threadTs, text || "");
+  return postSlackMessage(lovableKey, slackKey, channel, threadTs, text || "");
 }
 
-async function postSlackMessage(token: string, channel: string, threadTs: string, text: string) {
-  const res = await fetch("https://slack.com/api/chat.postMessage", {
+async function postSlackMessage(lovableKey: string, slackKey: string, channel: string, threadTs: string, text: string) {
+  const res = await fetch(`${SLACK_GATEWAY_URL}/chat.postMessage`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": slackKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -741,10 +742,13 @@ async function postSlackMessage(token: string, channel: string, threadTs: string
   return data;
 }
 
-async function getSlackUserInfo(token: string, userId: string): Promise<any> {
+async function getSlackUserInfo(lovableKey: string, slackKey: string, userId: string): Promise<any> {
   try {
-    const res = await fetch(`https://slack.com/api/users.info?user=${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${SLACK_GATEWAY_URL}/users.info?user=${userId}`, {
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": slackKey,
+      },
     });
     const data = await res.json();
     return data.ok ? data.user : null;
