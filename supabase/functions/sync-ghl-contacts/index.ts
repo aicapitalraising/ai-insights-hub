@@ -96,7 +96,7 @@ interface GHLContact {
   name?: string;
   email?: string;
   phone?: string;
-  customFields?: Record<string, any>[];
+  customFields?: any;
   tags?: string[];
   source?: string;
   dateAdded?: string;
