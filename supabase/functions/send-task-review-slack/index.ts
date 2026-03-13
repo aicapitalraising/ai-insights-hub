@@ -99,11 +99,12 @@ serve(async (req) => {
       });
     }
 
-    // Send via direct bot token (custom app)
-    const slackRes = await fetch("https://slack.com/api/chat.postMessage", {
+    // Send via connector gateway
+    const slackRes = await fetch(`${SLACK_GATEWAY_URL}/chat.postMessage`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": SLACK_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
