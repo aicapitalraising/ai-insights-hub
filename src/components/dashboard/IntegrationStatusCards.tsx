@@ -2,7 +2,7 @@ import { useIntegrationStatuses, useTokenExpiryWarnings, getIntegrationDisplayNa
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, RefreshCw, Zap, MessageSquare, CreditCard, BarChart3, Link2 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Zap, MessageSquare, CreditCard, BarChart3, Link2, Phone, Mic } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const INTEGRATION_ICONS: Record<string, React.ElementType> = {
