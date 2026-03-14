@@ -279,6 +279,10 @@ const Index = () => {
                 <Handshake className="h-4 w-4" />
                 <span className="hidden sm:inline">Deals</span>
               </TabsTrigger>
+              <TabsTrigger value="outreach" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">AI Outreach</span>
+              </TabsTrigger>
               {currentMember?.role === 'admin' && (
                 <TabsTrigger value="billing" className="gap-2">
                   <Receipt className="h-4 w-4" />
