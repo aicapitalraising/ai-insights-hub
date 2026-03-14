@@ -2,7 +2,7 @@ import { useIntegrationStatuses, useTokenExpiryWarnings, getIntegrationDisplayNa
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, RefreshCw, Zap, MessageSquare, CreditCard, BarChart3, Link2 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Zap, MessageSquare, CreditCard, BarChart3, Link2, Phone, Mic } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const INTEGRATION_ICONS: Record<string, React.ElementType> = {
@@ -11,6 +11,8 @@ const INTEGRATION_ICONS: Record<string, React.ElementType> = {
   hubspot: Zap,
   meetgeek: MessageSquare,
   stripe: CreditCard,
+  sendblue: Phone,
+  elevenlabs: Mic,
 };
 
 interface IntegrationStatusCardsProps {
@@ -21,7 +23,7 @@ export function IntegrationStatusCards({ onNavigateToSettings }: IntegrationStat
   const { data: statuses = [] } = useIntegrationStatuses();
   const warnings = useTokenExpiryWarnings(statuses);
 
-  const integrations = ['meta_ads', 'ghl', 'hubspot', 'meetgeek', 'stripe'];
+  const integrations = ['meta_ads', 'ghl', 'hubspot', 'meetgeek', 'stripe', 'sendblue', 'elevenlabs'];
 
   const getStatus = (name: string) => statuses.find(s => s.integration_name === name);
 
@@ -46,7 +48,7 @@ export function IntegrationStatusCards({ onNavigateToSettings }: IntegrationStat
         </Alert>
       )}
 
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-4 md:grid-cols-7 gap-3">
         {integrations.map(name => {
           const status = getStatus(name);
           const color = getStatusColor(status);

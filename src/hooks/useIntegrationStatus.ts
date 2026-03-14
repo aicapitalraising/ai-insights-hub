@@ -17,7 +17,7 @@ export interface IntegrationStatus {
   updated_at: string;
 }
 
-const INTEGRATIONS = ['meta_ads', 'ghl', 'hubspot', 'meetgeek', 'stripe'] as const;
+const INTEGRATIONS = ['meta_ads', 'ghl', 'hubspot', 'meetgeek', 'stripe', 'sendblue', 'elevenlabs'] as const;
 export type IntegrationName = typeof INTEGRATIONS[number];
 
 export function useIntegrationStatuses() {
@@ -76,6 +76,8 @@ export function getIntegrationDisplayName(name: string): string {
     hubspot: 'HubSpot',
     meetgeek: 'MeetGeek',
     stripe: 'Stripe',
+    sendblue: 'Sendblue',
+    elevenlabs: 'ElevenLabs',
   };
   return map[name] || name;
 }

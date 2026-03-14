@@ -32,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Sliders, Video, CheckCircle, RefreshCw, Upload, LayoutDashboard, Smartphone, Bot, Wifi, LayoutGrid, Receipt, Handshake } from 'lucide-react';
+import { Sliders, Video, CheckCircle, RefreshCw, Upload, LayoutDashboard, Smartphone, Bot, Wifi, LayoutGrid, Receipt, Handshake, MessageSquare } from 'lucide-react';
 import { MasterMetaTokenCard } from '@/components/dashboard/MasterMetaTokenCard';
 import { useClients, Client } from '@/hooks/useClients';
 import { useAllDailyMetrics, useFundedInvestors, aggregateMetrics, AggregatedMetrics } from '@/hooks/useMetrics';
@@ -42,8 +42,8 @@ import { useAllClientSettings, useAllClientFullSettings } from '@/hooks/useAllCl
 import { useAllClientMRR } from '@/hooks/useClientMRR';
 import { useMeetings, usePendingMeetingTasks, useSyncMeetings } from '@/hooks/useMeetings';
 import { useApiConnectionTest } from '@/hooks/useApiConnectionTest';
-
 import { useAllCreatives } from '@/hooks/useAllCreatives';
+import { OutreachTab } from '@/components/outreach/OutreachTab';
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { useSourceFilteredMetrics } from '@/hooks/useSourceFilteredMetrics';
 import { useLeads, useCalls } from '@/hooks/useLeadsAndCalls';
@@ -206,6 +206,9 @@ const Index = () => {
     queryClient.invalidateQueries({ queryKey: ['client-source-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['all-client-full-settings'] });
     queryClient.invalidateQueries({ queryKey: ['integration-status'] });
+    queryClient.invalidateQueries({ queryKey: ['outreach-campaigns'] });
+    queryClient.invalidateQueries({ queryKey: ['outreach-messages'] });
+    queryClient.invalidateQueries({ queryKey: ['outreach-stats'] });
     toast.success('Refreshed dashboard data');
   };
 
@@ -278,6 +281,10 @@ const Index = () => {
               <TabsTrigger value="deals" className="gap-2">
                 <Handshake className="h-4 w-4" />
                 <span className="hidden sm:inline">Deals</span>
+              </TabsTrigger>
+              <TabsTrigger value="outreach" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">AI Outreach</span>
               </TabsTrigger>
               {currentMember?.role === 'admin' && (
                 <TabsTrigger value="billing" className="gap-2">
@@ -504,6 +511,19 @@ const Index = () => {
           <TabsContent value="deals" className="space-y-6">
             <SectionErrorBoundary sectionName="Deal Pipeline">
               <DealPipelineBoard />
+            </SectionErrorBoundary>
+          </TabsContent>
+
+          {/* AI Outreach Tab */}
+          <TabsContent value="outreach" className="space-y-6">
+            <SectionErrorBoundary sectionName="AI Outreach">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold">AI Outreach</h2>
+                <p className="text-sm text-muted-foreground">
+                  Automated text messaging (Sendblue) and AI voice calls (ElevenLabs)
+                </p>
+              </div>
+              <OutreachTab />
             </SectionErrorBoundary>
           </TabsContent>
 
