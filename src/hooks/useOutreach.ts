@@ -54,11 +54,14 @@ export interface OutreachSequence {
   created_at: string;
 }
 
+// Cast to any to bypass auto-generated types that don't include new tables yet
+const sb = supabase as any;
+
 export function useOutreachCampaigns(clientId?: string) {
   return useQuery({
     queryKey: ['outreach-campaigns', clientId],
     queryFn: async () => {
-      let query = supabase
+      let query = sb
         .from('outreach_campaigns')
         .select('*')
         .order('created_at', { ascending: false });
@@ -74,7 +77,7 @@ export function useOutreachMessages(clientId?: string, campaignId?: string) {
   return useQuery({
     queryKey: ['outreach-messages', clientId, campaignId],
     queryFn: async () => {
-      let query = supabase
+      let query = sb
         .from('outreach_messages')
         .select('*')
         .order('created_at', { ascending: false })
@@ -93,21 +96,20 @@ export function useOutreachStats() {
     queryKey: ['outreach-stats'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      const { data: todayMessages, error } = await supabase
+      const { data: todayMessages, error } = await sb
         .from('outreach_messages')
         .select('channel, status, direction')
         .gte('created_at', today + 'T00:00:00.000Z');
       if (error) throw error;
 
-      const msgs = todayMessages || [];
+      const msgs = (todayMessages || []) as Array<{ channel: string; status: string; direction: string }>;
       const outbound = msgs.filter(m => m.direction === 'outbound');
       const smsToday = outbound.filter(m => m.channel === 'sms' || m.channel === 'imessage').length;
       const callsToday = outbound.filter(m => m.channel === 'voice_call').length;
       const replied = outbound.filter(m => m.status === 'replied').length;
       const responseRate = outbound.length > 0 ? (replied / outbound.length) * 100 : 0;
 
-      // Active campaigns count
-      const { count: activeCampaigns } = await supabase
+      const { count: activeCampaigns } = await sb
         .from('outreach_campaigns')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'active');
@@ -126,9 +128,9 @@ export function useCreateCampaign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (campaign: Partial<OutreachCampaign>) => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('outreach_campaigns')
-        .insert(campaign as any)
+        .insert(campaign)
         .select()
         .single();
       if (error) throw error;
@@ -146,7 +148,7 @@ export function useUpdateCampaignStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
+      const { error } = await sb
         .from('outreach_campaigns')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id);

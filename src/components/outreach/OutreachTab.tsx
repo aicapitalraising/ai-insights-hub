@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useOutreachCampaigns, useOutreachMessages, useOutreachStats, useCreateCampaign, useUpdateCampaignStatus, useSendMessage, useMakeAICall } from '@/hooks/useOutreach';
 import { useClients } from '@/hooks/useClients';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -46,24 +46,22 @@ export function OutreachTab() {
   const sendMessage = useSendMessage();
   const makeCall = useMakeAICall();
 
-  // Create campaign form state
   const [newCampaign, setNewCampaign] = useState({
     client_id: '',
     campaign_name: '',
-    campaign_type: 'sms' as const,
+    campaign_type: 'sms' as string,
     trigger_event: 'manual',
     message_template: '',
     voice_agent_prompt: '',
     voice_id: '',
   });
 
-  // Quick send form state
   const [quickSend, setQuickSend] = useState({
     client_id: '',
     phone: '',
     message: '',
     contact_name: '',
-    channel: 'sms' as 'sms' | 'voice_call',
+    channel: 'sms' as string,
   });
 
   const handleCreateCampaign = () => {
@@ -139,7 +137,7 @@ export function OutreachTab() {
       </div>
 
       {/* Filter + Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Select value={selectedClientFilter} onValueChange={setSelectedClientFilter}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="All Clients" />
@@ -165,7 +163,7 @@ export function OutreachTab() {
                   {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={quickSend.channel} onValueChange={(v: any) => setQuickSend(p => ({ ...p, channel: v }))}>
+              <Select value={quickSend.channel} onValueChange={v => setQuickSend(p => ({ ...p, channel: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="sms">SMS / iMessage</SelectItem>
@@ -200,7 +198,7 @@ export function OutreachTab() {
                   {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={newCampaign.campaign_type} onValueChange={(v: any) => setNewCampaign(p => ({ ...p, campaign_type: v }))}>
+              <Select value={newCampaign.campaign_type} onValueChange={v => setNewCampaign(p => ({ ...p, campaign_type: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="sms">SMS</SelectItem>
@@ -242,7 +240,6 @@ export function OutreachTab() {
           <TabsTrigger value="feed">Message Feed</TabsTrigger>
         </TabsList>
 
-        {/* Campaigns List */}
         <TabsContent value="overview">
           {campaigns.length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">No campaigns yet. Create your first outreach campaign to get started.</CardContent></Card>
@@ -313,7 +310,6 @@ export function OutreachTab() {
           )}
         </TabsContent>
 
-        {/* Message Feed */}
         <TabsContent value="feed">
           {messages.length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">No messages yet. Send your first outreach message to see activity here.</CardContent></Card>
