@@ -494,10 +494,10 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
                     const crmStatus = getGhlStatus(c);
                     const contactsSync = crmSource === 'hubspot' ? c.hubspotLastContactsSync : c.ghlLastContactsSync;
                     const calendarStatus = c.trackedCalendarIds && c.trackedCalendarIds.length > 0
-                      ? getSyncStatusFromDate(c.ghlLastCallsSync, true)
+                      ? getSyncStatusFromDate(c.ghlLastCallsSync, true, { healthy: 2, stale: 24 })
                       : 'not_configured' as SyncStatus;
                     const pipelineStatus = c.fundedPipelineId
-                      ? getSyncStatusFromDate(c.lastGhlSyncAt || c.lastHubspotSyncAt, true)
+                      ? getSyncStatusFromDate(c.lastGhlSyncAt || c.lastHubspotSyncAt, true, { healthy: 4, stale: 48 })
                       : 'not_configured' as SyncStatus;
 
                     // Calculate "days gap" — the worst gap across all configured sources
