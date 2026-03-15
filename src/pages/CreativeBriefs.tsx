@@ -147,13 +147,21 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
             </Table>
           </div>
         )}
-      </main>
+      </div>
 
       <BriefDetailDialog
         brief={selectedBrief}
         open={!!selectedBrief}
         onOpenChange={(open) => !open && setSelectedBrief(null)}
       />
+    </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      {content}
     </div>
   );
 }
