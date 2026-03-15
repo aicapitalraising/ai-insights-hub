@@ -48,7 +48,6 @@ import { toast } from 'sonner';
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
-  source?: string;
 }
 
 export function CreativesTab() {
