@@ -254,7 +254,9 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, results, run_at: new Date().toISOString() }), {
+    console.log(`Weekly brief generation complete: ${results.filter(r => r.status === 'generated').length} briefs generated for week of ${weekAgoStr}`);
+
+    return new Response(JSON.stringify({ success: true, results, run_at: new Date().toISOString(), week_of: weekAgoStr }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
