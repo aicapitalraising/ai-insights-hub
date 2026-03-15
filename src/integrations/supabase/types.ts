@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_scripts: {
+        Row: {
+          body: string | null
+          brief_id: string | null
+          client_id: string
+          created_at: string
+          cta: string | null
+          duration_seconds: number | null
+          hook: string | null
+          id: string
+          notes: string | null
+          script_type: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          brief_id?: string | null
+          client_id: string
+          created_at?: string
+          cta?: string | null
+          duration_seconds?: number | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          script_type?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          brief_id?: string | null
+          client_id?: string
+          created_at?: string
+          cta?: string | null
+          duration_seconds?: number | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          script_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_scripts_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "creative_briefs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_spend_reports: {
         Row: {
           ad_set_name: string | null
