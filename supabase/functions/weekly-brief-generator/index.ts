@@ -25,6 +25,8 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const forceClientId = body.client_id as string | undefined;
 
+    console.log("Weekly creative loop executed on Monday", new Date().toISOString());
+
     // Date ranges
     const now = new Date();
     const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
