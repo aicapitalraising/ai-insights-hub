@@ -22,7 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Completed',
 };
 
-export default function CreativeBriefs() {
+export default function CreativeBriefs({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const { data: briefs = [], isLoading } = useCreativeBriefs();
   const updateStatus = useUpdateBriefStatus();
@@ -38,10 +38,10 @@ export default function CreativeBriefs() {
     });
   }, [briefs, statusFilter, searchQuery]);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card px-6 py-4">
-        <div className="flex items-center gap-4">
+  const content = (
+    <div className="space-y-4">
+      {!embedded && (
+        <div className="flex items-center gap-4 mb-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -50,9 +50,13 @@ export default function CreativeBriefs() {
             <p className="text-sm text-muted-foreground">AI-generated briefs for creative production</p>
           </div>
         </div>
-      </header>
-
-      <main className="p-6 space-y-4">
+      )}
+      {embedded && (
+        <div>
+          <h2 className="text-lg font-bold">Creative Briefs</h2>
+          <p className="text-sm text-muted-foreground">AI-generated briefs for creative production</p>
+        </div>
+      )}
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
