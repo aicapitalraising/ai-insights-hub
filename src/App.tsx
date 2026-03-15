@@ -34,6 +34,18 @@ import ExportHubPage from "./pages/ExportHubPage";
 import ClientProjectsPage from "./pages/ClientProjectsPage";
 import ProjectPage from "./pages/ProjectPage";
 
+// Funnel Builder pages (from aicapitalraising)
+import FunnelBuilderPage from "./pages/FunnelBuilderPage";
+import FunnelBookingPage from "./pages/FunnelBookingPage";
+import FunnelOnboardingPage from "./pages/FunnelOnboardingPage";
+import FunnelAdminPage from "./pages/FunnelAdminPage";
+import FunnelClientPage from "./pages/FunnelClientPage";
+import FunnelDeckPage from "./pages/FunnelDeckPage";
+import FunnelFulfillmentPage from "./pages/FunnelFulfillmentPage";
+import FunnelInvestPage from "./pages/FunnelInvestPage";
+import FunnelKickoffPage from "./pages/FunnelKickoffPage";
+import FunnelAccessPage from "./pages/FunnelAccessPage";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -76,6 +88,18 @@ const App = () => (
             <Route path="/export" element={<PasswordGate><ExportHubPage /></PasswordGate>} />
             <Route path="/projects" element={<PasswordGate><ClientProjectsPage /></PasswordGate>} />
             <Route path="/projects/:projectId" element={<PasswordGate><ProjectPage /></PasswordGate>} />
+
+            {/* Funnel Builder - from aicapitalraising */}
+            <Route path="/funnel-builder" element={<PasswordGate><FunnelBuilderPage /></PasswordGate>} />
+            <Route path="/funnel/:clientId/booking" element={<FunnelBookingPage />} />
+            <Route path="/funnel/:clientId/onboarding" element={<FunnelOnboardingPage />} />
+            <Route path="/funnel/:clientId/admin" element={<PasswordGate><FunnelAdminPage /></PasswordGate>} />
+            <Route path="/funnel/:clientId/client" element={<FunnelClientPage />} />
+            <Route path="/funnel/:clientId/deck" element={<FunnelDeckPage />} />
+            <Route path="/funnel/:clientId/fulfillment" element={<PasswordGate><FunnelFulfillmentPage /></PasswordGate>} />
+            <Route path="/funnel/:clientId/invest" element={<FunnelInvestPage />} />
+            <Route path="/funnel/:clientId/kickoff" element={<FunnelKickoffPage />} />
+            <Route path="/funnel/:clientId/access" element={<FunnelAccessPage />} />
 
             {/* Public routes - no password required */}
             <Route path="/public/:token" element={<PublicReport />} />

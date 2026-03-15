@@ -25,6 +25,15 @@ import {
   History,
   Download,
   User,
+  Globe,
+  HelpCircle,
+  Calendar,
+  BookOpen,
+  DollarSign,
+  Users,
+  CheckCircle2,
+  Zap,
+  BarChart2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -104,9 +113,20 @@ const navStructure = [
     ],
   },
   {
-    title: 'Funnel',
-    value: 'funnel',
+    title: 'Funnel Builder',
+    value: 'funnel-group',
     icon: Smartphone,
+    children: [
+      { title: 'Funnel Overview', value: 'funnel-builder', icon: Globe },
+      { title: 'Quiz Builder', value: 'funnel-quiz', icon: HelpCircle },
+      { title: 'Booking Pages', value: 'funnel-booking', icon: Calendar },
+      { title: 'Sales Deck', value: 'funnel-deck', icon: BookOpen },
+      { title: 'Investment Page', value: 'funnel-invest', icon: DollarSign },
+      { title: 'Onboarding', value: 'funnel-onboarding', icon: Users },
+      { title: 'Fulfillment', value: 'funnel-fulfillment', icon: CheckCircle2 },
+      { title: 'Kickoff', value: 'funnel-kickoff', icon: Zap },
+      { title: 'Funnel Analytics', value: 'funnel-analytics', icon: BarChart2 },
+    ],
   },
   {
     title: 'Settings',
