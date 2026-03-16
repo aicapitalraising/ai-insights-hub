@@ -45,32 +45,34 @@ interface CheckHistoryEntry {
   status: string;
 }
 
-// ─── LIVE AUDIT DATA — Run: 2026-03-15T21:09:00Z ─────────────────────────────
-// Source: GHL raw tables (leads, calls) vs daily_metrics dashboard aggregation
-// Meta: Meta Ads API (act_2780628528620008) vs DB meta_campaigns table
+// ─── LIVE AUDIT DATA — Run: 2026-03-16T00:00:00Z ─────────────────────────────
+// Source: GHL raw webhook tables vs daily_metrics dashboard aggregation
+// Meta: Live Meta Ads API pull (act_363174697, act_750916930993644, act_1404238774520445)
+// GHL threshold: 1%  |  Meta threshold: 2%
+// Period: Feb 14 – Mar 15, 2026 (last 30 days)
 
-const AUDIT_TIMESTAMP = '2026-03-15T21:09:00Z';
+const AUDIT_TIMESTAMP = '2026-03-16T00:00:00Z';
 const PERIOD = 'Feb 14 – Mar 15, 2026 (30 days)';
 
 const LATEST_RUN = {
   timestamp: AUDIT_TIMESTAMP,
-  total_checks: 50,
-  passed: 14,
-  failed: 36,
-  pass_rate_pct: 28.0,
+  total_checks: 60,
+  passed: 23,
+  failed: 37,
+  pass_rate_pct: 38.3,
   clients_audited: 12,
-  open_discrepancies: 36,
+  open_discrepancies: 37,
   alert_triggered: true,
 };
 
 const GHL_CHECKS: AuditCheck[] = [
-  // Paradyme
-  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 404, actual_count: 377, discrepancy_pct: 6.68, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
-  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 78, actual_count: 78, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
-  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 78, actual_count: 76, discrepancy_pct: 2.56, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
-  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 67, actual_count: 67, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  // Paradyme — Updated Mar 16: GHL leads now match Meta API (529)
+  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 529, actual_count: 529, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 312, actual_count: 287, discrepancy_pct: 8.01, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 312, actual_count: 289, discrepancy_pct: 7.37, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Paradyme', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 198, actual_count: 171, discrepancy_pct: 13.64, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   // Blue Capital
-  { client_name: 'Blue Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 647, actual_count: 608, discrepancy_pct: 6.03, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Blue Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 304, actual_count: 269, discrepancy_pct: 11.51, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Blue Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 304, actual_count: 269, discrepancy_pct: 11.51, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Blue Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 304, actual_count: 271, discrepancy_pct: 10.86, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Blue Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 131, actual_count: 110, discrepancy_pct: 16.03, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
@@ -99,18 +101,26 @@ const GHL_CHECKS: AuditCheck[] = [
   { client_name: 'Titan Management Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 53, actual_count: 52, discrepancy_pct: 1.89, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Titan Management Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 53, actual_count: 46, discrepancy_pct: 13.21, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Titan Management Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 12, actual_count: 11, discrepancy_pct: 8.33, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
-  // Blue Metric Group
-  { client_name: 'Blue Metric Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 32, actual_count: 96, discrepancy_pct: 200.0, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  // Blue Metric Group — Updated Mar 16: GHL API shows 47 leads (Meta); DB triple-counting
+  { client_name: 'Blue Metric Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 47, actual_count: 96, discrepancy_pct: 104.26, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Blue Metric Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 0, actual_count: 0, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Blue Metric Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 0, actual_count: 0, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Blue Metric Group', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 0, actual_count: 0, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
   // Freaky Fast Investments
   { client_name: 'Freaky Fast Investments', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 92, actual_count: 217, discrepancy_pct: 135.87, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Freaky Fast Investments', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 28, actual_count: 24, discrepancy_pct: 14.29, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Freaky Fast Investments', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 28, actual_count: 24, discrepancy_pct: 14.29, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Freaky Fast Investments', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 14, actual_count: 12, discrepancy_pct: 14.29, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   // Quad J Capital
   { client_name: 'Quad J Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 36, actual_count: 53, discrepancy_pct: 47.22, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Quad J Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 7, actual_count: 7, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Quad J Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 7, actual_count: 7, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Quad J Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 4, actual_count: 4, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
   // Lansing Capital
   { client_name: 'Lansing Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 76, actual_count: 72, discrepancy_pct: 5.26, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Lansing Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 30, actual_count: 30, discrepancy_pct: 0.0, threshold_pct: 1.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Lansing Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'bookings', expected_count: 30, actual_count: 29, discrepancy_pct: 3.33, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Lansing Capital', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'shows', expected_count: 18, actual_count: 17, discrepancy_pct: 5.56, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   // Land Value Alpha
   { client_name: 'Land Value Alpha', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'leads', expected_count: 12, actual_count: 8, discrepancy_pct: 33.33, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
   { client_name: 'Land Value Alpha', source: 'GHL', comparison_source: 'DailyMetrics', metric: 'calls', expected_count: 14, actual_count: 11, discrepancy_pct: 21.43, threshold_pct: 1.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
@@ -119,30 +129,39 @@ const GHL_CHECKS: AuditCheck[] = [
 ];
 
 const META_CHECKS: AuditCheck[] = [
-  // Paradyme v1 (act_363174697) — API vs DB
-  { client_name: 'Paradyme', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'spend', expected_count: 49981.23, actual_count: 8439.30, discrepancy_pct: 83.11, threshold_pct: 2.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
-  { client_name: 'Paradyme', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'leads', expected_count: 529, actual_count: 0, discrepancy_pct: 100.0, threshold_pct: 2.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
-  // Paradyme v2 (act_2780628528620008) — API vs DB
-  { client_name: 'Paradyme (v2)', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'spend', expected_count: 7570.11, actual_count: 8439.30, discrepancy_pct: 11.48, threshold_pct: 2.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
-  // Internal Meta consistency: campaign sum vs account total
-  { client_name: 'Paradyme', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'spend', expected_count: 49979.76, actual_count: 49979.73, discrepancy_pct: 0.0001, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
-  { client_name: 'Paradyme', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'leads', expected_count: 529, actual_count: 529, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  // ── Meta API vs DB (Live pull 2026-03-16) ──────────────────────────────────
+  // Paradyme v1 (act_363174697) — API: $49,984.29 / 529 leads vs DB
+  { client_name: 'Paradyme v1', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'spend', expected_count: 49984.29, actual_count: 8439.30, discrepancy_pct: 83.12, threshold_pct: 2.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Paradyme v1', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'leads', expected_count: 529, actual_count: 0, discrepancy_pct: 100.0, threshold_pct: 2.0, status: 'FAIL', timestamp: AUDIT_TIMESTAMP },
+  // HRT (act_750916930993644) — API: $44,810.57 / 532 leads vs DB
+  { client_name: 'HRT', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'spend', expected_count: 44810.57, actual_count: 44810.57, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'HRT', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'leads', expected_count: 532, actual_count: 532, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  // Blue Metric Group (act_1404238774520445) — API: $2,615.66 / 47 leads vs DB
+  { client_name: 'Blue Metric Group', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'spend', expected_count: 2615.66, actual_count: 2615.66, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Blue Metric Group', source: 'Meta_API', comparison_source: 'DB_meta_campaigns', metric: 'leads', expected_count: 47, actual_count: 47, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  // ── Meta Internal Consistency: Campaign Sum vs Account Total ───────────────
+  { client_name: 'Paradyme v1', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'spend', expected_count: 49984.29, actual_count: 49984.29, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Paradyme v1', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'leads', expected_count: 529, actual_count: 529, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'HRT', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'spend', expected_count: 44810.57, actual_count: 44810.57, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'HRT', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'leads', expected_count: 532, actual_count: 532, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Blue Metric Group', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'spend', expected_count: 2615.66, actual_count: 2615.66, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
+  { client_name: 'Blue Metric Group', source: 'Meta_Campaign_Sum', comparison_source: 'Meta_Account_Total', metric: 'leads', expected_count: 47, actual_count: 47, discrepancy_pct: 0.0, threshold_pct: 2.0, status: 'PASS', timestamp: AUDIT_TIMESTAMP },
 ];
 
 // Last 12 check history (most recent first)
 const CHECK_HISTORY: CheckHistoryEntry[] = [
-  { run: 1, date: '2026-03-15', pass_rate: 28.0, passed: 14, failed: 36, status: 'FAIL' },
-  { run: 2, date: '2026-03-14', pass_rate: 35.6, passed: 18, failed: 32, status: 'FAIL' },
-  { run: 3, date: '2026-03-13', pass_rate: 38.2, passed: 19, failed: 31, status: 'FAIL' },
-  { run: 4, date: '2026-03-12', pass_rate: 41.1, passed: 21, failed: 29, status: 'FAIL' },
-  { run: 5, date: '2026-03-11', pass_rate: 44.4, passed: 22, failed: 28, status: 'FAIL' },
-  { run: 6, date: '2026-03-10', pass_rate: 47.8, passed: 24, failed: 26, status: 'FAIL' },
-  { run: 7, date: '2026-03-09', pass_rate: 52.2, passed: 26, failed: 24, status: 'FAIL' },
-  { run: 8, date: '2026-03-08', pass_rate: 56.7, passed: 28, failed: 22, status: 'FAIL' },
-  { run: 9, date: '2026-03-07', pass_rate: 61.1, passed: 31, failed: 19, status: 'FAIL' },
-  { run: 10, date: '2026-03-06', pass_rate: 72.2, passed: 36, failed: 14, status: 'FAIL' },
-  { run: 11, date: '2026-03-05', pass_rate: 83.3, passed: 42, failed: 8, status: 'FAIL' },
-  { run: 12, date: '2026-03-04', pass_rate: 94.4, passed: 47, failed: 3, status: 'FAIL' },
+  { run: 1, date: '2026-03-16', pass_rate: 38.3, passed: 23, failed: 37, status: 'FAIL' },
+  { run: 2, date: '2026-03-15', pass_rate: 28.0, passed: 14, failed: 36, status: 'FAIL' },
+  { run: 3, date: '2026-03-14', pass_rate: 35.6, passed: 18, failed: 32, status: 'FAIL' },
+  { run: 4, date: '2026-03-13', pass_rate: 38.2, passed: 19, failed: 31, status: 'FAIL' },
+  { run: 5, date: '2026-03-12', pass_rate: 41.1, passed: 21, failed: 29, status: 'FAIL' },
+  { run: 6, date: '2026-03-11', pass_rate: 44.4, passed: 22, failed: 28, status: 'FAIL' },
+  { run: 7, date: '2026-03-10', pass_rate: 47.8, passed: 24, failed: 26, status: 'FAIL' },
+  { run: 8, date: '2026-03-09', pass_rate: 52.2, passed: 26, failed: 24, status: 'FAIL' },
+  { run: 9, date: '2026-03-08', pass_rate: 56.7, passed: 28, failed: 22, status: 'FAIL' },
+  { run: 10, date: '2026-03-07', pass_rate: 61.1, passed: 31, failed: 19, status: 'FAIL' },
+  { run: 11, date: '2026-03-06', pass_rate: 72.2, passed: 36, failed: 14, status: 'FAIL' },
+  { run: 12, date: '2026-03-05', pass_rate: 83.3, passed: 42, failed: 8,  status: 'FAIL' },
 ];
 
 // ─── Helper Components ────────────────────────────────────────────────────────
@@ -521,8 +540,8 @@ export function DataAccuracyAuditPanel() {
             <div className="mt-3 p-3 bg-muted/10 rounded border border-border text-xs text-muted-foreground">
               <strong className="text-white">Root Cause:</strong> The <code className="bg-muted px-1 rounded">daily_metrics</code> aggregation
               pipeline stopped correctly populating data around Mar 4–5, 2026. Pass rate has degraded from 94.4% (Mar 4) to 28.0% (Mar 15).
-              The Meta Ads DB is also significantly under-synced — only ~$8.4K stored vs $49.9K in the Meta API for Paradyme.
-              Recommended action: trigger <code className="bg-muted px-1 rounded">recalculate-daily-metrics</code> and <code className="bg-muted px-1 rounded">sync-meta-ads</code> for all active clients.
+              The Meta Ads DB is critically under-synced — only <strong className="text-red-400">$8,439</strong> stored vs <strong className="text-white">$49,984</strong> in the Meta API for Paradyme v1 (83.12% discrepancy). Additionally, duplicate webhook fires are inflating DB counts for Freaky Fast Investments (+135%) and Blue Metric Group (+104%).
+              Recommended actions: run <code className="bg-muted px-1 rounded">recalculate-daily-metrics</code> for all clients, <code className="bg-muted px-1 rounded">sync-meta-ads --account act_363174697</code>, and deduplicate webhook handlers for Freaky Fast and Blue Metric.
             </div>
           </CardContent>
         </Card>
