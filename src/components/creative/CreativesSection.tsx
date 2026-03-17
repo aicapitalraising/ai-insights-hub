@@ -5,6 +5,7 @@ import { StaticGenTab } from './StaticGenTab';
 import { VideoGenTab } from './VideoGenTab';
 import { BriefGeneratorTab } from './BriefGeneratorTab';
 import { Upload, Image, Video, Target } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 interface CreativesSectionProps {
   clientId: string;
@@ -71,10 +72,16 @@ export function CreativesSection({ clientId, clientName, isPublicView = false }:
         </TabsContent>
 
         <TabsContent value="briefs" className="mt-4">
-          <BriefGeneratorTab
-            clientId={clientId}
-            clientName={clientName}
-          />
+          <ErrorBoundary fallback={
+            <div className="p-6 text-center text-muted-foreground">
+              <p>Failed to load AI Briefs. Try refreshing the page.</p>
+            </div>
+          }>
+            <BriefGeneratorTab
+              clientId={clientId}
+              clientName={clientName}
+            />
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

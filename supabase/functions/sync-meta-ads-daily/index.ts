@@ -21,23 +21,66 @@ Deno.serve(async (req) => {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-  console.log(`[sync-meta-ads-daily] Starting daily sync for ${yesterdayStr}`);
+  // Parse request body for options
+  let diagnosticOnly = false;
+  try {
+    const body = await req.json();
+    diagnosticOnly = body?.diagnosticOnly === true;
+  } catch { /* no body is fine */ }
 
-  // Get all active clients with a meta_ad_account_id
-  const { data: clients, error } = await supabase
+  console.log(`[sync-meta-ads-daily] Starting daily sync for ${yesterdayStr}${diagnosticOnly ? " (DIAGNOSTIC MODE)" : ""}`);
+
+  // ── Pre-sync diagnostic: fetch ALL clients to report exclusions ──
+  const { data: allClients, error: allError } = await supabase
     .from("clients")
-    .select("id, name, meta_ad_account_id")
-    .not("meta_ad_account_id", "is", null)
-    .in("status", ["active", "onboarding"]);
+    .select("id, name, status, meta_ad_account_id, meta_access_token");
 
-  if (error || !clients) {
-    console.error("Failed to fetch clients:", error);
+  if (allError || !allClients) {
+    console.error("Failed to fetch clients:", allError);
     return new Response(JSON.stringify({ success: false, error: "Failed to fetch clients" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  console.log(`[sync-meta-ads-daily] Found ${clients.length} clients with ad accounts`);
+  const hasSharedToken = !!Deno.env.get("META_SHARED_ACCESS_TOKEN");
+
+  // Classify each client's sync readiness
+  const readiness = allClients.map((c: any) => {
+    const issues: string[] = [];
+    if (!["active", "onboarding"].includes(c.status)) issues.push(`status="${c.status}" (need active/onboarding)`);
+    if (!c.meta_ad_account_id) issues.push("missing meta_ad_account_id");
+    if (!c.meta_access_token && !hasSharedToken) issues.push("no token (client or shared)");
+    return { id: c.id, name: c.name, status: c.status, ready: issues.length === 0, issues };
+  });
+
+  const excluded = readiness.filter((r: any) => !r.ready);
+  const clients = allClients.filter((c: any) =>
+    ["active", "onboarding"].includes(c.status) && c.meta_ad_account_id
+  );
+
+  // Log exclusions so they're not silent
+  if (excluded.length > 0) {
+    console.warn(`[sync-meta-ads-daily] ${excluded.length} clients EXCLUDED from sync:`);
+    for (const ex of excluded) {
+      console.warn(`  - ${ex.name}: ${ex.issues.join(", ")}`);
+    }
+  }
+
+  console.log(`[sync-meta-ads-daily] Found ${clients.length} sync-ready clients, ${excluded.length} excluded`);
+
+  // Diagnostic mode: return readiness report without syncing
+  if (diagnosticOnly) {
+    return new Response(JSON.stringify({
+      success: true,
+      diagnosticOnly: true,
+      date: yesterdayStr,
+      sharedTokenConfigured: hasSharedToken,
+      totalClients: allClients.length,
+      syncReady: clients.length,
+      excluded: excluded.length,
+      readiness,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   const doSync = async () => {
     const results: Array<{ clientId: string; name: string; success: boolean; error?: string; backfilledDays?: string[] }> = [];
@@ -191,12 +234,16 @@ Deno.serve(async (req) => {
       success: true,
       message: `Daily Meta Ads sync started for ${clients.length} clients (background, with gap detection)`,
       date: yesterdayStr,
+      syncReady: clients.length,
+      excluded: excluded.map((e: any) => ({ name: e.name, issues: e.issues })),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } else {
     const results = await doSync();
     return new Response(JSON.stringify({
       success: true,
       date: yesterdayStr,
+      syncReady: clients.length,
+      excluded: excluded.map((e: any) => ({ name: e.name, issues: e.issues })),
       results,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
