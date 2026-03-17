@@ -198,6 +198,7 @@ export function useUpdateScriptStatus() {
       return data;
     },
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['ad_scripts'] });
       queryClient.invalidateQueries({ queryKey: ['ad_scripts_client', variables.clientId] });
       toast.success(`Script marked as ${variables.status}`);
     },

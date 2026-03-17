@@ -118,56 +118,106 @@ Deno.serve(async (req) => {
       const avgCPL = totalLeads > 0 ? totalSpend / totalLeads : 0;
       const avgCPF = totalFunded > 0 ? totalSpend / totalFunded : 0;
 
-      const systemPrompt = `You are a senior performance creative strategist at a digital marketing agency specializing in direct response advertising. You analyze Meta Ads performance data and generate strategic creative briefs that produce high-converting ads.
+      const reasonContext: Record<string, string> = {
+        high_cpa: "CPA is above target. Focus on improving conversion efficiency. Analyze what top-converting ads have in common vs. high-spend low-conversion ads. Prioritize angles that lower cost per acquisition — tighter targeting messages, stronger social proof, urgency, and more specific CTAs.",
+        fatigue: "Creative fatigue detected — CTR is declining and frequency is rising. The audience has seen current ads too many times. Generate COMPLETELY NEW angles that feel fresh. Avoid reusing hooks or themes from existing top campaigns. Push into unexpected emotional territory or contrarian framings.",
+        scaling: "Current campaigns are performing well and we want to scale. Generate new angles that can run alongside winners without audience overlap. Look for underexploited pain points or desires that existing ads don't address. These should expand the audience, not cannibalize existing winners.",
+        new_angle: "Client wants a fresh creative direction. Analyze what themes/emotions/formats are NOT represented in current campaigns. Push creative boundaries — test unconventional hooks, new emotional drivers, or different storytelling structures.",
+      };
 
-Your briefs are data-driven, specific, and actionable. You identify winning patterns and develop new angles based on what the data shows is working.
+      const systemPrompt = `You are a senior performance creative strategist who has managed $50M+ in Meta ad spend across direct response campaigns. You generate strategic creative briefs that consistently produce top-decile ads.
+
+Your analytical process:
+1. PATTERN DETECTION — Identify what winning ads share (hooks, emotions, formats, audience signals) and what losing ads have in common
+2. GAP ANALYSIS — Find untested angles, underexploited emotions, or audience segments not addressed by current creative
+3. STRATEGIC ANGLES — Develop 3 differentiated messaging angles, each targeting a different emotional driver or audience motivation
+4. ACTIONABLE DIRECTION — Give designers/videographers specific, executable creative guidance
+
+Rules:
+- Every angle must be grounded in specific data observations (cite campaign names/metrics)
+- Hooks must stop the scroll in under 2 seconds — lead with pattern interrupts, specific numbers, or provocative statements
+- Pain points must be specific to the industry, not generic ("tired of low returns" not "tired of problems")
+- Each angle must target a DIFFERENT emotional driver (fear, aspiration, curiosity, urgency, belonging, etc.)
 
 Always respond with valid JSON matching this exact schema:
 {
-  "title": "string - concise brief title",
-  "objective": "string - what this brief aims to achieve",
+  "title": "string - concise brief title referencing the strategic focus",
+  "objective": "string - specific measurable goal (e.g. 'Reduce CPL from $45 to $30 by testing urgency-driven hooks')",
   "target_audience": {
-    "demographics": "string",
-    "psychographics": "string",
-    "pain_points": ["string"],
-    "desires": ["string"]
+    "demographics": "string - age, income, location, job title if relevant",
+    "psychographics": "string - beliefs, values, lifestyle, media consumption",
+    "pain_points": ["string - 3-4 specific pain points with industry context"],
+    "desires": ["string - 3-4 specific desires/aspirations"],
+    "awareness_level": "string - unaware/problem-aware/solution-aware/product-aware/most-aware"
+  },
+  "performance_insights": {
+    "winning_patterns": "string - what top-performing ads have in common",
+    "losing_patterns": "string - what underperforming ads share",
+    "untested_territory": "string - angles/emotions/formats not yet explored"
   },
   "messaging_angles": [
     {
       "angle": "string - angle name",
-      "hook": "string - opening hook text",
-      "rationale": "string - why this angle based on data"
+      "emotional_driver": "string - primary emotion (fear/aspiration/curiosity/urgency/social-proof/belonging)",
+      "hook": "string - opening hook text (must stop scroll in <2 sec)",
+      "hook_variants": ["string - 2 alternative hooks for A/B testing"],
+      "body_theme": "string - core message/story arc for the body copy",
+      "proof_points": ["string - specific claims, stats, or social proof to include"],
+      "rationale": "string - why this angle based on specific data observations"
     }
   ],
-  "creative_direction": "string - visual and copy direction",
-  "ad_format": "string - recommended format (image/video/carousel)"
+  "creative_direction": "string - visual style, color palette, imagery type, text overlay approach",
+  "ad_format": "string - recommended format (static_image/video_short/video_long/carousel)",
+  "format_rationale": "string - why this format based on performance data"
 }`;
 
+      // Sort campaigns by efficiency for better analysis
+      const sortedCampaigns = (campaigns || [])
+        .map(c => ({
+          ...c,
+          _cpl: Number(c.attributed_leads) > 0 ? Number(c.spend) / Number(c.attributed_leads) : Infinity,
+          _ctr: Number(c.ctr) || 0,
+        }))
+        .sort((a, b) => a._cpl - b._cpl);
+
+      const sortedAds = (ads || [])
+        .map(a => ({
+          ...a,
+          _cpl: Number(a.attributed_leads) > 0 ? Number(a.spend) / Number(a.attributed_leads) : Infinity,
+          _ctr: Number(a.ctr) || 0,
+        }))
+        .sort((a, b) => a._cpl - b._cpl);
+
+      // Identify winners vs losers
+      const winnerAds = sortedAds.filter(a => a._cpl < avgCPL && a._cpl < Infinity).slice(0, 5);
+      const loserAds = sortedAds.filter(a => a._cpl > avgCPL * 1.5 || a._cpl === Infinity).slice(0, 5);
+
       const userPrompt = `Generate a creative brief for ${client.name} (${client.industry || "industry not specified"}).
-${client.description ? `Business description: ${client.description}` : ""}
+${client.description ? `Business: ${client.description}` : ""}
 
-PERFORMANCE DATA:
-- Total spend: $${totalSpend.toFixed(2)}
-- Total leads: ${totalLeads}
-- Total funded/converted: ${totalFunded}
-- Average CPL: $${avgCPL.toFixed(2)}
-- Average cost per funded: $${avgCPF.toFixed(2)}
-${clientSettings?.target_cpl ? `- Target CPL: $${clientSettings.target_cpl}` : ""}
-${clientSettings?.target_cost_per_investor ? `- Target cost per investor: $${clientSettings.target_cost_per_investor}` : ""}
+STRATEGIC CONTEXT: ${reasonContext[reason] || reasonContext.scaling}
 
-TOP CAMPAIGNS:
-${(campaigns || []).map(c => `- ${c.name}: $${Number(c.spend).toFixed(0)} spend, ${c.attributed_leads || 0} leads, ${c.attributed_funded || 0} funded, CTR: ${Number(c.ctr).toFixed(2)}%`).join("\n")}
+AGGREGATE PERFORMANCE:
+- Total spend: $${totalSpend.toFixed(0)} | Leads: ${totalLeads} | Funded: ${totalFunded}
+- Current CPL: $${avgCPL.toFixed(2)} ${clientSettings?.target_cpl ? `| Target CPL: $${clientSettings.target_cpl}` : ""} ${avgCPL > (clientSettings?.target_cpl || Infinity) ? "⚠️ ABOVE TARGET" : ""}
+- Current CPF: $${avgCPF.toFixed(2)} ${clientSettings?.target_cost_per_investor ? `| Target: $${clientSettings.target_cost_per_investor}` : ""}
+- Lead→Funded rate: ${totalLeads > 0 ? ((totalFunded / totalLeads) * 100).toFixed(1) : 0}%
 
-TOP AD SETS (with targeting):
-${(adSets || []).map(a => `- ${a.name}: $${Number(a.spend).toFixed(0)} spend, ${a.attributed_leads || 0} leads, targeting: ${JSON.stringify(a.targeting || {}).substring(0, 200)}`).join("\n")}
+TOP PERFORMING CAMPAIGNS (by efficiency):
+${sortedCampaigns.slice(0, 5).map(c => `- "${c.name}": $${Number(c.spend).toFixed(0)} spend, ${c.attributed_leads || 0} leads (CPL: $${c._cpl === Infinity ? "N/A" : c._cpl.toFixed(2)}), CTR: ${c._ctr.toFixed(2)}%, ${c.attributed_funded || 0} funded`).join("\n")}
 
-TOP ADS:
-${(ads || []).map(a => `- ${a.name}: $${Number(a.spend).toFixed(0)} spend, ${a.attributed_leads || 0} leads, CTR: ${Number(a.ctr).toFixed(2)}%, CPC: $${Number(a.cpc).toFixed(2)}`).join("\n")}
+WINNING ADS (lowest CPL):
+${winnerAds.length > 0 ? winnerAds.map(a => `- "${a.name}": CPL $${a._cpl.toFixed(2)}, CTR ${a._ctr.toFixed(2)}%, ${a.attributed_leads} leads from $${Number(a.spend).toFixed(0)} spend`).join("\n") : "- No clear winners yet (insufficient attribution data)"}
 
-GENERATION REASON: ${reason}
+UNDERPERFORMING ADS (high CPL or no conversions):
+${loserAds.length > 0 ? loserAds.map(a => `- "${a.name}": CPL ${a._cpl === Infinity ? "∞ (no leads)" : "$" + a._cpl.toFixed(2)}, CTR ${a._ctr.toFixed(2)}%, $${Number(a.spend).toFixed(0)} spent`).join("\n") : "- No clear underperformers identified"}
+
+AD SETS WITH TARGETING CONTEXT:
+${(adSets || []).slice(0, 8).map(a => `- "${a.name}": $${Number(a.spend).toFixed(0)} → ${a.attributed_leads || 0} leads, targeting: ${JSON.stringify(a.targeting || {}).substring(0, 250)}`).join("\n")}
+
 PLATFORM: ${platform}
 
-Based on this data, generate a strategic creative brief with 3 messaging angles. Focus on what's working and identify opportunities for new creative directions.`;
+Analyze the data carefully. What patterns separate winners from losers? What emotional territory or audience segments are untapped? Generate a brief with 3 distinct angles that address the strategic context above.`;
 
       const response = await callClaude(ANTHROPIC_API_KEY, systemPrompt, userPrompt);
 
@@ -192,9 +242,13 @@ Based on this data, generate a strategic creative brief with 3 messaging angles.
           messaging_angles: briefData.messaging_angles,
           creative_direction: briefData.creative_direction,
           platform,
-          ad_format: briefData.ad_format,
+          ad_format: briefData.ad_format || briefData.format_rationale ? `${briefData.ad_format} (${briefData.format_rationale})` : briefData.ad_format,
           source_campaigns: (campaigns || []).map(c => c.name),
-          performance_snapshot: { totalSpend, totalLeads, totalFunded, avgCPL, avgCPF },
+          performance_snapshot: {
+            spend: totalSpend, leads: totalLeads, funded: totalFunded,
+            cpl: avgCPL, cpf: avgCPF,
+            insights: briefData.performance_insights || null,
+          },
           generation_reason: reason,
           status: "pending",
           generated_by: "ai",
@@ -223,42 +277,104 @@ Based on this data, generate a strategic creative brief with 3 messaging angles.
 
       const angles = brief.messaging_angles || [];
 
-      const systemPrompt = `You are an expert direct response copywriter who writes high-converting Meta ads. You take creative briefs and produce production-ready ad scripts.
+      const adFormat = brief.ad_format || "static_image";
+      const isVideo = adFormat.includes("video");
+      const isCarousel = adFormat === "carousel";
 
-Your copy is punchy, specific, and drives action. You use proven direct response frameworks: AIDA, PAS, hook-story-offer.
+      const formatInstructions: Record<string, string> = {
+        static_image: `FORMAT: Static Image Ad
+- Primary text: 3-5 short lines, first line is the hook (visible without "See more"). Keep under 125 chars for first line.
+- Headline: Max 40 characters, appears below image. Must reinforce the hook.
+- Description: Max 30 characters, supporting text below headline.
+- Text overlay on image: 1-2 punchy lines, max 20% of image area. Include the core value prop.`,
+        video_short: `FORMAT: Short-Form Video (15-30 sec)
+- Hook (0-3 sec): Pattern interrupt — must stop the scroll. Use text overlay + motion.
+- Problem (3-8 sec): Agitate the pain point. Be specific and visceral.
+- Solution (8-18 sec): Present the offer. Show proof (testimonials, results, demos).
+- CTA (18-25 sec): Clear next step with urgency. Text overlay + voiceover.
+- Primary text: 2-3 lines max, hook + key benefit + CTA link. First line must hook without "See more".
+- Headline: 40 chars max.
+- Include script_body with [VISUAL] and [VO/TEXT] markers for each section.`,
+        video_long: `FORMAT: Long-Form Video (60-120 sec)
+- Hook (0-3 sec): Pattern interrupt with provocative statement or question.
+- Story (3-30 sec): Relatable scenario or testimonial setup. Build emotional connection.
+- Problem amplification (30-50 sec): Deepen the pain. Show consequences of inaction.
+- Solution reveal (50-80 sec): Present offering as the bridge from pain to desire.
+- Social proof (80-100 sec): Testimonials, numbers, credibility markers.
+- CTA (100-120 sec): Urgency + clear next step.
+- Include script_body with [SCENE], [VISUAL], [VO/TEXT], and [TIMING] markers.`,
+        carousel: `FORMAT: Carousel Ad (3-5 cards)
+- Each card must work standalone AND as part of a sequence.
+- Card 1: Hook card — must stop scroll and create curiosity to swipe.
+- Cards 2-4: Value/proof cards — each delivers one benefit, stat, or testimonial.
+- Final card: CTA card — clear action step with urgency.
+- headlines array should have one headline per card.
+- body_variants should have one body text per card.`,
+      };
 
-For each messaging angle in the brief, generate one complete ad script.
+      const systemPrompt = `You are an elite direct response copywriter with a track record of producing Meta ads that consistently outperform benchmarks. You write copy that converts because you understand buyer psychology, not just copywriting formulas.
+
+Your writing principles:
+1. SPECIFICITY SELLS — "297 investors funded in 90 days" beats "help many clients succeed"
+2. HOOKS BREAK PATTERNS — The first line must make them stop scrolling. Use numbers, contrarian claims, direct address, or curiosity gaps.
+3. EMOTION THEN LOGIC — Lead with feeling, support with facts. Every angle targets one primary emotion.
+4. ONE IDEA PER AD — Don't dilute. Each script delivers one clear message with one clear CTA.
+5. WRITE FOR THE SCROLL — Short paragraphs. One idea per line. Whitespace is your friend.
+
+${formatInstructions[adFormat] || formatInstructions.static_image}
+
+For each messaging angle, generate one production-ready ad script. These should be ready to hand directly to a designer or videographer with no additional creative direction needed.
 
 Always respond with valid JSON matching this exact schema:
 {
   "scripts": [
     {
-      "title": "string - script name",
-      "angle": "string - which angle this uses",
+      "title": "string - descriptive script name",
+      "angle": "string - which brief angle this addresses",
+      "emotional_driver": "string - primary emotion targeted",
       "headline": "string - primary headline (max 40 chars)",
-      "headlines": ["string - 3 headline variants"],
-      "body_copy": "string - primary body text (max 125 chars for Meta primary text)",
-      "body_variants": ["string - 2 body copy variants"],
-      "cta": "string - call to action",
-      "hook": "string - opening hook (first line or first 3 seconds)",
-      "script_body": "string - full script if video format, otherwise null"
+      "headlines": ["string - 3 headline variants for A/B testing"],
+      "body_copy": "string - primary ad text${isCarousel ? " (for card 1)" : ""}",
+      "body_variants": ["string - ${isCarousel ? "one per card" : "2 variants for testing"}"],
+      "cta": "string - specific call to action button text",
+      "cta_url_suggestion": "string - suggested landing page path or UTM params",
+      "hook": "string - the scroll-stopping opening line",
+      "hook_variants": ["string - 2 alternative hooks"],
+      ${isVideo ? `"script_body": "string - full video script with [TIMING], [VISUAL], [VO/TEXT] markers for each section",` : `"script_body": "string or null - text overlay copy if applicable, null for pure feed ads",`}
+      "design_notes": "string - specific visual direction for the designer/videographer"
     }
   ]
 }`;
 
-      const userPrompt = `Generate ad scripts from this creative brief for ${client.name}:
+      const userPrompt = `Generate production-ready ad scripts for ${client.name} (${client.industry || "industry not specified"}).
+${client.description ? `Business: ${client.description}` : ""}
 
-BRIEF: ${brief.title}
+CREATIVE BRIEF: "${brief.title}"
 OBJECTIVE: ${brief.objective}
-TARGET AUDIENCE: ${JSON.stringify(brief.target_audience)}
-CREATIVE DIRECTION: ${brief.creative_direction}
-AD FORMAT: ${brief.ad_format || "image"}
+FORMAT: ${adFormat}
 PLATFORM: ${brief.platform || "meta"}
 
-MESSAGING ANGLES:
-${angles.map((a: any, i: number) => `${i + 1}. ${a.angle}: ${a.hook} (Rationale: ${a.rationale})`).join("\n")}
+TARGET AUDIENCE:
+${JSON.stringify(brief.target_audience, null, 2)}
 
-Generate one production-ready ad script per angle (${angles.length} scripts total). Each script should be ready to hand to a designer/videographer.`;
+CREATIVE DIRECTION: ${brief.creative_direction}
+
+PERFORMANCE CONTEXT:
+${brief.performance_snapshot ? `- Current CPL: $${brief.performance_snapshot.cpl?.toFixed(2) || "N/A"} | Total leads: ${brief.performance_snapshot.leads || 0} | Funded: ${brief.performance_snapshot.funded || 0}` : "- No performance data available"}
+${clientSettings?.target_cpl ? `- Target CPL: $${clientSettings.target_cpl}` : ""}
+
+MESSAGING ANGLES TO SCRIPT:
+${angles.map((a: any, i: number) => `
+${i + 1}. ANGLE: "${a.angle}"
+   Emotional driver: ${a.emotional_driver || "not specified"}
+   Hook: "${a.hook}"
+   ${a.hook_variants ? `Alt hooks: ${a.hook_variants.map((h: string) => `"${h}"`).join(", ")}` : ""}
+   Body theme: ${a.body_theme || "not specified"}
+   Proof points: ${a.proof_points ? a.proof_points.join("; ") : "none specified"}
+   Rationale: ${a.rationale}
+`).join("")}
+
+Write ${angles.length} complete, production-ready scripts — one per angle. Each must be directly executable by a designer/videographer with no additional creative direction needed. Include specific visual/design notes for each.`;
 
       const response = await callClaude(ANTHROPIC_API_KEY, systemPrompt, userPrompt);
 
@@ -287,7 +403,7 @@ Generate one production-ready ad script per angle (${angles.length} scripts tota
             hook: script.hook,
             script_body: script.script_body,
             platform: brief.platform || "meta",
-            ad_format: brief.ad_format || "image",
+            ad_format: adFormat,
             angle: script.angle,
             status: "draft",
             generated_by: "ai",
