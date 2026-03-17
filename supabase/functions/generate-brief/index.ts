@@ -306,7 +306,9 @@ Analyze the data carefully. What patterns separate winners from losers? What emo
           messaging_angles: briefData.messaging_angles,
           creative_direction: briefData.creative_direction,
           platform,
-          ad_format: briefData.ad_format || briefData.format_rationale ? `${briefData.ad_format} (${briefData.format_rationale})` : briefData.ad_format,
+          ad_format: briefData.ad_format && briefData.format_rationale
+            ? `${briefData.ad_format} (${briefData.format_rationale})`
+            : briefData.ad_format || null,
           source_campaigns: (campaigns || []).map(c => c.name),
           performance_snapshot: {
             spend: totalSpend, leads: totalLeads, funded: totalFunded,

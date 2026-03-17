@@ -102,7 +102,6 @@ verify_jwt = false
 [functions.run-attribution]
 verify_jwt = false
 
-
 [functions.fetch-ad-media-hd]
 verify_jwt = false
 
@@ -119,4 +118,22 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.weekly-brief-generator]
+verify_jwt = false
+
+[functions.batch-scrape-branding]
+verify_jwt = false
+
+[functions.fetch-ghl-calendars]
+verify_jwt = false
+
+[functions.fetch-page-metadata]
+verify_jwt = false
+
+[functions.scrape-brand-info]
+verify_jwt = false
+
+[functions.sync-calendar-appointments]
+verify_jwt = false
+
+[functions.verify-password]
 verify_jwt = false
