@@ -17,6 +17,7 @@ const ALLOWED_TABLES = [
   "client_voice_notes", "client_offers", "pipeline_stages", "pipeline_opportunities",
   "funnel_campaigns", "funnel_step_variants", "ad_spend_reports",
   "alert_configs", "chat_conversations", "chat_messages",
+  "creative_briefs", "ad_scripts",
   "ai_hub_conversations", "ai_hub_messages", "custom_gpts", "gpt_files",
   "gpt_knowledge_base", "knowledge_base_documents", "csv_import_logs",
   "contact_timeline_events", "data_discrepancies", "sync_logs", "sync_queue",

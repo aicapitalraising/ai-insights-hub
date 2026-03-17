@@ -257,6 +257,9 @@ async function attributeCRMData(supabase: any, clientId: string, startDate?: str
     map.set(key, stats);
   }
 
+  // Track leads needing source-proportional attribution
+  const sourceProportionalLeads: string[] = [];
+
   for (const lead of leads || []) {
     const isSpam = !!lead.is_spam;
 
@@ -321,8 +324,39 @@ async function attributeCRMData(supabase: any, clientId: string, startDate?: str
       attributed = true;
     }
 
+    // Pass 3: Source-proportional fallback — lead came from Facebook/Meta but lacks campaign detail
+    if (!attributed) {
+      const src = (lead.source || lead.utm_source || "").toLowerCase();
+      const isMeta = src.includes("facebook") || src.includes("meta") || src.includes("fb") || src.includes("ig") || src.includes("instagram");
+      if (isMeta) {
+        sourceProportionalLeads.push(lead.id);
+        attributed = true;
+      }
+    }
+
     if (!attributed && !isSpam) {
       unattributedCount++;
+    }
+  }
+
+  // Source-proportional attribution: distribute leads across campaigns by spend weight
+  if (sourceProportionalLeads.length > 0 && metaCampaigns.length > 0) {
+    const activeCampaigns = metaCampaigns.filter((c: any) => Number(c.spend) > 0);
+    const totalSpend = activeCampaigns.reduce((sum: number, c: any) => sum + (Number(c.spend) || 0), 0);
+
+    if (totalSpend > 0 && activeCampaigns.length > 0) {
+      console.log(`Source-proportional: distributing ${sourceProportionalLeads.length} Facebook-source leads across ${activeCampaigns.length} active campaigns (total spend: $${totalSpend.toFixed(2)})`);
+
+      for (const leadId of sourceProportionalLeads) {
+        // Attribute to the highest-spend campaign (winner-take-all per lead for cleaner data)
+        const topCampaign = activeCampaigns.reduce((best: any, c: any) =>
+          (Number(c.spend) || 0) > (Number(best.spend) || 0) ? c : best
+        , activeCampaigns[0]);
+        addStats(campaignStats, topCampaign.name, leadId);
+      }
+    } else {
+      // No spend data — count as unattributed
+      unattributedCount += sourceProportionalLeads.length;
     }
   }
 

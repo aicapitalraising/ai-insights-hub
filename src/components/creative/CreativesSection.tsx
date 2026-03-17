@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreativeApproval } from './CreativeApproval';
 import { StaticGenTab } from './StaticGenTab';
 import { VideoGenTab } from './VideoGenTab';
-import { Upload, Image, Video } from 'lucide-react';
+import { BriefGeneratorTab } from './BriefGeneratorTab';
+import { Upload, Image, Video, Target } from 'lucide-react';
 
 interface CreativesSectionProps {
   clientId: string;
@@ -41,6 +42,10 @@ export function CreativesSection({ clientId, clientName, isPublicView = false }:
             <Video className="h-4 w-4" />
             Video Gen
           </TabsTrigger>
+          <TabsTrigger value="briefs" className="gap-2">
+            <Target className="h-4 w-4" />
+            AI Briefs
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="approval" className="mt-4">
@@ -59,8 +64,15 @@ export function CreativesSection({ clientId, clientName, isPublicView = false }:
         </TabsContent>
 
         <TabsContent value="video" className="mt-4">
-          <VideoGenTab 
-            clientId={clientId} 
+          <VideoGenTab
+            clientId={clientId}
+            clientName={clientName}
+          />
+        </TabsContent>
+
+        <TabsContent value="briefs" className="mt-4">
+          <BriefGeneratorTab
+            clientId={clientId}
             clientName={clientName}
           />
         </TabsContent>
