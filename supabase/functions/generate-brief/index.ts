@@ -111,6 +111,16 @@ Deno.serve(async (req) => {
         .order("spend", { ascending: false })
         .limit(10);
 
+      // Fetch past rejected briefs for this client (learning from mistakes)
+      const { data: rejectedBriefs } = await supabase
+        .from("creative_briefs")
+        .select("title, objective, rejection_reason, generation_reason, created_at")
+        .eq("client_id", clientId)
+        .eq("status", "rejected")
+        .not("rejection_reason", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
       // Calculate aggregate performance
       const totalSpend = (campaigns || []).reduce((s, c) => s + (Number(c.spend) || 0), 0);
       const totalLeads = (campaigns || []).reduce((s, c) => s + (Number(c.attributed_leads) || 0), 0);
@@ -216,7 +226,11 @@ AD SETS WITH TARGETING CONTEXT:
 ${(adSets || []).slice(0, 8).map(a => `- "${a.name}": $${Number(a.spend).toFixed(0)} → ${a.attributed_leads || 0} leads, targeting: ${JSON.stringify(a.targeting || {}).substring(0, 250)}`).join("\n")}
 
 PLATFORM: ${platform}
-
+${rejectedBriefs && rejectedBriefs.length > 0 ? `
+PREVIOUSLY REJECTED BRIEFS — DO NOT repeat these mistakes:
+${rejectedBriefs.map((rb: any) => `- "${rb.title}" (${rb.generation_reason}) — REJECTED: ${rb.rejection_reason}`).join("\n")}
+Learn from this feedback. Avoid the same angles, tones, or approaches that were rejected.
+` : ""}
 Analyze the data carefully. What patterns separate winners from losers? What emotional territory or audience segments are untapped? Generate a brief with 3 distinct angles that address the strategic context above.`;
 
       const response = await callClaude(ANTHROPIC_API_KEY, systemPrompt, userPrompt);
@@ -276,6 +290,16 @@ Analyze the data carefully. What patterns separate winners from losers? What emo
       if (briefErr || !brief) throw new Error("Brief not found");
 
       const angles = brief.messaging_angles || [];
+
+      // Fetch past rejected scripts for this client (learning from mistakes)
+      const { data: rejectedScripts } = await supabase
+        .from("ad_scripts")
+        .select("title, angle, headline, hook, rejection_reason, created_at")
+        .eq("client_id", clientId)
+        .eq("status", "rejected")
+        .not("rejection_reason", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(8);
 
       const adFormat = brief.ad_format || "static_image";
       const isVideo = adFormat.includes("video");
@@ -374,7 +398,11 @@ ${i + 1}. ANGLE: "${a.angle}"
    Rationale: ${a.rationale}
 `).join("")}
 
-Write ${angles.length} complete, production-ready scripts — one per angle. Each must be directly executable by a designer/videographer with no additional creative direction needed. Include specific visual/design notes for each.`;
+Write ${angles.length} complete, production-ready scripts — one per angle. Each must be directly executable by a designer/videographer with no additional creative direction needed. Include specific visual/design notes for each.
+${rejectedScripts && rejectedScripts.length > 0 ? `
+PREVIOUSLY REJECTED SCRIPTS — learn from this feedback and avoid these patterns:
+${rejectedScripts.map((rs: any) => `- "${rs.title}" (hook: "${rs.hook}") — REJECTED: ${rs.rejection_reason}`).join("\n")}
+Do NOT reuse rejected hooks, headlines, or tones. Produce distinctly different creative.` : ""}`;
 
       const response = await callClaude(ANTHROPIC_API_KEY, systemPrompt, userPrompt);
 
