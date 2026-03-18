@@ -929,9 +929,11 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
               fundedPipelineId={fundedPipelineId}
               fundedStageIds={fundedStageIds}
               committedStageIds={committedStageIds}
+              salesStageIds={salesStageIds}
               onPipelineChange={setFundedPipelineId}
               onFundedStagesChange={setFundedStageIds}
               onCommittedStagesChange={setCommittedStageIds}
+              onSalesStagesChange={setSalesStageIds}
             />
 
             {/* Webhook Freeze Notice */}
