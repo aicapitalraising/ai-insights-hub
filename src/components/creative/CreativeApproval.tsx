@@ -359,34 +359,62 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
 
                 <div>
                   <label className="text-sm font-medium">Select Files</label>
+                  <div className="mt-2 border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => bulkFileInputRef.current?.click()}
+                  >
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm font-medium">Tap to select files</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Images & videos up to 10 GB each • 4K supported
+                    </p>
+                  </div>
                   <input
                     ref={bulkFileInputRef}
                     type="file"
                     accept="image/*,video/*"
                     multiple
                     onChange={(e) => setBulkFiles(Array.from(e.target.files || []))}
-                    className="mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    className="hidden"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Select multiple images or videos. Titles will be auto-generated from filenames.
-                  </p>
                 </div>
 
                 {bulkFiles.length > 0 && (
                   <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm font-medium mb-2">{bulkFiles.length} file(s) selected:</p>
+                    <p className="text-sm font-medium mb-2">
+                      {bulkFiles.length} file(s) selected 
+                      <span className="text-muted-foreground font-normal ml-1">
+                        ({formatFileSize(bulkFiles.reduce((sum, f) => sum + f.size, 0))} total)
+                      </span>
+                    </p>
                     <ul className="text-xs space-y-1 max-h-32 overflow-auto">
                       {bulkFiles.map((file, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          {file.type.startsWith('video/') ? (
-                            <Video className="h-3 w-3" />
-                          ) : (
-                            <Image className="h-3 w-3" />
-                          )}
-                          {file.name}
+                        <li key={i} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {file.type.startsWith('video/') ? (
+                              <Video className="h-3 w-3 flex-shrink-0" />
+                            ) : (
+                              <Image className="h-3 w-3 flex-shrink-0" />
+                            )}
+                            <span className="truncate">{file.name}</span>
+                          </div>
+                          <span className="text-muted-foreground flex-shrink-0">{formatFileSize(file.size)}</span>
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* Upload progress */}
+                {uploading && (
+                  <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium truncate max-w-[200px]">
+                        {uploadTotalFiles > 1 ? `File ${uploadFileIndex}/${uploadTotalFiles}: ` : ''}
+                        {uploadCurrentFile}
+                      </span>
+                      <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
                   </div>
                 )}
 
@@ -398,7 +426,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   {uploading ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
+                      Uploading {uploadFileIndex}/{uploadTotalFiles}...
                     </>
                   ) : (
                     <>
