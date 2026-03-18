@@ -100,6 +100,9 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   const [healthResults, setHealthResults] = useState<Record<string, any>>({});
   const [settingsClient, setSettingsClient] = useState<ClientSyncInfo | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [globalSyncingMeta, setGlobalSyncingMeta] = useState(false);
+  const [globalRecalculating, setGlobalRecalculating] = useState(false);
+  const [globalAccuracyChecking, setGlobalAccuracyChecking] = useState(false);
   
   // Settings form state
   const [editMetaAccountId, setEditMetaAccountId] = useState('');
@@ -376,6 +379,56 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
     }
   };
 
+  // ── Global Sync Actions ──
+
+  const handleGlobalMetaSync = async () => {
+    setGlobalSyncingMeta(true);
+    try {
+      const { error } = await supabase.functions.invoke('sync-meta-ads-daily');
+      if (error) throw error;
+      toast.success('Global Meta Ads sync triggered for all clients (running in background)');
+      queryClient.invalidateQueries({ queryKey: ['all-client-settings'] });
+    } catch (err) {
+      toast.error(`Global Meta sync failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setGlobalSyncingMeta(false);
+    }
+  };
+
+  const handleGlobalRecalculate = async () => {
+    setGlobalRecalculating(true);
+    try {
+      const { error } = await supabase.functions.invoke('recalculate-daily-metrics');
+      if (error) throw error;
+      toast.success('Daily metrics recalculation triggered for all clients');
+      queryClient.invalidateQueries({ queryKey: ['accuracy-health'] });
+    } catch (err) {
+      toast.error(`Recalculation failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setGlobalRecalculating(false);
+    }
+  };
+
+  const handleGlobalAccuracyCheck = async () => {
+    setGlobalAccuracyChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('daily-accuracy-check');
+      if (error) throw error;
+      const disc = data?.discrepanciesFound || 0;
+      const fixed = data?.autoFixedClients || 0;
+      if (disc === 0) {
+        toast.success('Accuracy check passed — no discrepancies found');
+      } else {
+        toast.warning(`Found ${disc} discrepancies across ${fixed} clients — auto-fixed`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['accuracy-health'] });
+    } catch (err) {
+      toast.error(`Accuracy check failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setGlobalAccuracyChecking(false);
+    }
+  };
+
     const getGhlStatus = (c: ClientSyncInfo): SyncStatus => {
     if (c.hubspotPortalId) return getSyncStatusFromDate(c.lastHubspotSyncAt, !!c.hubspotPortalId, { healthy: 8, stale: 48 });
     if (c.ghlSyncStatus === 'error') return 'error';
@@ -430,12 +483,42 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
               </Tooltip>
             )}
             
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CheckCircle className="h-3 w-3 text-chart-2" /> Healthy
                 <Clock className="h-3 w-3 text-chart-4 ml-2" /> Stale
                 <XCircle className="h-3 w-3 text-destructive ml-2" /> Error
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleGlobalMetaSync}
+                disabled={globalSyncingMeta}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${globalSyncingMeta ? 'animate-spin' : ''}`} />
+                Sync All Meta
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleGlobalRecalculate}
+                disabled={globalRecalculating}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${globalRecalculating ? 'animate-spin' : ''}`} />
+                Recalculate Metrics
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleGlobalAccuracyCheck}
+                disabled={globalAccuracyChecking}
+              >
+                <ShieldCheck className={`h-3 w-3 mr-1 ${globalAccuracyChecking ? 'animate-spin' : ''}`} />
+                Accuracy Check
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

@@ -137,8 +137,7 @@ export default function MetaAdsOverlay() {
   const { data: adSets = [] } = useMetaAdSets(clientId);
   const { data: ads = [] } = useMetaAds(clientId);
 
-  // Auto-refresh every 60s
-  const { data: _refreshCampaigns } = useMetaCampaigns(clientId);
+  // Data loaded from stored DB records only — no auto-refresh API calls.
 
   const searchLower = search.toLowerCase();
   const filteredCampaigns = useMemo(() => {

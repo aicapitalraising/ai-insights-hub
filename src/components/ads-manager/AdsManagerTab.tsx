@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { RefreshCw, Loader2, BarChart3, Play, Image as ImageIcon, Calendar, AlertTriangle, Trophy, Wand2, Download, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -213,7 +213,7 @@ export function AdsManagerTab({ clientId, clientName = 'Client' }: AdsManagerTab
   const [activeTab, setActiveTab] = useState('campaigns');
   const [filterCampaignId, setFilterCampaignId] = useState<string | null>(null);
   const [filterAdSetId, setFilterAdSetId] = useState<string | null>(null);
-  const lastSyncedRange = useRef<string | null>(null);
+  
 
   const { data: campaigns = [], isLoading: cLoading } = useMetaCampaigns(clientId);
   const { data: allAdSets = [], isLoading: asLoading } = useMetaAdSets(clientId);
@@ -223,19 +223,8 @@ export function AdsManagerTab({ clientId, clientName = 'Client' }: AdsManagerTab
   const syncMutation = useSyncMetaAds();
   const attributionMutation = useRunAttribution();
 
-  const currentRangeKey = `${startDate}_${endDate}`;
-
-  useEffect(() => {
-    const hasCredentials = (settings as any)?.meta_ads_sync_enabled || 
-      ((settings as any) && (settings as any).meta_ads_last_sync);
-    
-    if (!hasCredentials) return;
-    if (syncMutation.isPending) return;
-    if (lastSyncedRange.current === currentRangeKey) return;
-    
-    lastSyncedRange.current = currentRangeKey;
-    syncMutation.mutate({ clientId, startDate, endDate });
-  }, [currentRangeKey, clientId, settings]);
+  // Meta Ads data is loaded from stored DB records only.
+  // Syncing is manual — click "Sync Meta Ads" to pull fresh data from the Meta API.
 
   const lastSync = (settings as any)?.meta_ads_last_sync
     ? formatDistanceToNow(new Date((settings as any).meta_ads_last_sync), { addSuffix: true })
@@ -255,7 +244,6 @@ export function AdsManagerTab({ clientId, clientName = 'Client' }: AdsManagerTab
   const filterAdSetName = filterAdSetId ? allAdSets.find((a: any) => a.id === filterAdSetId)?.name : null;
 
   const handleSync = () => {
-    lastSyncedRange.current = currentRangeKey;
     syncMutation.mutate({ clientId, startDate, endDate });
   };
 
