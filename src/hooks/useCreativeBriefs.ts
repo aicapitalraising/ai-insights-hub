@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 export interface CreativeBrief {
   id: string;
   client_id: string;
+  client_name?: string | null;
+  source?: string | null;
   title: string;
   objective: string;
   target_audience: {
@@ -34,6 +36,10 @@ export interface CreativeBrief {
   status: 'pending' | 'in_production' | 'completed' | 'rejected';
   generated_by: string;
   approved_by: string | null;
+  full_brief_json?: Record<string, any> | null;
+  recommended_variations?: any[] | null;
+  hook_patterns?: string[] | null;
+  offer_angles?: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -66,15 +72,17 @@ export function useCreativeBriefs(clientId?: string) {
   return useQuery({
     queryKey: ['creative_briefs', clientId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('creative_briefs' as any)
         .select('*')
-        .eq('client_id', clientId!)
         .order('created_at', { ascending: false });
+
+      if (clientId) query = query.eq('client_id', clientId);
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as unknown as CreativeBrief[];
     },
-    enabled: !!clientId,
   });
 }
 
@@ -166,24 +174,45 @@ export function useGenerateScripts() {
 export function useUpdateBriefStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ briefId, status, clientId, rejectionReason }: { briefId: string; status: string; clientId: string; rejectionReason?: string }) => {
+    mutationFn: async ({ briefId, id, status, clientId, rejectionReason }: { briefId?: string; id?: string; status: string; clientId?: string; rejectionReason?: string }) => {
+      const resolvedBriefId = briefId ?? id;
+      if (!resolvedBriefId) throw new Error('briefId is required');
+
       const update: Record<string, unknown> = { status };
       if (rejectionReason) update.rejection_reason = rejectionReason;
       const { data, error } = await supabase
         .from('creative_briefs' as any)
         .update(update)
-        .eq('id', briefId)
+        .eq('id', resolvedBriefId)
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return data as CreativeBrief;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['creative_briefs', variables.clientId] });
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['creative_briefs'] });
+      if (variables.clientId ?? data.client_id) {
+        queryClient.invalidateQueries({ queryKey: ['creative_briefs', variables.clientId ?? data.client_id] });
+      }
       toast.success(`Brief marked as ${variables.status}`);
     },
     onError: (error: Error) => {
       toast.error('Failed to update status: ' + error.message);
+    },
+  });
+}
+
+export function usePendingBriefsCount() {
+  return useQuery({
+    queryKey: ['creative_briefs_pending_count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('creative_briefs' as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 }
@@ -204,10 +233,8 @@ export function useUpdateScriptStatus() {
       return data;
     },
     onSuccess: (_, variables) => {
-      // Invalidate all ad_scripts queries (both by brief and by client)
       queryClient.invalidateQueries({ queryKey: ['ad_scripts'] });
       queryClient.invalidateQueries({ queryKey: ['ad_scripts_client', variables.clientId] });
-      // Also refresh briefs since brief status may depend on script states
       queryClient.invalidateQueries({ queryKey: ['creative_briefs', variables.clientId] });
       toast.success(`Script marked as ${variables.status}`);
     },

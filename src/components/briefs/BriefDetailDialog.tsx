@@ -15,10 +15,10 @@ interface BriefDetailDialogProps {
 export function BriefDetailDialog({ brief, open, onOpenChange, showSaveToast }: BriefDetailDialogProps) {
   if (!brief) return null;
 
-  const fullBrief = brief.full_brief_json || {};
-  const variations = brief.recommended_variations || fullBrief.recommended_variations || [];
-  const hookPatterns = brief.hook_patterns || fullBrief.hook_patterns || [];
-  const offerAngles = brief.offer_angles || fullBrief.offer_angles || [];
+  const fullBrief = (brief.full_brief_json ?? {}) as Record<string, any>;
+  const variations = brief.recommended_variations ?? fullBrief.recommended_variations ?? [];
+  const hookPatterns = brief.hook_patterns ?? fullBrief.hook_patterns ?? [];
+  const offerAngles = brief.offer_angles ?? fullBrief.offer_angles ?? [];
   const summary = fullBrief.brief_summary || '';
 
   const handleSaveClose = () => {

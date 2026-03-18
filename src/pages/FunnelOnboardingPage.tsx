@@ -57,7 +57,7 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (searchParams.get('payment') === 'success') {
-      toast({ title: 'Payment successful!', description: 'Now complete your onboarding to get started.' });
+      toast.success('Payment successful!');
     }
   }, [searchParams]);
 
@@ -163,7 +163,7 @@ export default function Onboarding() {
       }
 
       setSubmitted(true);
-      toast({ title: 'Onboarding submitted!', description: 'We\'ll be in touch within 24 hours.' });
+      toast.success('Onboarding submitted! We\'ll be in touch within 24 hours.');
     } catch (err) {
       console.error('Submit error:', err);
       toast.error('Failed to submit. Please try again.');
