@@ -107,7 +107,7 @@ export function ScrapingScheduleSection() {
                 <label key={c.id} className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-muted/50">
                   <Checkbox checked={selectedClientIds.includes(c.id)} onCheckedChange={() => toggleClient(c.id)} disabled={!enabled} />
                   <span className="text-sm">{c.name}</span>
-                  {c.product_url && <Badge variant="outline" className="text-[9px] ml-auto">Has URL</Badge>}
+                  {c.description && <Badge variant="outline" className="text-[9px] ml-auto">Has Info</Badge>}
                 </label>
               ))}
             </div>

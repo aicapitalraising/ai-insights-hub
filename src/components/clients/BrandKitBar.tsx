@@ -82,11 +82,11 @@ export function BrandKitBar({ client, stylesCount = 0, assetsCount = 0, onEditSe
           <div
             className="flex items-center gap-1.5 shrink-0 max-w-[200px] cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => onEditSection?.('offer')}
-            title={client.offer_description || 'No offer set'}
+            title={client.description || 'No description set'}
           >
             <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <span className="text-xs text-muted-foreground truncate">
-              {client.offer_description ? client.offer_description.slice(0, 50) + (client.offer_description.length > 50 ? '...' : '') : 'No offer set'}
+              {client.description ? client.description.slice(0, 50) + (client.description.length > 50 ? '...' : '') : 'No description set'}
             </span>
           </div>
 
@@ -106,10 +106,10 @@ export function BrandKitBar({ client, stylesCount = 0, assetsCount = 0, onEditSe
             </div>
           </div>
 
-          {client.product_url && (
+          {client.business_manager_url && (
             <>
               <div className="w-px h-6 bg-border shrink-0" />
-              <a href={client.product_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
+              <a href={client.business_manager_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
                 <Link className="h-3 w-3" />
                 Website
               </a>

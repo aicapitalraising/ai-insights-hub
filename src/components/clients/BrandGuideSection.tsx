@@ -18,11 +18,11 @@ interface BrandGuideSectionProps {
 export function BrandGuideSection({ client }: BrandGuideSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState(client.description || '');
-  const [offerDescription, setOfferDescription] = useState(client.offer_description || '');
+  const [offerDescription, setOfferDescription] = useState(client.description || '');
   const [colors, setColors] = useState<string[]>(client.brand_colors || []);
   const [fonts, setFonts] = useState<string[]>(client.brand_fonts || []);
-  const [productUrl, setProductUrl] = useState(client.product_url || '');
-  const [productImages, setProductImages] = useState<string[]>(client.product_images || []);
+  const [productUrl, setProductUrl] = useState('');
+  const [productImages, setProductImages] = useState<string[]>([]);
   const [newColor, setNewColor] = useState('#3B82F6');
   const [newFont, setNewFont] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -35,11 +35,8 @@ export function BrandGuideSection({ client }: BrandGuideSectionProps) {
       await updateClient.mutateAsync({
         id: client.id,
         description: description || null,
-        offer_description: offerDescription || null,
         brand_colors: colors,
         brand_fonts: fonts,
-        product_url: productUrl || null,
-        product_images: productImages,
       });
       toast.success('Brand guide updated');
       setIsEditing(false);
@@ -118,11 +115,11 @@ export function BrandGuideSection({ client }: BrandGuideSectionProps) {
               size="sm"
               onClick={() => {
               setDescription(client.description || '');
-                setOfferDescription(client.offer_description || '');
+                setOfferDescription(client.description || '');
                 setColors(client.brand_colors || []);
                 setFonts(client.brand_fonts || []);
-                setProductUrl(client.product_url || '');
-                setProductImages(client.product_images || []);
+                setProductUrl('');
+                setProductImages([]);
                 setIsEditing(false);
               }}
             >

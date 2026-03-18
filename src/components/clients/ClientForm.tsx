@@ -47,7 +47,7 @@ interface ClientFormProps {
 export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: ClientFormProps) {
   const [brandColors, setBrandColors] = useState<string[]>(client?.brand_colors || []);
   const [brandFonts, setBrandFonts] = useState<string[]>(client?.brand_fonts || []);
-  const [productUrl, setProductUrl] = useState<string>(client?.product_url || '');
+  const [productUrl, setProductUrl] = useState<string>('');
   const [newColor, setNewColor] = useState('#6366f1');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
@@ -57,7 +57,7 @@ export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: 
     defaultValues: {
       name: client?.name || '',
       description: client?.description || '',
-      offer_description: client?.offer_description || '',
+      offer_description: client?.description || '',
       logo_url: client?.logo_url || '',
       website_url: '',
     },
@@ -68,14 +68,14 @@ export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: 
     if (open) {
       setBrandColors(client?.brand_colors || []);
       setBrandFonts(client?.brand_fonts || []);
-      setProductUrl(client?.product_url || '');
+      setProductUrl('');
       setHasAnalyzed(false);
       form.reset({
         name: client?.name || '',
         description: client?.description || '',
-        offer_description: client?.offer_description || '',
+        offer_description: client?.description || '',
         logo_url: client?.logo_url || '',
-        website_url: client?.product_url || '',
+        website_url: '',
       });
     }
   }, [open, client, form]);
@@ -145,12 +145,9 @@ export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: 
     onSubmit({
       name: values.name,
       description: values.description || undefined,
-      offer_description: values.offer_description || undefined,
       logo_url: values.logo_url || undefined,
       brand_colors: brandColors,
       brand_fonts: brandFonts,
-      product_url: productUrl || undefined,
-      product_images: client?.product_images || [],
     });
   };
 

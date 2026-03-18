@@ -180,7 +180,7 @@ export default function StaticAdsPage() {
           prompt: variantPrompt,
           styleName: style.label,
           aspectRatio: getAspectRatio(ad.format),
-          productDescription: selectedClient?.offer_description || selectedClient?.description,
+          productDescription: selectedClient?.description,
           brandColors,
           clientId: selectedClientId || undefined,
         },
@@ -252,9 +252,7 @@ export default function StaticAdsPage() {
       if (framework) {
         variantPrompt += `\nCopy Framework: ${framework.label} — ${framework.structure}`;
       }
-      if (selectedClient?.offer_description) {
-        variantPrompt += `\nOffer/Product: ${selectedClient.offer_description}`;
-      } else if (selectedClient?.description) {
+      if (selectedClient?.description) {
         variantPrompt += `\nProduct: ${selectedClient.description}`;
       }
       if (variantCount > 1) {
@@ -268,8 +266,7 @@ export default function StaticAdsPage() {
             prompt: variantPrompt,
             styleName: style.label,
             aspectRatio: getAspectRatio(ad.format),
-            productDescription: selectedClient?.offer_description || selectedClient?.description,
-            productUrl: selectedClient?.product_url,
+            productDescription: selectedClient?.description,
             brandColors,
             clientId: selectedClientId || undefined,
           },
@@ -496,9 +493,9 @@ export default function StaticAdsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedClient?.offer_description && (
+                  {selectedClient?.description && (
                     <p className="text-[10px] text-muted-foreground line-clamp-2">
-                      Offer: {selectedClient.offer_description}
+                      Info: {selectedClient.description}
                     </p>
                   )}
                 </Card>
