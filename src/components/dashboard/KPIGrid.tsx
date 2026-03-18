@@ -32,6 +32,9 @@ interface KPIMetrics {
   pipelineValue?: number;
   costPerReconnectCall?: number;
   costPerReconnectShowed?: number;
+  salesCount?: number;
+  salesDollars?: number;
+  roas?: number;
 }
 
 interface PriorMetrics {
