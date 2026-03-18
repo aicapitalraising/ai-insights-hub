@@ -193,7 +193,42 @@ Deno.serve(async (req) => {
           const commitmentDollars = (fundedData || []).reduce((sum: number, f: any) => sum + (f.commitment_amount || 0), 0);
           const commitmentCount = (fundedData || []).filter((f: any) => f.commitment_amount && f.commitment_amount > 0).length;
 
-          // UPSERT — only CRM columns, never touch ad_spend/impressions/clicks/ctr
+          // ── Sales: from pipeline_opportunities where stage matches sales_stage_ids ──
+          let salesCount = 0;
+          let salesDollars = 0;
+          const salesConfig = salesConfigMap[client.id];
+          if (salesConfig?.salesStageIds?.length > 0 && salesConfig.pipelineId) {
+            // Get the internal pipeline ID
+            const { data: dbPipeline } = await supabase
+              .from("client_pipelines")
+              .select("id")
+              .eq("client_id", client.id)
+              .eq("ghl_pipeline_id", salesConfig.pipelineId)
+              .maybeSingle();
+            
+            if (dbPipeline) {
+              // Get stage IDs that match the GHL stage IDs in sales_stage_ids
+              const { data: salesStages } = await supabase
+                .from("pipeline_stages")
+                .select("id")
+                .eq("pipeline_id", dbPipeline.id)
+                .in("ghl_stage_id", salesConfig.salesStageIds);
+              
+              if (salesStages && salesStages.length > 0) {
+                const stageIds = salesStages.map((s: any) => s.id);
+                const { data: salesOpps, count: salesOppCount } = await supabase
+                  .from("pipeline_opportunities")
+                  .select("monetary_value", { count: "exact" })
+                  .eq("pipeline_id", dbPipeline.id)
+                  .in("stage_id", stageIds)
+                  .gte("last_stage_change_at", dayStart)
+                  .lt("last_stage_change_at", dayNext);
+                
+                salesCount = salesOppCount || 0;
+                salesDollars = (salesOpps || []).reduce((sum: number, o: any) => sum + Number(o.monetary_value || 0), 0);
+              }
+            }
+          }
           const { error: upsertError } = await supabase
             .from("daily_metrics")
             .upsert(
