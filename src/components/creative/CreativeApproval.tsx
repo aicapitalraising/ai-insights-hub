@@ -503,6 +503,22 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                 {(newCreative.type === 'image' || newCreative.type === 'video') && (
                   <div>
                     <label className="text-sm font-medium">File</label>
+                    <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {newCreative.file ? (
+                        <div className="flex items-center justify-center gap-2">
+                          {newCreative.type === 'video' ? <Video className="h-4 w-4" /> : <Image className="h-4 w-4" />}
+                          <span className="text-sm truncate max-w-[200px]">{newCreative.file.name}</span>
+                          <span className="text-xs text-muted-foreground">({formatFileSize(newCreative.file.size)})</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                          <p className="text-xs text-muted-foreground">Tap to select • Up to 10 GB • 4K supported</p>
+                        </>
+                      )}
+                    </div>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -511,7 +527,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                         ...newCreative, 
                         file: e.target.files?.[0] || null 
                       })}
-                      className="mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                      className="hidden"
                     />
                   </div>
                 )}
@@ -544,6 +560,17 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   />
                 </div>
 
+                {/* Upload progress */}
+                {uploading && (
+                  <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium truncate max-w-[200px]">{uploadCurrentFile}</span>
+                      <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
+                  </div>
+                )}
+
                 <Button 
                   onClick={handleUpload} 
                   className="w-full"
@@ -552,7 +579,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   {uploading ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
+                      Uploading... {uploadProgress}%
                     </>
                   ) : (
                     <>
