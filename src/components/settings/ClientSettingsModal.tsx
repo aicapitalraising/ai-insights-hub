@@ -158,6 +158,9 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     if (settingsAny?.committed_stage_ids) {
       setCommittedStageIds(settingsAny.committed_stage_ids || []);
     }
+    if (settingsAny?.sales_stage_ids) {
+      setSalesStageIds(settingsAny.sales_stage_ids || []);
+    }
   }, [settings]);
 
   // Load client business manager URL, GHL credentials, and Meta Ad Account
