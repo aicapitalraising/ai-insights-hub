@@ -21,7 +21,7 @@ interface KPICardProps {
   changeLabel?: string;
   clickable?: boolean;
   onClick?: () => void;
-  format?: 'currency' | 'percent' | 'number' | 'days';
+  format?: 'currency' | 'percent' | 'number' | 'days' | 'multiplier';
   threshold?: KPIThreshold;
   invertThreshold?: boolean;
   confidence?: ConfidenceLevel;
