@@ -77,7 +77,7 @@ export function ScriptSelectionStep({ onComplete, isProcessing }: ScriptSelectio
       const { data, error } = await supabase
         .from('scripts').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
       if (error) throw error;
-      setScripts(data || []);
+      setScripts((data ?? []) as Script[]);
     } catch {
       toast.error('Failed to load scripts');
     } finally {
