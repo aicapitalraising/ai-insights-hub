@@ -202,6 +202,21 @@ export function useUpdateBriefStatus() {
   });
 }
 
+export function usePendingBriefsCount() {
+  return useQuery({
+    queryKey: ['creative_briefs_pending_count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('creative_briefs' as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
 export function useUpdateScriptStatus() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -218,10 +233,8 @@ export function useUpdateScriptStatus() {
       return data;
     },
     onSuccess: (_, variables) => {
-      // Invalidate all ad_scripts queries (both by brief and by client)
       queryClient.invalidateQueries({ queryKey: ['ad_scripts'] });
       queryClient.invalidateQueries({ queryKey: ['ad_scripts_client', variables.clientId] });
-      // Also refresh briefs since brief status may depend on script states
       queryClient.invalidateQueries({ queryKey: ['creative_briefs', variables.clientId] });
       toast.success(`Script marked as ${variables.status}`);
     },

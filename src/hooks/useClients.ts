@@ -117,6 +117,30 @@ export function useClientByToken(token: string | undefined) {
   });
 }
 
+export function useCreateClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (client: Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>) => {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert(client)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Client;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    },
+    onError: (error) => {
+      console.error('Failed to create client:', error);
+      toast.error('Failed to create client');
+    },
+  });
+}
+
 export function useUpdateClient() {
   const queryClient = useQueryClient();
   
@@ -139,6 +163,26 @@ export function useUpdateClient() {
     onError: (error) => {
       console.error('Failed to update client:', error);
       toast.error('Failed to update client');
+    },
+  });
+}
+
+export function useDeleteClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('clients').delete().eq('id', id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.removeQueries({ queryKey: ['client', id] });
+    },
+    onError: (error) => {
+      console.error('Failed to delete client:', error);
+      toast.error('Failed to delete client');
     },
   });
 }
