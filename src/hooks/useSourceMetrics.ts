@@ -53,6 +53,9 @@ export interface SourceAggregatedMetrics {
   pipelineValue: number;
   costPerReconnectCall: number;
   costPerReconnectShowed: number;
+  salesCount: number;
+  salesDollars: number;
+  roas: number;
 }
 
 /**
