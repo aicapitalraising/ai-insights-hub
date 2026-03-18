@@ -231,6 +231,11 @@ const Index = () => {
             {/* Briefs utility page */}
             {activeTab === 'briefs' && <CreativeBriefs embedded />}
 
+            {/* Ads Manager */}
+            {activeTab === 'ads-manager' && <AdminAdsManagerTab platform="all" />}
+            {activeTab === 'ads-manager-meta' && <AdminAdsManagerTab platform="meta" />}
+            {activeTab === 'ads-manager-google' && <AdminAdsManagerTab platform="google" />}
+
             {/* Dashboard */}
             {activeTab === 'dashboard' && (
               <>
