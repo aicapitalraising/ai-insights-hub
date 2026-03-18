@@ -80,6 +80,16 @@ const navStructure = [
     ],
   },
   {
+    title: 'Ads Manager',
+    value: 'ads-manager-group',
+    icon: BarChart3,
+    children: [
+      { title: 'All Ads', value: 'ads-manager', icon: BarChart3 },
+      { title: 'Meta Ads', value: 'ads-manager-meta', icon: BarChart3 },
+      { title: 'Google Ads', value: 'ads-manager-google', icon: BarChart3 },
+    ],
+  },
+  {
     title: 'Creatives',
     value: 'creatives',
     icon: Palette,
