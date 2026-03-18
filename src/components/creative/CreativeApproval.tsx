@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
 import { PlatformAdPreview } from './PlatformAdPreview';
 import { CreativeHorizontalPreview } from './CreativeHorizontalPreview';
