@@ -244,7 +244,6 @@ export function AdsManagerTab({ clientId, clientName = 'Client' }: AdsManagerTab
   const filterAdSetName = filterAdSetId ? allAdSets.find((a: any) => a.id === filterAdSetId)?.name : null;
 
   const handleSync = () => {
-    lastSyncedRange.current = currentRangeKey;
     syncMutation.mutate({ clientId, startDate, endDate });
   };
 
