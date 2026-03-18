@@ -306,9 +306,43 @@ export function PipelineMappingSection({
                 </div>
               </div>
 
-              {(committedStageIds.length > 0 || fundedStageIds.length > 0) && (
+              {/* Sales Stages (Ecom) */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-500" />
+                  Sales Stages (Ecom/Direct Sales)
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Stages that indicate a completed sale — used for ROAS tracking
+                </p>
+                <div className="grid gap-2 max-h-32 overflow-y-auto">
+                  {stages.map(stage => (
+                    <div
+                      key={`sales-${stage.id}`}
+                      className="flex items-center gap-2 p-2 border border-border rounded hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        id={`sales-${stage.id}`}
+                        checked={salesStageIds.includes(stage.id)}
+                        onCheckedChange={() => toggleSalesStage(stage.id)}
+                      />
+                      <label
+                        htmlFor={`sales-${stage.id}`}
+                        className="flex-1 text-sm cursor-pointer"
+                      >
+                        {stage.name}
+                      </label>
+                      {salesStageIds.includes(stage.id) && (
+                        <Badge className="text-xs bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30">Sale</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {(committedStageIds.length > 0 || fundedStageIds.length > 0 || salesStageIds.length > 0) && (
                 <div className="p-3 bg-muted/30 border border-border text-sm">
-                  <strong>Mapped:</strong> {committedStageIds.length} committed stage(s), {fundedStageIds.length} funded stage(s)
+                  <strong>Mapped:</strong> {committedStageIds.length} committed, {fundedStageIds.length} funded, {salesStageIds.length} sales stage(s)
                 </div>
               )}
             </>
