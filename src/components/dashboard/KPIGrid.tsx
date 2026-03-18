@@ -186,6 +186,12 @@ export function KPIGrid({
     { key: 'fundedDollars', label: 'Funded $', value: metrics.fundedDollars ?? 0, format: 'currency' as const },
     { key: 'costPerInvestor', label: 'Cost / Investor', value: metrics.costPerInvestor ?? 0, format: 'currency' as const, threshold: thresholds?.costPerInvestor },
     { key: 'costOfCapital', label: 'Cost of Capital', value: metrics.costOfCapital ?? 0, format: 'percent' as const, threshold: thresholds?.costOfCapital },
+    // Sales / ROAS (only show if salesCount > 0 or salesDollars > 0)
+    ...((metrics.salesCount ?? 0) > 0 || (metrics.salesDollars ?? 0) > 0 ? [
+      { key: 'salesCount', label: 'Sales', value: metrics.salesCount ?? 0, format: 'number' as const },
+      { key: 'salesDollars', label: 'Sales Revenue', value: metrics.salesDollars ?? 0, format: 'currency' as const },
+      { key: 'roas', label: 'ROAS', value: metrics.roas ?? 0, format: 'multiplier' as const },
+    ] : []),
   ];
 
   const fundedMetrics = showFundedMetrics ? [
