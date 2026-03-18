@@ -33,10 +33,18 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     clientId = body.clientId || null;
-    
+
     if (body.startDate && body.endDate) {
       startDate = body.startDate;
       endDate = body.endDate;
+    } else if (body.days) {
+      // Support { days: N } parameter for recalculating last N days
+      const daysBack = Math.min(Math.max(parseInt(body.days) || 7, 1), 365);
+      const today = new Date();
+      const start = new Date(today);
+      start.setUTCDate(start.getUTCDate() - daysBack);
+      startDate = start.toISOString().split("T")[0];
+      endDate = today.toISOString().split("T")[0];
     } else {
       const today = new Date();
       const yesterday = new Date(today);

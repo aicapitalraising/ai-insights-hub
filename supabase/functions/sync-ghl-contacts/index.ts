@@ -2257,29 +2257,30 @@ async function syncAllContactsUnlimited(
   const fieldNameMap = await fetchGHLCustomFieldDefinitions(client.ghl_api_key, client.ghl_location_id);
   
   let hasMore = true;
-  let startAfterId: string | undefined;
+  let currentPage = 1;
   let totalProcessed = 0;
   const MAX_CONTACTS = 50000; // High limit for larger accounts
-  
+
   try {
     while (hasMore && totalProcessed < MAX_CONTACTS) {
-      const { contacts, nextPageUrl } = await fetchGHLContacts(
+      const { contacts, nextPage } = await fetchGHLContacts(
         client.ghl_api_key,
         client.ghl_location_id,
         100,
-        startAfterId
+        undefined,
+        currentPage
       );
-      
-      console.log(`Fetched batch of ${contacts.length} contacts, total processed: ${totalProcessed}`);
-      
+
+      console.log(`Fetched page ${currentPage}: ${contacts.length} contacts, total processed: ${totalProcessed}`);
+
       for (const contact of contacts) {
         try {
           const contactOpportunity = opportunityByContactId.get(contact.id);
           const syncResult = await syncContactToDatabase(supabase, client.id, contact, contactOpportunity, fieldNameMap);
-          
+
           if (syncResult.action === 'created') result.created++;
           else if (syncResult.action === 'updated') result.updated++;
-          
+
           // Check for funded investor tag
           if (hasFundedInvestorTag(contact)) {
             const created = await createFundedInvestorFromContact(
@@ -2296,13 +2297,13 @@ async function syncAllContactsUnlimited(
         }
         totalProcessed++;
       }
-      
-      if (nextPageUrl && contacts.length === 100) {
-        startAfterId = contacts[contacts.length - 1].id;
+
+      if (nextPage && contacts.length === 100) {
+        currentPage = nextPage;
       } else {
         hasMore = false;
       }
-      
+
       // Rate limiting delay
       await new Promise(resolve => setTimeout(resolve, 300));
     }
@@ -2800,16 +2801,17 @@ async function recalculateHistoricalMetrics(
           .gte('booked_at', dayStart)
           .lte('booked_at', dayEnd);
         
-        // Count showed calls BOOKED on this date (not reconnects)
+        // Count showed calls where the APPOINTMENT occurred on this date (not reconnects)
+        // Uses scheduled_at (actual appointment date) to match recalculate-daily-metrics
         const { count: showedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('showed', true)
           .neq('is_reconnect', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
-        
+          .gte('scheduled_at', dayStart)
+          .lte('scheduled_at', dayEnd);
+
         // Count reconnect calls BOOKED on this date
         const { count: reconnectCount } = await supabase
           .from('calls')
@@ -2818,16 +2820,16 @@ async function recalculateHistoricalMetrics(
           .eq('is_reconnect', true)
           .gte('booked_at', dayStart)
           .lte('booked_at', dayEnd);
-        
-        // Count reconnect showed calls BOOKED on this date
+
+        // Count reconnect showed calls where the APPOINTMENT occurred on this date
         const { count: reconnectShowedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('is_reconnect', true)
           .eq('showed', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .gte('scheduled_at', dayStart)
+          .lte('scheduled_at', dayEnd);
         
         // Get funded investors for this date
         const { data: fundedData, count: fundedCount } = await supabase
@@ -2965,16 +2967,17 @@ async function recalculateRecentMetrics(
           .gte('booked_at', dayStart)
           .lte('booked_at', dayEnd);
         
-        // Count showed calls BOOKED on this date (not reconnects)
+        // Count showed calls where the APPOINTMENT occurred on this date (not reconnects)
+        // Uses scheduled_at (actual appointment date) to match recalculate-daily-metrics
         const { count: showedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('showed', true)
           .neq('is_reconnect', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
-        
+          .gte('scheduled_at', dayStart)
+          .lte('scheduled_at', dayEnd);
+
         // Count reconnect calls BOOKED on this date
         const { count: reconnectCount } = await supabase
           .from('calls')
@@ -2983,16 +2986,16 @@ async function recalculateRecentMetrics(
           .eq('is_reconnect', true)
           .gte('booked_at', dayStart)
           .lte('booked_at', dayEnd);
-        
-        // Count reconnect showed calls BOOKED on this date
+
+        // Count reconnect showed calls where the APPOINTMENT occurred on this date
         const { count: reconnectShowedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('is_reconnect', true)
           .eq('showed', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .gte('scheduled_at', dayStart)
+          .lte('scheduled_at', dayEnd);
         
         // Get funded investors for this date
         const { data: fundedData, count: fundedCount } = await supabase
