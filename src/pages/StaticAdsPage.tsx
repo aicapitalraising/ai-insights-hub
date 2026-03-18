@@ -180,7 +180,7 @@ export default function StaticAdsPage() {
           prompt: variantPrompt,
           styleName: style.label,
           aspectRatio: getAspectRatio(ad.format),
-          productDescription: selectedClient?.offer_description || selectedClient?.description,
+          productDescription: selectedClient?.description,
           brandColors,
           clientId: selectedClientId || undefined,
         },
