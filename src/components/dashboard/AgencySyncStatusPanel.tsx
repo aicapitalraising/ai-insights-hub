@@ -98,6 +98,8 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   const [syncingPipeline, setSyncingPipeline] = useState<Set<string>>(new Set());
   const [healthChecking, setHealthChecking] = useState<Set<string>>(new Set());
   const [healthResults, setHealthResults] = useState<Record<string, any>>({});
+  const [backfillRunning, setBackfillRunning] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState<string | null>(null);
   const [settingsClient, setSettingsClient] = useState<ClientSyncInfo | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   
@@ -376,6 +378,80 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
     }
   };
 
+  // ── Backfill All Clients from Jan 1 2026 ──
+  const handleBackfillAll = async () => {
+    const ghlClients = clientSyncData.filter(c => c.ghlLocationId && c.ghlApiKey);
+    if (ghlClients.length === 0) {
+      toast.error('No clients with GHL credentials found');
+      return;
+    }
+
+    const sinceDays = Math.ceil((Date.now() - new Date('2026-01-01T00:00:00Z').getTime()) / (1000 * 60 * 60 * 24));
+
+    setBackfillRunning(true);
+    setBackfillProgress(`Starting backfill for ${ghlClients.length} clients (${sinceDays} days)...`);
+    toast.info(`Backfill started: ${ghlClients.length} clients, ${sinceDays} days back to Jan 1 2026`);
+
+    try {
+      // Step 1: Sync contacts for each client
+      for (let i = 0; i < ghlClients.length; i++) {
+        const c = ghlClients[i];
+        setBackfillProgress(`[${i + 1}/${ghlClients.length}] ${c.name}: syncing contacts...`);
+        try {
+          await supabase.functions.invoke('sync-ghl-contacts', {
+            body: { client_id: c.id, syncType: 'all', sinceDateDays: sinceDays },
+          });
+          toast.success(`${c.name}: contacts synced`);
+        } catch (err) {
+          toast.error(`${c.name}: contact sync failed`);
+        }
+
+        // Calendar
+        setBackfillProgress(`[${i + 1}/${ghlClients.length}] ${c.name}: syncing calendar...`);
+        try {
+          await supabase.functions.invoke('sync-calendar-appointments', {
+            body: { clientId: c.id, sinceDateDays: sinceDays },
+          });
+        } catch {}
+
+        // Pipeline
+        setBackfillProgress(`[${i + 1}/${ghlClients.length}] ${c.name}: syncing pipelines...`);
+        try {
+          await supabase.functions.invoke('sync-ghl-pipelines', {
+            body: { client_id: c.id },
+          });
+        } catch {}
+
+        // Delay between clients
+        if (i < ghlClients.length - 1) {
+          setBackfillProgress(`[${i + 1}/${ghlClients.length}] Waiting before next client...`);
+          await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+
+      // Step 2: Recalculate all daily metrics
+      setBackfillProgress('Recalculating daily metrics for full date range...');
+      try {
+        await supabase.functions.invoke('recalculate-daily-metrics', {
+          body: { startDate: '2026-01-01', endDate: new Date().toISOString().split('T')[0] },
+        });
+      } catch {}
+
+      toast.success(`Backfill complete for ${ghlClients.length} clients!`);
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['all-daily-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['calls'] });
+      queryClient.invalidateQueries({ queryKey: ['funded-investors'] });
+      queryClient.invalidateQueries({ queryKey: ['all-client-settings'] });
+    } catch (err) {
+      toast.error(`Backfill failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setBackfillRunning(false);
+      setBackfillProgress(null);
+    }
+  };
+
     const getGhlStatus = (c: ClientSyncInfo): SyncStatus => {
     if (c.hubspotPortalId) return getSyncStatusFromDate(c.lastHubspotSyncAt, !!c.hubspotPortalId, { healthy: 8, stale: 48 });
     if (c.ghlSyncStatus === 'error') return 'error';
@@ -445,8 +521,26 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
                 <Stethoscope className="h-3 w-3 mr-1" />
                 Test All APIs
               </Button>
+              <Button
+                variant={backfillRunning ? "secondary" : "default"}
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleBackfillAll}
+                disabled={backfillRunning}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${backfillRunning ? 'animate-spin' : ''}`} />
+                {backfillRunning ? 'Backfilling...' : 'Backfill All (Jan 1)'}
+              </Button>
             </div>
           </div>
+          {backfillProgress && (
+            <div className="mt-2 px-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                {backfillProgress}
+              </p>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
