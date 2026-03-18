@@ -57,7 +57,7 @@ export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: 
     defaultValues: {
       name: client?.name || '',
       description: client?.description || '',
-      offer_description: client?.offer_description || '',
+      offer_description: client?.description || '',
       logo_url: client?.logo_url || '',
       website_url: '',
     },
