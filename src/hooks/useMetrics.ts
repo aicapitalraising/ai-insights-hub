@@ -20,6 +20,8 @@ export interface DailyMetric {
   funded_dollars: number;
   reconnect_calls?: number;
   reconnect_showed?: number;
+  sales_count?: number;
+  sales_dollars?: number;
 }
 
 export interface FundedInvestor {

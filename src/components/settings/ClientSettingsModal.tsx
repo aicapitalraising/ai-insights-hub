@@ -92,6 +92,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
   const [fundedPipelineId, setFundedPipelineId] = useState<string | null>(null);
   const [fundedStageIds, setFundedStageIds] = useState<string[]>([]);
   const [committedStageIds, setCommittedStageIds] = useState<string[]>([]);
+  const [salesStageIds, setSalesStageIds] = useState<string[]>([]);
 
   // Public link password state
   const [publicLinkPassword, setPublicLinkPassword] = useState('');
@@ -156,6 +157,9 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     }
     if (settingsAny?.committed_stage_ids) {
       setCommittedStageIds(settingsAny.committed_stage_ids || []);
+    }
+    if (settingsAny?.sales_stage_ids) {
+      setSalesStageIds(settingsAny.sales_stage_ids || []);
     }
   }, [settings]);
 
@@ -257,6 +261,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         funded_pipeline_id: fundedPipelineId,
         funded_stage_ids: fundedStageIds,
         committed_stage_ids: committedStageIds,
+        sales_stage_ids: salesStageIds,
       } as any);
 
       // Save alert configs if slack webhook provided
@@ -924,9 +929,11 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
               fundedPipelineId={fundedPipelineId}
               fundedStageIds={fundedStageIds}
               committedStageIds={committedStageIds}
+              salesStageIds={salesStageIds}
               onPipelineChange={setFundedPipelineId}
               onFundedStagesChange={setFundedStageIds}
               onCommittedStagesChange={setCommittedStageIds}
+              onSalesStagesChange={setSalesStageIds}
             />
 
             {/* Webhook Freeze Notice */}

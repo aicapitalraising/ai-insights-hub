@@ -21,7 +21,7 @@ interface KPICardProps {
   changeLabel?: string;
   clickable?: boolean;
   onClick?: () => void;
-  format?: 'currency' | 'percent' | 'number' | 'days';
+  format?: 'currency' | 'percent' | 'number' | 'days' | 'multiplier';
   threshold?: KPIThreshold;
   invertThreshold?: boolean;
   confidence?: ConfidenceLevel;
@@ -52,6 +52,8 @@ export function KPICard({
         return `${val.toFixed(0)}%`;
       case 'days':
         return `${val.toFixed(0)} days`;
+      case 'multiplier':
+        return `${val.toFixed(2)}x`;
       default:
         return val.toLocaleString();
     }

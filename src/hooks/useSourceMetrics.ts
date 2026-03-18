@@ -53,6 +53,9 @@ export interface SourceAggregatedMetrics {
   pipelineValue: number;
   costPerReconnectCall: number;
   costPerReconnectShowed: number;
+  salesCount: number;
+  salesDollars: number;
+  roas: number;
 }
 
 /**
@@ -74,6 +77,8 @@ export function aggregateFromSourceData(
       totalImpressions: acc.totalImpressions + (day.impressions || 0),
       totalCommitments: acc.totalCommitments + (day.commitments || 0),
       commitmentDollars: acc.commitmentDollars + Number(day.commitment_dollars || 0),
+      salesCount: acc.salesCount + (day.sales_count || 0),
+      salesDollars: acc.salesDollars + Number(day.sales_dollars || 0),
     }),
     {
       totalAdSpend: 0,
@@ -81,6 +86,8 @@ export function aggregateFromSourceData(
       totalImpressions: 0,
       totalCommitments: 0,
       commitmentDollars: 0,
+      salesCount: 0,
+      salesDollars: 0,
     }
   );
 
@@ -157,6 +164,9 @@ export function aggregateFromSourceData(
     pipelineValue,
     costPerReconnectCall: reconnectCalls.length > 0 ? totalAdSpend / reconnectCalls.length : 0,
     costPerReconnectShowed: reconnectShowed.length > 0 ? totalAdSpend / reconnectShowed.length : 0,
+    salesCount: dailyTotals.salesCount,
+    salesDollars: dailyTotals.salesDollars,
+    roas: totalAdSpend > 0 ? dailyTotals.salesDollars / totalAdSpend : 0,
   };
 }
 

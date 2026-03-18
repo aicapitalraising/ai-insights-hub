@@ -75,6 +75,21 @@ Deno.serve(async (req) => {
   const doRecalc = async () => {
     const summary: Array<{ clientId: string; name: string; daysUpdated: number; errors: string[] }> = [];
 
+    // Pre-fetch sales stage config for all clients
+    const clientIds = clients.map((c: any) => c.id);
+    const { data: allSettings } = await supabase
+      .from("client_settings")
+      .select("client_id, sales_stage_ids, funded_pipeline_id")
+      .in("client_id", clientIds);
+    
+    const salesConfigMap: Record<string, { salesStageIds: string[]; pipelineId: string | null }> = {};
+    for (const s of (allSettings || [])) {
+      salesConfigMap[(s as any).client_id] = {
+        salesStageIds: (s as any).sales_stage_ids || [],
+        pipelineId: (s as any).funded_pipeline_id || null,
+      };
+    }
+
     for (const client of clients) {
       const clientResult = { clientId: client.id, name: client.name, daysUpdated: 0, errors: [] as string[] };
 
@@ -178,7 +193,42 @@ Deno.serve(async (req) => {
           const commitmentDollars = (fundedData || []).reduce((sum: number, f: any) => sum + (f.commitment_amount || 0), 0);
           const commitmentCount = (fundedData || []).filter((f: any) => f.commitment_amount && f.commitment_amount > 0).length;
 
-          // UPSERT — only CRM columns, never touch ad_spend/impressions/clicks/ctr
+          // ── Sales: from pipeline_opportunities where stage matches sales_stage_ids ──
+          let salesCount = 0;
+          let salesDollars = 0;
+          const salesConfig = salesConfigMap[client.id];
+          if (salesConfig?.salesStageIds?.length > 0 && salesConfig.pipelineId) {
+            // Get the internal pipeline ID
+            const { data: dbPipeline } = await supabase
+              .from("client_pipelines")
+              .select("id")
+              .eq("client_id", client.id)
+              .eq("ghl_pipeline_id", salesConfig.pipelineId)
+              .maybeSingle();
+            
+            if (dbPipeline) {
+              // Get stage IDs that match the GHL stage IDs in sales_stage_ids
+              const { data: salesStages } = await supabase
+                .from("pipeline_stages")
+                .select("id")
+                .eq("pipeline_id", dbPipeline.id)
+                .in("ghl_stage_id", salesConfig.salesStageIds);
+              
+              if (salesStages && salesStages.length > 0) {
+                const stageIds = salesStages.map((s: any) => s.id);
+                const { data: salesOpps, count: salesOppCount } = await supabase
+                  .from("pipeline_opportunities")
+                  .select("monetary_value", { count: "exact" })
+                  .eq("pipeline_id", dbPipeline.id)
+                  .in("stage_id", stageIds)
+                  .gte("last_stage_change_at", dayStart)
+                  .lt("last_stage_change_at", dayNext);
+                
+                salesCount = salesOppCount || 0;
+                salesDollars = (salesOpps || []).reduce((sum: number, o: any) => sum + Number(o.monetary_value || 0), 0);
+              }
+            }
+          }
           const { error: upsertError } = await supabase
             .from("daily_metrics")
             .upsert(
@@ -200,6 +250,8 @@ Deno.serve(async (req) => {
                 calls_showed: showedCount || 0,
                 commitments_on_day: commitmentCount,
                 funded_on_day: fundedCount || 0,
+                sales_count: salesCount,
+                sales_dollars: salesDollars,
                 updated_at: new Date().toISOString(),
               },
               { onConflict: "client_id,date", ignoreDuplicates: false }

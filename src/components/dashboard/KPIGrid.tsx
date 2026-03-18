@@ -32,6 +32,9 @@ interface KPIMetrics {
   pipelineValue?: number;
   costPerReconnectCall?: number;
   costPerReconnectShowed?: number;
+  salesCount?: number;
+  salesDollars?: number;
+  roas?: number;
 }
 
 interface PriorMetrics {
@@ -62,6 +65,9 @@ interface PriorMetrics {
   costPerReconnectCall?: number;
   costPerReconnectShowed?: number;
   leadToBookedPercent?: number;
+  salesCount?: number;
+  salesDollars?: number;
+  roas?: number;
 }
 
 export interface KPIThresholds {
@@ -152,6 +158,8 @@ export function KPIGrid({
       fundedDollars: 'funded_dollars',
       reconnectCalls: 'reconnect_calls',
       reconnectShowed: 'reconnect_showed',
+      salesCount: 'sales_count',
+      salesDollars: 'sales_dollars',
     };
 
     for (const [kpiKey, col] of Object.entries(keyToColumn)) {
@@ -180,6 +188,12 @@ export function KPIGrid({
     { key: 'fundedDollars', label: 'Funded $', value: metrics.fundedDollars ?? 0, format: 'currency' as const },
     { key: 'costPerInvestor', label: 'Cost / Investor', value: metrics.costPerInvestor ?? 0, format: 'currency' as const, threshold: thresholds?.costPerInvestor },
     { key: 'costOfCapital', label: 'Cost of Capital', value: metrics.costOfCapital ?? 0, format: 'percent' as const, threshold: thresholds?.costOfCapital },
+    // Sales / ROAS (only show if salesCount > 0 or salesDollars > 0)
+    ...((metrics.salesCount ?? 0) > 0 || (metrics.salesDollars ?? 0) > 0 ? [
+      { key: 'salesCount', label: 'Sales', value: metrics.salesCount ?? 0, format: 'number' as const },
+      { key: 'salesDollars', label: 'Sales Revenue', value: metrics.salesDollars ?? 0, format: 'currency' as const },
+      { key: 'roas', label: 'ROAS', value: metrics.roas ?? 0, format: 'multiplier' as const },
+    ] : []),
   ];
 
   const fundedMetrics = showFundedMetrics ? [
