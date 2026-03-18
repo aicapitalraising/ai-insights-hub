@@ -68,14 +68,14 @@ export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: 
     if (open) {
       setBrandColors(client?.brand_colors || []);
       setBrandFonts(client?.brand_fonts || []);
-      setProductUrl(client?.product_url || '');
+      setProductUrl('');
       setHasAnalyzed(false);
       form.reset({
         name: client?.name || '',
         description: client?.description || '',
-        offer_description: client?.offer_description || '',
+        offer_description: client?.description || '',
         logo_url: client?.logo_url || '',
-        website_url: client?.product_url || '',
+        website_url: '',
       });
     }
   }, [open, client, form]);
