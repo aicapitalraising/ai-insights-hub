@@ -196,19 +196,22 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     }
 
     setUploading(true);
+    setUploadTotalFiles(bulkFiles.length);
     let successCount = 0;
     let failCount = 0;
 
     try {
-      for (const file of bulkFiles) {
+      for (let i = 0; i < bulkFiles.length; i++) {
+        const file = bulkFiles[i];
+        setUploadFileIndex(i + 1);
+        setUploadCurrentFile(file.name);
+        setUploadProgress(0);
+        
         try {
           const isVideo = file.type.startsWith('video/');
-          
-          // Detect aspect ratio before upload
           const aspectRatio = await detectAspectRatio(file);
-          const fileUrl = await uploadCreativeFile(file, clientId);
+          const fileUrl = await uploadCreativeFile(file, clientId, (pct) => setUploadProgress(pct));
           
-          // Generate dynamic title from filename
           const fileName = file.name.replace(/\.[^/.]+$/, '');
           const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -225,7 +228,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
             status: isAgencyUpload ? 'draft' : 'pending',
             comments: [],
             aspect_ratio: aspectRatio,
-            isAgencyUpload, // Pass the agency flag for AI spelling check
+            isAgencyUpload,
           });
           successCount++;
         } catch (err) {
@@ -247,6 +250,8 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
       console.error('Bulk upload error:', error);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+      setUploadCurrentFile('');
     }
   };
 
