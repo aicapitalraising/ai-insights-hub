@@ -33,6 +33,7 @@ export function SettingsTab() {
   const [loadingCalendars, setLoadingCalendars] = useState(false);
   const [calendarMappings, setCalendarMappings] = useState<CalendarMapping[]>([]);
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const fetchCalendars = async () => {
     setLoadingCalendars(true);
