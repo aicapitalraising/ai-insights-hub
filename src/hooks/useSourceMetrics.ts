@@ -164,6 +164,9 @@ export function aggregateFromSourceData(
     pipelineValue,
     costPerReconnectCall: reconnectCalls.length > 0 ? totalAdSpend / reconnectCalls.length : 0,
     costPerReconnectShowed: reconnectShowed.length > 0 ? totalAdSpend / reconnectShowed.length : 0,
+    salesCount: dailyTotals.salesCount,
+    salesDollars: dailyTotals.salesDollars,
+    roas: totalAdSpend > 0 ? dailyTotals.salesDollars / totalAdSpend : 0,
   };
 }
 
