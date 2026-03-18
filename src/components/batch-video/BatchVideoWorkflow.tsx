@@ -169,7 +169,7 @@ export function BatchVideoWorkflow({ projectId: propProjectId, clientId: propCli
               ))}
             </div>
           )}
-          {client.offer_description && <span className="truncate max-w-xs">{client.offer_description}</span>}
+          {client.description && <span className="truncate max-w-xs">{client.description}</span>}
         </div>
       )}
 
