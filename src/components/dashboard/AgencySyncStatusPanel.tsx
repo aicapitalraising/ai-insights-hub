@@ -100,6 +100,11 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   const [healthResults, setHealthResults] = useState<Record<string, any>>({});
   const [settingsClient, setSettingsClient] = useState<ClientSyncInfo | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [globalSyncingMeta, setGlobalSyncingMeta] = useState(false);
+  const [globalRecalculating, setGlobalRecalculating] = useState(false);
+  const [globalAccuracyChecking, setGlobalAccuracyChecking] = useState(false);
+  const [settingsClient, setSettingsClient] = useState<ClientSyncInfo | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   
   // Settings form state
   const [editMetaAccountId, setEditMetaAccountId] = useState('');
