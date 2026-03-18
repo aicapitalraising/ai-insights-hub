@@ -141,14 +141,17 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     }
 
     setUploading(true);
+    setUploadProgress(0);
+    setUploadCurrentFile(newCreative.file?.name || 'file');
+    setUploadTotalFiles(1);
+    setUploadFileIndex(1);
     try {
       let fileUrl = null;
       let aspectRatio = null;
       
       if (newCreative.file && (newCreative.type === 'image' || newCreative.type === 'video')) {
-        // Detect aspect ratio before upload
         aspectRatio = await detectAspectRatio(newCreative.file);
-        fileUrl = await uploadCreativeFile(newCreative.file, clientId);
+        fileUrl = await uploadCreativeFile(newCreative.file, clientId, (pct) => setUploadProgress(pct));
       }
 
       await createCreative.mutateAsync({
@@ -164,7 +167,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         status: isAgencyUpload ? 'draft' : 'pending',
         comments: [],
         aspect_ratio: aspectRatio,
-        isAgencyUpload, // Pass the agency flag for AI spelling check
+        isAgencyUpload,
       });
 
       setUploadOpen(false);
@@ -182,6 +185,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
       console.error('Upload error:', error);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
