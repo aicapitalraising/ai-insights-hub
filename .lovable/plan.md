@@ -1,117 +1,65 @@
 
 
-# Daily Accuracy Assurance System
+# Verify & Seed All Clients from API Reference
 
-## Summary
+## Problem
+The API reference lists 21 clients with detailed configuration (GHL keys, Meta ad account IDs, funnel pages, calendar IDs, pipeline IDs, etc.). We need to ensure all are present in the database with accurate data across three tables: `clients`, `client_settings`, and `client_funnel_steps`.
 
-Build a standalone metrics reconciliation system that runs independently of the sync pipeline, ensuring `daily_metrics` always matches source-of-truth tables (`leads`, `calls`, `funded_investors`) while preserving Meta Ads data. This addresses 6 identified accuracy gaps including a critical bug where the current recalculation deletes ad spend data on days with zero CRM activity.
+## Approach
 
----
+Build an **admin seeding edge function** (`seed-client-directory`) that upserts all 21 clients and their configuration in one call. This is safer and more maintainable than manual SQL or individual inserts.
 
-## Critical Bug Found
+### Step 1: Create `seed-client-directory` edge function
 
-The existing `recalculateRecentMetrics` function (line 2751-2886 of `sync-ghl-contacts`) **deletes** all `daily_metrics` rows for the last 7 days, then only re-inserts rows where CRM activity exists. Any day with Meta ad spend but zero leads/calls/funded loses its ad_spend, impressions, and clicks data permanently. This must be fixed as part of this work.
+A single edge function that:
+1. Upserts all 21 clients into the `clients` table (matched by `id`) with fields: `name`, `status`, `slug`, `ghl_location_id`, `ghl_api_key`, `meta_ad_account_id`, `meta_access_token`, `business_manager_url`
+2. Upserts corresponding `client_settings` rows (matched by `client_id`) with: `funded_pipeline_id`, `tracked_calendar_ids`, `reconnect_calendar_ids`, `ads_library_url`
+3. Syncs `client_funnel_steps` for each client: deletes existing steps, then inserts all funnel pages from the reference with `name`, `url`, `sort_order`
 
----
+Password-protected using the existing `HPA1234$` pattern.
 
-## What Gets Built
+### Step 2: Add a "Sync Client Directory" button to Settings
 
-### 1. New `recalculate-daily-metrics` Edge Function (Highest Priority)
+Add a button in the existing Settings page (or the API Reference tab) that calls the new edge function. Shows a toast with results.
 
-A standalone function that recalculates CRM-sourced columns in `daily_metrics` for all active clients across a configurable date range, **without touching ad spend columns**.
+### Step 3: Call the function to populate data
 
-Logic per client per date:
-- Count non-spam leads from `leads` where `created_at` falls on that date
-- Count spam leads separately
-- Count booked calls (non-reconnect) from `calls` where `booked_at` falls on that date
-- Count showed calls (non-reconnect) where `showed = true`
-- Count reconnect calls and reconnect showed
-- Sum funded investors and funded dollars from `funded_investors` where `funded_at` falls on that date
-- **UPSERT** into `daily_metrics` using `ON CONFLICT (client_id, date)` -- only updating CRM columns, never overwriting `ad_spend`, `impressions`, `clicks`, or `ctr`
+Trigger the seed to ensure all 21 clients are present and accurate.
 
-The function accepts optional `startDate`, `endDate`, and `clientId` parameters. Defaults to yesterday + today for all active clients.
+## Data to seed (21 clients)
 
-### 2. New `daily-accuracy-check` Edge Function
+| Client | ID | Status | GHL | Meta |
+|---|---|---|---|---|
+| Blue Capital | f414feaa... | active | Yes | Yes |
+| Blue Metric Group | 0d75a471... | active | Yes | Yes |
+| Evia Company | d402676b... | onboarding | Yes | No |
+| Freaky Fast Investments | 8689db32... | active | Yes | Yes |
+| HPA - AI Capital Raising | 18acd701... | inactive | Yes | Yes |
+| HRT | 055eea03... | active | Yes | Yes |
+| JJ Dental | 5bffa91b... | active | Yes | Yes |
+| Kroh Exploration | d16175f2... | active | Yes | Yes |
+| Land Value Alpha | 70a87509... | active | Yes | Yes |
+| Lansing Capital | c9d7dc91... | active | Yes | Yes |
+| Legacy Capital | 3457607d... | active | Yes | Yes |
+| LSCRE | 924aee58... | active | Yes | Yes |
+| LSCRE - Leasing | 9bed8162... | active | No | No |
+| LSCRE - Hiring | 43dd2062... | active | Yes | No |
+| OBL | 268edbc5... | active | Yes | No |
+| Paradyme | a5b63280... | active | Yes | Yes |
+| Quad J Capital | 098bdcf2... | active | Yes | Yes |
+| Simple House Capital | 47b10f07... | active | Yes | Yes |
+| Texas State Oil | 6163dbe3... | active | Yes | Yes |
+| Think & Grow Rich | 56d833ca... | active | Yes | Yes |
+| Titan Management Group | 9b1b0228... | active | Yes | Yes |
 
-A validation function that compares `daily_metrics` against live source table counts for yesterday across all clients. For each discrepancy found:
-- Logs it to a new `sync_accuracy_log` table
-- Triggers recalculation for that specific client/date
-- Returns a summary of discrepancies found and auto-fixed
+Each client also has: funnel pages, tracked/reconnect calendar IDs, funded pipeline IDs, website URLs, ads manager URLs, and ads library URLs where applicable.
 
-### 3. New `sync_accuracy_log` Database Table
+## Technical Details
 
-```text
-Columns:
-- id (uuid, PK)
-- client_id (uuid)
-- check_date (date) -- the date being validated
-- metric_type (text) -- 'leads', 'calls', 'showed_calls', 'funded_investors', etc.
-- expected_count (integer) -- from source tables
-- actual_count (integer) -- from daily_metrics
-- discrepancy (integer) -- difference
-- auto_fixed (boolean)
-- created_at (timestamptz)
-```
-
-### 4. Fix `recalculateRecentMetrics` in Both Sync Functions
-
-Change the DELETE + INSERT pattern to an UPSERT pattern that preserves ad spend columns. Instead of deleting rows and re-inserting, it will upsert only CRM columns (leads, calls, showed, funded, etc.) while leaving ad_spend/impressions/clicks/ctr untouched.
-
-This fix applies to:
-- `supabase/functions/sync-ghl-contacts/index.ts` (lines 2751-2893)
-- `supabase/functions/sync-hubspot-contacts/index.ts` (same pattern)
-
-### 5. New Cron Jobs
-
-| Job | Schedule | What it does |
-|-----|----------|--------------|
-| `daily-metrics-recalculate` | `0 13 * * *` (5 AM PST) | Runs `recalculate-daily-metrics` for yesterday + today |
-| `daily-accuracy-check` | `0 14 * * *` (6 AM PST) | Runs `daily-accuracy-check` to validate and auto-fix |
-
-### 6. Fix Pipeline Funded Investor External ID
-
-Normalize the `external_id` in the pipeline-based funded investor creation path to always use `contactId` (not `opp.contactId + opp.id`), consistent with the tag-based path. The existing unique constraint on `(client_id, external_id)` will then properly prevent duplicates across both paths.
-
-### 7. Accuracy Health in Agency Sync Panel
-
-Add a small accuracy indicator to `AgencySyncStatusPanel.tsx`:
-- Show last accuracy check timestamp
-- Show discrepancy count from yesterday
-- Green if 0 discrepancies, yellow if auto-fixed, red if unfixed
-
----
-
-## Files to Create
-
-1. `supabase/functions/recalculate-daily-metrics/index.ts`
-2. `supabase/functions/daily-accuracy-check/index.ts`
-
-## Files to Modify
-
-1. `supabase/functions/sync-ghl-contacts/index.ts` -- Fix `recalculateRecentMetrics` to use upsert instead of delete+insert; fix pipeline funded investor external_id
-2. `supabase/functions/sync-hubspot-contacts/index.ts` -- Same upsert fix for its copy of `recalculateRecentMetrics`
-3. `supabase/config.toml` -- Register 2 new functions with `verify_jwt = false`
-4. `src/components/dashboard/AgencySyncStatusPanel.tsx` -- Add accuracy health indicator
-
-## Database Changes
-
-1. Create `sync_accuracy_log` table (via migration)
-2. Add 2 new cron jobs (via insert tool, not migration)
-
-## Existing Cron Jobs to Keep
-
-The existing hourly sync jobs (GHL contacts, calendar, pipelines, HubSpot) and the 6-hour orchestrators remain unchanged. The new daily recalculation runs *after* all syncs complete, acting as a safety net.
-
----
-
-## Implementation Order
-
-1. Fix the critical `recalculateRecentMetrics` bug (upsert pattern) in both sync functions
-2. Create `sync_accuracy_log` table
-3. Build `recalculate-daily-metrics` edge function
-4. Build `daily-accuracy-check` edge function
-5. Register functions in config.toml
-6. Add cron jobs
-7. Fix pipeline funded investor dedup
-8. Add accuracy health to sync panel
+- The edge function uses `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS
+- Upsert on `clients` uses `onConflict: 'id'` to update existing records
+- Upsert on `client_settings` uses `onConflict: 'client_id'`
+- Funnel steps are delete-and-reinsert per client for simplicity
+- The function returns a summary of what was created vs updated
+- Config.toml entry: `[functions.seed-client-directory] verify_jwt = false`
 
