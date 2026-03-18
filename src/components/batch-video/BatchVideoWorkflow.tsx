@@ -45,7 +45,7 @@ export function BatchVideoWorkflow({ projectId: propProjectId, clientId: propCli
     const platformRatio = platform === 'tiktok-reels' ? '9:16' as const : platform === 'square' ? '1:1' as const : '16:9' as const;
     
     // Wire brand guide context into config
-    const brandOffer = offerDescription || client?.offer_description || client?.description;
+    const brandOffer = offerDescription || client?.description;
     
     updateConfig({
       projectId: finalProjectId, scriptId, scriptContent, clientId: finalClientId,
