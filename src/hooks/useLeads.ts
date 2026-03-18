@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { EnrichedLead, QualificationTier, RoutingDestination } from '@/components/admin/mockLeads';
+import type { EnrichedLead, QualificationTier, RoutingDestination } from '@/components/funnel-builder/admin/mockLeads';
 
 function mapDbLeadToEnrichedLead(row: Record<string, unknown>): EnrichedLead {
   return {

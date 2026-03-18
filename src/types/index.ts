@@ -2,13 +2,23 @@
 export interface Client {
   id: string;
   name: string;
-  logo_url?: string;
-  brand_colors: string[];
-  brand_fonts: string[];
-  description?: string;
-  offer_description?: string;
-  product_url?: string;
-  product_images: string[];
+  status?: string;
+  public_token?: string | null;
+  business_manager_url?: string | null;
+  slug?: string | null;
+  industry?: string | null;
+  ghl_location_id?: string | null;
+  ghl_api_key?: string | null;
+  meta_ad_account_id?: string | null;
+  meta_access_token?: string | null;
+  logo_url?: string | null;
+  brand_colors?: string[] | null;
+  brand_fonts?: string[] | null;
+  description?: string | null;
+  offer_description?: string | null;
+  product_url?: string | null;
+  product_images?: string[] | null;
+  sort_order?: number;
   created_at: string;
   updated_at: string;
 }
