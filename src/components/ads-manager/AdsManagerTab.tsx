@@ -223,19 +223,8 @@ export function AdsManagerTab({ clientId, clientName = 'Client' }: AdsManagerTab
   const syncMutation = useSyncMetaAds();
   const attributionMutation = useRunAttribution();
 
-  const currentRangeKey = `${startDate}_${endDate}`;
-
-  useEffect(() => {
-    const hasCredentials = (settings as any)?.meta_ads_sync_enabled || 
-      ((settings as any) && (settings as any).meta_ads_last_sync);
-    
-    if (!hasCredentials) return;
-    if (syncMutation.isPending) return;
-    if (lastSyncedRange.current === currentRangeKey) return;
-    
-    lastSyncedRange.current = currentRangeKey;
-    syncMutation.mutate({ clientId, startDate, endDate });
-  }, [currentRangeKey, clientId, settings]);
+  // Meta Ads data is loaded from stored DB records only.
+  // Syncing is manual — click "Sync Meta Ads" to pull fresh data from the Meta API.
 
   const lastSync = (settings as any)?.meta_ads_last_sync
     ? formatDistanceToNow(new Date((settings as any).meta_ads_last_sync), { addSuffix: true })
