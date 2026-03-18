@@ -47,7 +47,7 @@ interface ClientFormProps {
 export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: ClientFormProps) {
   const [brandColors, setBrandColors] = useState<string[]>(client?.brand_colors || []);
   const [brandFonts, setBrandFonts] = useState<string[]>(client?.brand_fonts || []);
-  const [productUrl, setProductUrl] = useState<string>(client?.product_url || '');
+  const [productUrl, setProductUrl] = useState<string>('');
   const [newColor, setNewColor] = useState('#6366f1');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
