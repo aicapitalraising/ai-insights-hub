@@ -174,20 +174,26 @@ export function useGenerateScripts() {
 export function useUpdateBriefStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ briefId, status, clientId, rejectionReason }: { briefId: string; status: string; clientId: string; rejectionReason?: string }) => {
+    mutationFn: async ({ briefId, id, status, clientId, rejectionReason }: { briefId?: string; id?: string; status: string; clientId?: string; rejectionReason?: string }) => {
+      const resolvedBriefId = briefId ?? id;
+      if (!resolvedBriefId) throw new Error('briefId is required');
+
       const update: Record<string, unknown> = { status };
       if (rejectionReason) update.rejection_reason = rejectionReason;
       const { data, error } = await supabase
         .from('creative_briefs' as any)
         .update(update)
-        .eq('id', briefId)
+        .eq('id', resolvedBriefId)
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return data as CreativeBrief;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['creative_briefs', variables.clientId] });
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['creative_briefs'] });
+      if (variables.clientId ?? data.client_id) {
+        queryClient.invalidateQueries({ queryKey: ['creative_briefs', variables.clientId ?? data.client_id] });
+      }
       toast.success(`Brief marked as ${variables.status}`);
     },
     onError: (error: Error) => {
