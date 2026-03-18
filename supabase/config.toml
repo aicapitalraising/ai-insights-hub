@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.verify-password]
 verify_jwt = false
+
+[functions.seed-client-directory]
+verify_jwt = false

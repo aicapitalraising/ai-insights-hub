@@ -33,6 +33,7 @@ export function SettingsTab() {
   const [loadingCalendars, setLoadingCalendars] = useState(false);
   const [calendarMappings, setCalendarMappings] = useState<CalendarMapping[]>([]);
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const fetchCalendars = async () => {
     setLoadingCalendars(true);
@@ -97,9 +98,36 @@ export function SettingsTab() {
     }
   };
 
+  const handleSeedClients = async () => {
+    setSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-client-directory', {
+        body: { password: 'HPA1234$' },
+      });
+      if (error) throw error;
+      const errs = data?.errors?.length || 0;
+      toast({
+        title: errs > 0 ? 'Seeded with warnings' : 'Client directory synced',
+        description: `${data?.clients_upserted || 0} clients, ${data?.settings_upserted || 0} settings, ${data?.funnel_steps_synced || 0} funnel steps${errs > 0 ? ` (${errs} errors)` : ''}`,
+        variant: errs > 0 ? 'destructive' : 'default',
+      });
+      if (errs > 0) console.error('Seed errors:', data.errors);
+    } catch (err) {
+      console.error('Seed failed:', err);
+      toast({ title: 'Seed failed', description: 'Could not sync client directory.', variant: 'destructive' });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <p className="text-sm text-muted-foreground">Integration settings, calendar mapping, routing rules, and ad pixel configuration.</p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Integration settings, calendar mapping, routing rules, and ad pixel configuration.</p>
+        <Button size="sm" variant="outline" onClick={handleSeedClients} disabled={seeding} className="gap-2 shrink-0">
+          <Database className={`w-3.5 h-3.5 ${seeding ? 'animate-spin' : ''}`} /> {seeding ? 'Seeding…' : 'Sync Client Directory'}
+        </Button>
+      </div>
 
       {/* Integrations */}
       <div>
