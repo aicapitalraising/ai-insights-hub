@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 export interface CreativeBrief {
   id: string;
   client_id: string;
+  client_name?: string | null;
   title: string;
   objective: string;
   target_audience: {
@@ -34,6 +35,10 @@ export interface CreativeBrief {
   status: 'pending' | 'in_production' | 'completed' | 'rejected';
   generated_by: string;
   approved_by: string | null;
+  full_brief_json?: Record<string, any> | null;
+  recommended_variations?: any[] | null;
+  hook_patterns?: string[] | null;
+  offer_angles?: string[] | null;
   created_at: string;
   updated_at: string;
 }
