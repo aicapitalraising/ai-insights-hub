@@ -483,12 +483,42 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
               </Tooltip>
             )}
             
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CheckCircle className="h-3 w-3 text-chart-2" /> Healthy
                 <Clock className="h-3 w-3 text-chart-4 ml-2" /> Stale
                 <XCircle className="h-3 w-3 text-destructive ml-2" /> Error
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleGlobalMetaSync}
+                disabled={globalSyncingMeta}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${globalSyncingMeta ? 'animate-spin' : ''}`} />
+                Sync All Meta
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleGlobalRecalculate}
+                disabled={globalRecalculating}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${globalRecalculating ? 'animate-spin' : ''}`} />
+                Recalculate Metrics
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleGlobalAccuracyCheck}
+                disabled={globalAccuracyChecking}
+              >
+                <ShieldCheck className={`h-3 w-3 mr-1 ${globalAccuracyChecking ? 'animate-spin' : ''}`} />
+                Accuracy Check
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
