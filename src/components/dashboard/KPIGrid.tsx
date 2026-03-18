@@ -65,6 +65,9 @@ interface PriorMetrics {
   costPerReconnectCall?: number;
   costPerReconnectShowed?: number;
   leadToBookedPercent?: number;
+  salesCount?: number;
+  salesDollars?: number;
+  roas?: number;
 }
 
 export interface KPIThresholds {
