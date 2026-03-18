@@ -57,6 +57,7 @@ import { toast } from 'sonner';
 import DatabaseView from './DatabaseView';
 import SpamBlacklist from './SpamBlacklist';
 import CreativeBriefs from './CreativeBriefs';
+import { AdminAdsManagerTab } from '@/components/ads-manager/AdminAdsManagerTab';
 
 const Index = () => {
   const navigate = useNavigate();
