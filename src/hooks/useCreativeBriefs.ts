@@ -72,15 +72,17 @@ export function useCreativeBriefs(clientId?: string) {
   return useQuery({
     queryKey: ['creative_briefs', clientId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('creative_briefs' as any)
         .select('*')
-        .eq('client_id', clientId!)
         .order('created_at', { ascending: false });
+
+      if (clientId) query = query.eq('client_id', clientId);
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as unknown as CreativeBrief[];
     },
-    enabled: !!clientId,
   });
 }
 
