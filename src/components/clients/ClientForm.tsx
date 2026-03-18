@@ -145,11 +145,9 @@ export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: 
     onSubmit({
       name: values.name,
       description: values.description || undefined,
-      offer_description: values.offer_description || undefined,
       logo_url: values.logo_url || undefined,
       brand_colors: brandColors,
       brand_fonts: brandFonts,
-    });
     });
   };
 
