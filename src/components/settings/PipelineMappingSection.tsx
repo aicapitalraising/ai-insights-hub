@@ -127,6 +127,7 @@ export function PipelineMappingSection({
     // Clear stage selections when pipeline changes
     onFundedStagesChange([]);
     onCommittedStagesChange([]);
+    onSalesStagesChange([]);
     
     // Load stages for selected pipeline
     const selectedPipeline = pipelines.find(p => p.id === pipelineId);
