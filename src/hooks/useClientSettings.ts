@@ -45,6 +45,12 @@ export interface ClientSettings {
   // Stripe billing
   stripe_customer_id?: string | null;
   stripe_email?: string | null;
+  // Winning ads / variation config
+  winning_metric?: 'leads' | 'calls' | 'funded' | 'cpl' | 'cpa' | 'roas' | null;
+  variation_schedule_type?: 'daily' | 'weekly' | 'custom' | null;
+  variation_schedule_days?: string[] | null; // e.g. ['monday', 'thursday']
+  variation_schedule_time?: string | null; // e.g. '07:00'
+  variation_auto_enabled?: boolean;
 }
 
 export interface KPIThresholds {
