@@ -312,6 +312,14 @@ export function AdsManagerTab({ clientId, clientName = 'Client' }: AdsManagerTab
         </div>
       )}
 
+      {/* Winning Creatives Section */}
+      <WinningAdsSection
+        ads={allAds}
+        clientId={clientId}
+        clientName={clientName}
+        settings={settings}
+      />
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
