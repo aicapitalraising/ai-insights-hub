@@ -252,9 +252,7 @@ export default function StaticAdsPage() {
       if (framework) {
         variantPrompt += `\nCopy Framework: ${framework.label} — ${framework.structure}`;
       }
-      if (selectedClient?.offer_description) {
-        variantPrompt += `\nOffer/Product: ${selectedClient.offer_description}`;
-      } else if (selectedClient?.description) {
+      if (selectedClient?.description) {
         variantPrompt += `\nProduct: ${selectedClient.description}`;
       }
       if (variantCount > 1) {
