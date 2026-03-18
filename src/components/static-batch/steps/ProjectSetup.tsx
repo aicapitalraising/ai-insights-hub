@@ -49,8 +49,8 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
   // Auto-apply brand assets from client
   const brandColors = client?.brand_colors || [];
   const brandFonts = client?.brand_fonts || [];
-  const productUrl = client?.product_url || '';
-  const productImages = client?.product_images || [];
+  const productUrl = '';
+  const productImages: string[] = [];
 
   const handleSelectAvatar = (avatar: Avatar) => {
     updateConfig({ characterImageUrl: avatar.image_url });

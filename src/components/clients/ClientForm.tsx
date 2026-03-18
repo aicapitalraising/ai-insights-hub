@@ -149,8 +149,7 @@ export function ClientForm({ open, onOpenChange, client, onSubmit, isLoading }: 
       logo_url: values.logo_url || undefined,
       brand_colors: brandColors,
       brand_fonts: brandFonts,
-      product_url: productUrl || undefined,
-      product_images: client?.product_images || [],
+    });
     });
   };
 

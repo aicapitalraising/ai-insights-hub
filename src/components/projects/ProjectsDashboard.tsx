@@ -141,7 +141,7 @@ export function ProjectsDashboard({ client }: ProjectsDashboardProps) {
   const openCreateDialog = (type: ProjectType) => {
     setSelectedType(type);
     setProjectName('');
-    setOfferDescription(client.offer_description || '');
+    setOfferDescription(client.description || '');
     setCreateDialogOpen(true);
   };
 
