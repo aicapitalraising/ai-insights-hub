@@ -6,6 +6,7 @@ export interface CreativeBrief {
   id: string;
   client_id: string;
   client_name?: string | null;
+  source?: string | null;
   title: string;
   objective: string;
   target_audience: {
