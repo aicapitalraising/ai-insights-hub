@@ -261,6 +261,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         funded_pipeline_id: fundedPipelineId,
         funded_stage_ids: fundedStageIds,
         committed_stage_ids: committedStageIds,
+        sales_stage_ids: salesStageIds,
       } as any);
 
       // Save alert configs if slack webhook provided
