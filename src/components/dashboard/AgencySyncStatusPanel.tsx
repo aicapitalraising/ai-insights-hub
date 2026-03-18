@@ -379,6 +379,56 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
     }
   };
 
+  // ── Global Sync Actions ──
+
+  const handleGlobalMetaSync = async () => {
+    setGlobalSyncingMeta(true);
+    try {
+      const { error } = await supabase.functions.invoke('sync-meta-ads-daily');
+      if (error) throw error;
+      toast.success('Global Meta Ads sync triggered for all clients (running in background)');
+      queryClient.invalidateQueries({ queryKey: ['all-client-settings'] });
+    } catch (err) {
+      toast.error(`Global Meta sync failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setGlobalSyncingMeta(false);
+    }
+  };
+
+  const handleGlobalRecalculate = async () => {
+    setGlobalRecalculating(true);
+    try {
+      const { error } = await supabase.functions.invoke('recalculate-daily-metrics');
+      if (error) throw error;
+      toast.success('Daily metrics recalculation triggered for all clients');
+      queryClient.invalidateQueries({ queryKey: ['accuracy-health'] });
+    } catch (err) {
+      toast.error(`Recalculation failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setGlobalRecalculating(false);
+    }
+  };
+
+  const handleGlobalAccuracyCheck = async () => {
+    setGlobalAccuracyChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('daily-accuracy-check');
+      if (error) throw error;
+      const disc = data?.discrepanciesFound || 0;
+      const fixed = data?.autoFixedClients || 0;
+      if (disc === 0) {
+        toast.success('Accuracy check passed — no discrepancies found');
+      } else {
+        toast.warning(`Found ${disc} discrepancies across ${fixed} clients — auto-fixed`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['accuracy-health'] });
+    } catch (err) {
+      toast.error(`Accuracy check failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setGlobalAccuracyChecking(false);
+    }
+  };
+
     const getGhlStatus = (c: ClientSyncInfo): SyncStatus => {
     if (c.hubspotPortalId) return getSyncStatusFromDate(c.lastHubspotSyncAt, !!c.hubspotPortalId, { healthy: 8, stale: 48 });
     if (c.ghlSyncStatus === 'error') return 'error';
