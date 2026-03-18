@@ -108,6 +108,9 @@ export function buildClientMetricsFromRPC(
       pipelineValue,
       costPerReconnectCall: reconnectCalls > 0 ? totalAdSpend / reconnectCalls : 0,
       costPerReconnectShowed: reconnectShowed > 0 ? totalAdSpend / reconnectShowed : 0,
+      salesCount: 0, // Sales come from daily_metrics, not RPC
+      salesDollars: 0,
+      roas: 0,
     };
   }
 
