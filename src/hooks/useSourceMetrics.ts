@@ -77,6 +77,8 @@ export function aggregateFromSourceData(
       totalImpressions: acc.totalImpressions + (day.impressions || 0),
       totalCommitments: acc.totalCommitments + (day.commitments || 0),
       commitmentDollars: acc.commitmentDollars + Number(day.commitment_dollars || 0),
+      salesCount: acc.salesCount + (day.sales_count || 0),
+      salesDollars: acc.salesDollars + Number(day.sales_dollars || 0),
     }),
     {
       totalAdSpend: 0,
@@ -84,6 +86,8 @@ export function aggregateFromSourceData(
       totalImpressions: 0,
       totalCommitments: 0,
       commitmentDollars: 0,
+      salesCount: 0,
+      salesDollars: 0,
     }
   );
 
