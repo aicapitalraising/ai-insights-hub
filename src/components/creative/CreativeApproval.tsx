@@ -47,6 +47,7 @@ import {
   SendHorizontal,
   Download
 } from 'lucide-react';
+import { formatFileSize } from '@/lib/uploadWithProgress';
 import { toast } from 'sonner';
 
 interface CreativeApprovalProps {
