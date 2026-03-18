@@ -23,12 +23,12 @@ interface ProjectSetupProps {
 export function ProjectSetup({ config, updateConfig, client, projectOfferDescription, onOfferChange, onNext, onBack }: ProjectSetupProps) {
   const { data: avatars = [] } = useAvatars(client?.id);
   
-  const [editableOffer, setEditableOffer] = useState(projectOfferDescription || client?.offer_description || '');
+  const [editableOffer, setEditableOffer] = useState(projectOfferDescription || client?.description || '');
   const [editableDescription, setEditableDescription] = useState(config.productDescription || client?.description || '');
 
   useEffect(() => {
-    if (!editableOffer && (projectOfferDescription || client?.offer_description)) {
-      setEditableOffer(projectOfferDescription || client?.offer_description || '');
+    if (!editableOffer && (projectOfferDescription || client?.description)) {
+      setEditableOffer(projectOfferDescription || client?.description || '');
     }
     if (!editableDescription && client?.description) {
       setEditableDescription(client.description);
