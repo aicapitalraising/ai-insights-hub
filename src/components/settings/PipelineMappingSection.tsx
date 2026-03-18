@@ -47,9 +47,11 @@ export function PipelineMappingSection({
   fundedPipelineId,
   fundedStageIds,
   committedStageIds,
+  salesStageIds,
   onPipelineChange,
   onFundedStagesChange,
   onCommittedStagesChange,
+  onSalesStagesChange,
 }: PipelineMappingSectionProps) {
   const [pipelines, setPipelines] = useState<GHLPipeline[]>([]);
   const [stages, setStages] = useState<GHLStage[]>([]);
