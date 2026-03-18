@@ -213,7 +213,7 @@ export function AdsManagerTab({ clientId, clientName = 'Client' }: AdsManagerTab
   const [activeTab, setActiveTab] = useState('campaigns');
   const [filterCampaignId, setFilterCampaignId] = useState<string | null>(null);
   const [filterAdSetId, setFilterAdSetId] = useState<string | null>(null);
-  const lastSyncedRange = useRef<string | null>(null);
+  
 
   const { data: campaigns = [], isLoading: cLoading } = useMetaCampaigns(clientId);
   const { data: allAdSets = [], isLoading: asLoading } = useMetaAdSets(clientId);
