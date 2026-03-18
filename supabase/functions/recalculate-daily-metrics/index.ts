@@ -75,6 +75,21 @@ Deno.serve(async (req) => {
   const doRecalc = async () => {
     const summary: Array<{ clientId: string; name: string; daysUpdated: number; errors: string[] }> = [];
 
+    // Pre-fetch sales stage config for all clients
+    const clientIds = clients.map((c: any) => c.id);
+    const { data: allSettings } = await supabase
+      .from("client_settings")
+      .select("client_id, sales_stage_ids, funded_pipeline_id")
+      .in("client_id", clientIds);
+    
+    const salesConfigMap: Record<string, { salesStageIds: string[]; pipelineId: string | null }> = {};
+    for (const s of (allSettings || [])) {
+      salesConfigMap[(s as any).client_id] = {
+        salesStageIds: (s as any).sales_stage_ids || [],
+        pipelineId: (s as any).funded_pipeline_id || null,
+      };
+    }
+
     for (const client of clients) {
       const clientResult = { clientId: client.id, name: client.name, daysUpdated: 0, errors: [] as string[] };
 
