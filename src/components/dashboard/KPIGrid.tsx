@@ -158,6 +158,8 @@ export function KPIGrid({
       fundedDollars: 'funded_dollars',
       reconnectCalls: 'reconnect_calls',
       reconnectShowed: 'reconnect_showed',
+      salesCount: 'sales_count',
+      salesDollars: 'sales_dollars',
     };
 
     for (const [kpiKey, col] of Object.entries(keyToColumn)) {
