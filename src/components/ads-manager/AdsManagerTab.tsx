@@ -12,6 +12,7 @@ import { useMetaCampaigns, useMetaAdSets, useMetaAds, useSyncMetaAds } from '@/h
 import { useFetchAdMediaHD } from '@/hooks/useAdMediaHD';
 import { useRunAttribution } from '@/hooks/useRunAttribution';
 import { GenerateBriefButton } from '@/components/briefs/GenerateBriefButton';
+import { WinningAdsSection } from '@/components/ads-manager/WinningAdsSection';
 import { useClientSettings } from '@/hooks/useClientSettings';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useDateFilter } from '@/contexts/DateFilterContext';

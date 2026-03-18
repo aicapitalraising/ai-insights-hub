@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.seed-client-directory]
 verify_jwt = false
+
+[functions.generate-ad-variations]
+verify_jwt = false
