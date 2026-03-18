@@ -52,6 +52,8 @@ export function KPICard({
         return `${val.toFixed(0)}%`;
       case 'days':
         return `${val.toFixed(0)} days`;
+      case 'multiplier':
+        return `${val.toFixed(2)}x`;
       default:
         return val.toLocaleString();
     }
