@@ -33,9 +33,11 @@ interface PipelineMappingSectionProps {
   fundedPipelineId: string | null;
   fundedStageIds: string[];
   committedStageIds: string[];
+  salesStageIds: string[];
   onPipelineChange: (pipelineId: string | null) => void;
   onFundedStagesChange: (ids: string[]) => void;
   onCommittedStagesChange: (ids: string[]) => void;
+  onSalesStagesChange: (ids: string[]) => void;
 }
 
 export function PipelineMappingSection({
