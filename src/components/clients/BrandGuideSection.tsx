@@ -35,11 +35,8 @@ export function BrandGuideSection({ client }: BrandGuideSectionProps) {
       await updateClient.mutateAsync({
         id: client.id,
         description: description || null,
-        offer_description: offerDescription || null,
         brand_colors: colors,
         brand_fonts: fonts,
-        product_url: productUrl || null,
-        product_images: productImages,
       });
       toast.success('Brand guide updated');
       setIsEditing(false);

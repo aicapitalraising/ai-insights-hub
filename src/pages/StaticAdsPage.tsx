@@ -493,9 +493,9 @@ export default function StaticAdsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedClient?.offer_description && (
+                  {selectedClient?.description && (
                     <p className="text-[10px] text-muted-foreground line-clamp-2">
-                      Offer: {selectedClient.offer_description}
+                      Info: {selectedClient.description}
                     </p>
                   )}
                 </Card>

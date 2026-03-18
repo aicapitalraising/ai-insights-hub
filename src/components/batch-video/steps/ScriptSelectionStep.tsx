@@ -60,7 +60,7 @@ export function ScriptSelectionStep({ onComplete, isProcessing }: ScriptSelectio
   const { data: projects = [] } = useProjects(selectedClientId);
   const { data: selectedClient } = useClient(selectedClientId);
   const { data: selectedProject } = useProject(selectedProjectId);
-  const offerDescription = selectedProject?.offer_description || selectedClient?.offer_description || selectedClient?.description || '';
+  const offerDescription = selectedProject?.offer_description || selectedClient?.description || '';
 
   useEffect(() => {
     if (selectedProjectId) {

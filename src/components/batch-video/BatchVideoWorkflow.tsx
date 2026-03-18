@@ -206,7 +206,7 @@ export function BatchVideoWorkflow({ projectId: propProjectId, clientId: propCli
                 brandContext={client ? {
                   colors: client.brand_colors || [],
                   fonts: client.brand_fonts || [],
-                  offer: client.offer_description || client.description || '',
+                  offer: client.description || '',
                 } : undefined}
               />
             )}
