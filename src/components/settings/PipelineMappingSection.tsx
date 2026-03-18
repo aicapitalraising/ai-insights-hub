@@ -152,6 +152,13 @@ export function PipelineMappingSection({
     onCommittedStagesChange(newIds);
   };
 
+  const toggleSalesStage = (stageId: string) => {
+    const newIds = salesStageIds.includes(stageId)
+      ? salesStageIds.filter(id => id !== stageId)
+      : [...salesStageIds, stageId];
+    onSalesStagesChange(newIds);
+  };
+
   if (!ghlApiKey || !ghlLocationId) {
     return (
       <div className="border-2 border-border p-4 bg-muted/20">
