@@ -115,11 +115,11 @@ export function BrandGuideSection({ client }: BrandGuideSectionProps) {
               size="sm"
               onClick={() => {
               setDescription(client.description || '');
-                setOfferDescription(client.offer_description || '');
+                setOfferDescription(client.description || '');
                 setColors(client.brand_colors || []);
                 setFonts(client.brand_fonts || []);
-                setProductUrl(client.product_url || '');
-                setProductImages(client.product_images || []);
+                setProductUrl('');
+                setProductImages([]);
                 setIsEditing(false);
               }}
             >

@@ -106,10 +106,10 @@ export function BrandKitBar({ client, stylesCount = 0, assetsCount = 0, onEditSe
             </div>
           </div>
 
-          {client.product_url && (
+          {client.business_manager_url && (
             <>
               <div className="w-px h-6 bg-border shrink-0" />
-              <a href={client.product_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
+              <a href={client.business_manager_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
                 <Link className="h-3 w-3" />
                 Website
               </a>

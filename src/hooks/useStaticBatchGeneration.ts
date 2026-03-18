@@ -111,7 +111,7 @@ export function useStaticBatchGeneration({
             referenceImages: style.reference_images || [],
             primaryReferenceImage: ad.referenceImageUrl || undefined,
             characterImageUrl: config.characterImageUrl || undefined,
-            offerDescription: projectOfferDescription || client?.offer_description,
+            offerDescription: projectOfferDescription || client?.description,
             includeDisclaimer: config.includeDisclaimer,
             disclaimerText: config.disclaimerText,
             strictBrandAdherence: config.strictBrandAdherence,
