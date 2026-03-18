@@ -310,10 +310,20 @@ export function useDeleteCreative() {
   });
 }
 
-export async function uploadCreativeFile(file: File, clientId: string): Promise<string> {
+export async function uploadCreativeFile(
+  file: File, 
+  clientId: string,
+  onProgress?: (percent: number) => void
+): Promise<string> {
   const fileExt = file.name.split('.').pop();
   const fileName = `${clientId}/${Date.now()}.${fileExt}`;
   
+  // Use progress-tracking upload for large files (>5MB) or when callback provided
+  if (onProgress || file.size > 5 * 1024 * 1024) {
+    const { uploadWithProgress } = await import('@/lib/uploadWithProgress');
+    return uploadWithProgress('creatives', fileName, file, onProgress);
+  }
+
   const { data, error } = await supabase.storage
     .from('creatives')
     .upload(fileName, file);

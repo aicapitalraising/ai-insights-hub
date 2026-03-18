@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { useParams } from 'react-router-dom';
 import { 
@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
 import { PlatformAdPreview } from './PlatformAdPreview';
 import { CreativeHorizontalPreview } from './CreativeHorizontalPreview';
@@ -46,6 +47,7 @@ import {
   SendHorizontal,
   Download
 } from 'lucide-react';
+import { formatFileSize } from '@/lib/uploadWithProgress';
 import { toast } from 'sonner';
 
 interface CreativeApprovalProps {
@@ -77,6 +79,10 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   const [selectedCreative, setSelectedCreative] = useState<Creative | null>(null);
   const [commentText, setCommentText] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadCurrentFile, setUploadCurrentFile] = useState('');
+  const [uploadFileIndex, setUploadFileIndex] = useState(0);
+  const [uploadTotalFiles, setUploadTotalFiles] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
   const [cardComments, setCardComments] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,14 +141,17 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     }
 
     setUploading(true);
+    setUploadProgress(0);
+    setUploadCurrentFile(newCreative.file?.name || 'file');
+    setUploadTotalFiles(1);
+    setUploadFileIndex(1);
     try {
       let fileUrl = null;
       let aspectRatio = null;
       
       if (newCreative.file && (newCreative.type === 'image' || newCreative.type === 'video')) {
-        // Detect aspect ratio before upload
         aspectRatio = await detectAspectRatio(newCreative.file);
-        fileUrl = await uploadCreativeFile(newCreative.file, clientId);
+        fileUrl = await uploadCreativeFile(newCreative.file, clientId, (pct) => setUploadProgress(pct));
       }
 
       await createCreative.mutateAsync({
@@ -158,7 +167,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         status: isAgencyUpload ? 'draft' : 'pending',
         comments: [],
         aspect_ratio: aspectRatio,
-        isAgencyUpload, // Pass the agency flag for AI spelling check
+        isAgencyUpload,
       });
 
       setUploadOpen(false);
@@ -176,6 +185,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
       console.error('Upload error:', error);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -186,19 +196,22 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     }
 
     setUploading(true);
+    setUploadTotalFiles(bulkFiles.length);
     let successCount = 0;
     let failCount = 0;
 
     try {
-      for (const file of bulkFiles) {
+      for (let i = 0; i < bulkFiles.length; i++) {
+        const file = bulkFiles[i];
+        setUploadFileIndex(i + 1);
+        setUploadCurrentFile(file.name);
+        setUploadProgress(0);
+        
         try {
           const isVideo = file.type.startsWith('video/');
-          
-          // Detect aspect ratio before upload
           const aspectRatio = await detectAspectRatio(file);
-          const fileUrl = await uploadCreativeFile(file, clientId);
+          const fileUrl = await uploadCreativeFile(file, clientId, (pct) => setUploadProgress(pct));
           
-          // Generate dynamic title from filename
           const fileName = file.name.replace(/\.[^/.]+$/, '');
           const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -215,7 +228,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
             status: isAgencyUpload ? 'draft' : 'pending',
             comments: [],
             aspect_ratio: aspectRatio,
-            isAgencyUpload, // Pass the agency flag for AI spelling check
+            isAgencyUpload,
           });
           successCount++;
         } catch (err) {
@@ -237,6 +250,8 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
       console.error('Bulk upload error:', error);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+      setUploadCurrentFile('');
     }
   };
 
@@ -344,34 +359,62 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
 
                 <div>
                   <label className="text-sm font-medium">Select Files</label>
+                  <div className="mt-2 border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => bulkFileInputRef.current?.click()}
+                  >
+                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm font-medium">Tap to select files</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Images & videos up to 10 GB each • 4K supported
+                    </p>
+                  </div>
                   <input
                     ref={bulkFileInputRef}
                     type="file"
                     accept="image/*,video/*"
                     multiple
                     onChange={(e) => setBulkFiles(Array.from(e.target.files || []))}
-                    className="mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    className="hidden"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Select multiple images or videos. Titles will be auto-generated from filenames.
-                  </p>
                 </div>
 
                 {bulkFiles.length > 0 && (
                   <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm font-medium mb-2">{bulkFiles.length} file(s) selected:</p>
+                    <p className="text-sm font-medium mb-2">
+                      {bulkFiles.length} file(s) selected 
+                      <span className="text-muted-foreground font-normal ml-1">
+                        ({formatFileSize(bulkFiles.reduce((sum, f) => sum + f.size, 0))} total)
+                      </span>
+                    </p>
                     <ul className="text-xs space-y-1 max-h-32 overflow-auto">
                       {bulkFiles.map((file, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          {file.type.startsWith('video/') ? (
-                            <Video className="h-3 w-3" />
-                          ) : (
-                            <Image className="h-3 w-3" />
-                          )}
-                          {file.name}
+                        <li key={i} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {file.type.startsWith('video/') ? (
+                              <Video className="h-3 w-3 flex-shrink-0" />
+                            ) : (
+                              <Image className="h-3 w-3 flex-shrink-0" />
+                            )}
+                            <span className="truncate">{file.name}</span>
+                          </div>
+                          <span className="text-muted-foreground flex-shrink-0">{formatFileSize(file.size)}</span>
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* Upload progress */}
+                {uploading && (
+                  <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium truncate max-w-[200px]">
+                        {uploadTotalFiles > 1 ? `File ${uploadFileIndex}/${uploadTotalFiles}: ` : ''}
+                        {uploadCurrentFile}
+                      </span>
+                      <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
                   </div>
                 )}
 
@@ -383,7 +426,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   {uploading ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
+                      Uploading {uploadFileIndex}/{uploadTotalFiles}...
                     </>
                   ) : (
                     <>
@@ -460,6 +503,22 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                 {(newCreative.type === 'image' || newCreative.type === 'video') && (
                   <div>
                     <label className="text-sm font-medium">File</label>
+                    <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {newCreative.file ? (
+                        <div className="flex items-center justify-center gap-2">
+                          {newCreative.type === 'video' ? <Video className="h-4 w-4" /> : <Image className="h-4 w-4" />}
+                          <span className="text-sm truncate max-w-[200px]">{newCreative.file.name}</span>
+                          <span className="text-xs text-muted-foreground">({formatFileSize(newCreative.file.size)})</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                          <p className="text-xs text-muted-foreground">Tap to select • Up to 10 GB • 4K supported</p>
+                        </>
+                      )}
+                    </div>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -468,7 +527,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                         ...newCreative, 
                         file: e.target.files?.[0] || null 
                       })}
-                      className="mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                      className="hidden"
                     />
                   </div>
                 )}
@@ -501,6 +560,17 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   />
                 </div>
 
+                {/* Upload progress */}
+                {uploading && (
+                  <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium truncate max-w-[200px]">{uploadCurrentFile}</span>
+                      <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
+                  </div>
+                )}
+
                 <Button 
                   onClick={handleUpload} 
                   className="w-full"
@@ -509,7 +579,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   {uploading ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
+                      Uploading... {uploadProgress}%
                     </>
                   ) : (
                     <>
