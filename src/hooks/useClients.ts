@@ -26,9 +26,6 @@ export interface Client {
   brand_colors?: string[] | null;
   brand_fonts?: string[] | null;
   description?: string | null;
-  offer_description?: string | null;
-  product_url?: string | null;
-  product_images?: string[] | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
