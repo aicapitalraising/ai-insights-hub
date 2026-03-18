@@ -250,6 +250,8 @@ Deno.serve(async (req) => {
                 calls_showed: showedCount || 0,
                 commitments_on_day: commitmentCount,
                 funded_on_day: fundedCount || 0,
+                sales_count: salesCount,
+                sales_dollars: salesDollars,
                 updated_at: new Date().toISOString(),
               },
               { onConflict: "client_id,date", ignoreDuplicates: false }
