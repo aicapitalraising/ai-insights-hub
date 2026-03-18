@@ -92,6 +92,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
   const [fundedPipelineId, setFundedPipelineId] = useState<string | null>(null);
   const [fundedStageIds, setFundedStageIds] = useState<string[]>([]);
   const [committedStageIds, setCommittedStageIds] = useState<string[]>([]);
+  const [salesStageIds, setSalesStageIds] = useState<string[]>([]);
 
   // Public link password state
   const [publicLinkPassword, setPublicLinkPassword] = useState('');
