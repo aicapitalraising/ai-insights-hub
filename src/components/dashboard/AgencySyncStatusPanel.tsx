@@ -432,6 +432,26 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
     }
   };
 
+  const handleDiagnoseAll = async () => {
+    setDiagnosing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('diagnose-ghl-sync');
+      if (error) throw error;
+      setDiagnoseResults(data);
+      setDiagnoseOpen(true);
+      const s = data?.summary;
+      if (s?.healthy === s?.totalClients) {
+        toast.success(`All ${s.totalClients} clients have healthy GHL connections`);
+      } else {
+        toast.warning(`${s?.healthy}/${s?.totalClients} healthy. ${s?.missingCredentials} missing creds, ${s?.apiUnreachable} unreachable, ${s?.mismatches} mismatches`);
+      }
+    } catch (err) {
+      toast.error(`Diagnosis failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setDiagnosing(false);
+    }
+  };
+
     const getGhlStatus = (c: ClientSyncInfo): SyncStatus => {
     if (c.hubspotPortalId) return getSyncStatusFromDate(c.lastHubspotSyncAt, !!c.hubspotPortalId, { healthy: 8, stale: 48 });
     if (c.ghlSyncStatus === 'error') return 'error';
