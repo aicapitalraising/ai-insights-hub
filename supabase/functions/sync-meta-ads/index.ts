@@ -848,9 +848,30 @@ Deno.serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("sync-meta-ads error:", error);
+    
+    // If token expired, update client status with clear error message
+    if (error instanceof MetaTokenExpiredError) {
+      try {
+        const body = await req.clone().json().catch(() => ({}));
+        const cId = (body as any)?.clientId;
+        if (cId) {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+          const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          const sb = createClient(supabaseUrl, supabaseKey);
+          await sb.from("client_settings").upsert({
+            client_id: cId,
+            meta_ads_sync_error: "Meta access token expired — regenerate in Business Manager",
+          }, { onConflict: "client_id" });
+        }
+      } catch (updateErr) {
+        console.error("Failed to update client token error status:", updateErr);
+      }
+    }
+    
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
+      tokenExpired: error instanceof MetaTokenExpiredError,
     }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
