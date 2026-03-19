@@ -551,6 +551,16 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
                 <Stethoscope className="h-3 w-3 mr-1" />
                 Test All APIs
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={handleDiagnoseAll}
+                disabled={diagnosing}
+              >
+                <HeartPulse className={`h-3 w-3 mr-1 ${diagnosing ? 'animate-spin' : ''}`} />
+                {diagnosing ? 'Diagnosing...' : 'Diagnose CRM'}
+              </Button>
             </div>
           </div>
         </CardHeader>
