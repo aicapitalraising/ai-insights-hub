@@ -1043,7 +1043,15 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pending_meeting_tasks_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "agency_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reconciliation_items: {
         Row: {
@@ -1275,6 +1283,63 @@ export type Database = {
           },
         ]
       }
+      sync_runs: {
+        Row: {
+          client_id: string
+          created_at: string
+          duration_ms: number | null
+          error_details: Json | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          metadata: Json | null
+          mode: string | null
+          records_created: number | null
+          records_errored: number | null
+          records_processed: number | null
+          records_updated: number | null
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          duration_ms?: number | null
+          error_details?: Json | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          mode?: string | null
+          records_created?: number | null
+          records_errored?: number | null
+          records_processed?: number | null
+          records_updated?: number | null
+          started_at?: string
+          status?: string
+          sync_type: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          duration_ms?: number | null
+          error_details?: Json | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          mode?: string | null
+          records_created?: number | null
+          records_errored?: number | null
+          records_processed?: number | null
+          records_updated?: number | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           client_id: string
@@ -1440,7 +1505,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_client_source_metrics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_calls_to_fund: number
+          avg_time_to_fund: number
+          client_id: string
+          commitment_dollars: number
+          funded_count: number
+          funded_dollars: number
+          reconnect_calls: number
+          reconnect_showed: number
+          showed_calls: number
+          spam_leads: number
+          total_calls: number
+          total_leads: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
