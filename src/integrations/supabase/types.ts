@@ -64,10 +64,15 @@ export type Database = {
           created_at: string
           external_id: string
           id: string
+          is_reconnect: boolean | null
           lead_id: string | null
           outcome: string | null
+          quality_score: number | null
+          recording_url: string | null
           scheduled_at: string | null
           showed: boolean | null
+          summary: string | null
+          transcript: string | null
           updated_at: string
         }
         Insert: {
@@ -75,10 +80,15 @@ export type Database = {
           created_at?: string
           external_id: string
           id?: string
+          is_reconnect?: boolean | null
           lead_id?: string | null
           outcome?: string | null
+          quality_score?: number | null
+          recording_url?: string | null
           scheduled_at?: string | null
           showed?: boolean | null
+          summary?: string | null
+          transcript?: string | null
           updated_at?: string
         }
         Update: {
@@ -86,10 +96,15 @@ export type Database = {
           created_at?: string
           external_id?: string
           id?: string
+          is_reconnect?: boolean | null
           lead_id?: string | null
           outcome?: string | null
+          quality_score?: number | null
+          recording_url?: string | null
           scheduled_at?: string | null
           showed?: boolean | null
+          summary?: string | null
+          transcript?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -109,44 +124,310 @@ export type Database = {
           },
         ]
       }
+      client_custom_tabs: {
+        Row: {
+          client_id: string
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          url: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+          url: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_custom_tabs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_settings: {
+        Row: {
+          client_id: string
+          cost_of_capital_threshold_red: number | null
+          cost_of_capital_threshold_yellow: number | null
+          cost_per_call_threshold_red: number | null
+          cost_per_call_threshold_yellow: number | null
+          cost_per_investor_threshold_red: number | null
+          cost_per_investor_threshold_yellow: number | null
+          cost_per_show_threshold_red: number | null
+          cost_per_show_threshold_yellow: number | null
+          cpl_threshold_red: number | null
+          cpl_threshold_yellow: number | null
+          created_at: string
+          funded_investor_label: string | null
+          id: string
+          updated_at: string
+          webhook_mappings: Json | null
+        }
+        Insert: {
+          client_id: string
+          cost_of_capital_threshold_red?: number | null
+          cost_of_capital_threshold_yellow?: number | null
+          cost_per_call_threshold_red?: number | null
+          cost_per_call_threshold_yellow?: number | null
+          cost_per_investor_threshold_red?: number | null
+          cost_per_investor_threshold_yellow?: number | null
+          cost_per_show_threshold_red?: number | null
+          cost_per_show_threshold_yellow?: number | null
+          cpl_threshold_red?: number | null
+          cpl_threshold_yellow?: number | null
+          created_at?: string
+          funded_investor_label?: string | null
+          id?: string
+          updated_at?: string
+          webhook_mappings?: Json | null
+        }
+        Update: {
+          client_id?: string
+          cost_of_capital_threshold_red?: number | null
+          cost_of_capital_threshold_yellow?: number | null
+          cost_per_call_threshold_red?: number | null
+          cost_per_call_threshold_yellow?: number | null
+          cost_per_investor_threshold_red?: number | null
+          cost_per_investor_threshold_yellow?: number | null
+          cost_per_show_threshold_red?: number | null
+          cost_per_show_threshold_yellow?: number | null
+          cpl_threshold_red?: number | null
+          cpl_threshold_yellow?: number | null
+          created_at?: string
+          funded_investor_label?: string | null
+          id?: string
+          updated_at?: string
+          webhook_mappings?: Json | null
+        }
+        Relationships: []
+      }
+      client_voice_notes: {
+        Row: {
+          audio_url: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          duration_seconds: number | null
+          id: string
+          transcript: string | null
+        }
+        Insert: {
+          audio_url: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          transcript?: string | null
+        }
+        Update: {
+          audio_url?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          transcript?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_voice_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
+          brand_colors: string[] | null
+          brand_fonts: string[] | null
+          business_manager_url: string | null
           created_at: string
+          description: string | null
           ghl_api_key: string | null
           ghl_location_id: string | null
           id: string
+          industry: string | null
+          logo_url: string | null
           meta_access_token: string | null
           meta_ad_account_id: string | null
           name: string
           public_token: string | null
+          slug: string | null
+          sort_order: number | null
           status: string
           updated_at: string
+          webhook_secret: string | null
         }
         Insert: {
+          brand_colors?: string[] | null
+          brand_fonts?: string[] | null
+          business_manager_url?: string | null
           created_at?: string
+          description?: string | null
           ghl_api_key?: string | null
           ghl_location_id?: string | null
           id?: string
+          industry?: string | null
+          logo_url?: string | null
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
           name: string
           public_token?: string | null
+          slug?: string | null
+          sort_order?: number | null
           status?: string
           updated_at?: string
+          webhook_secret?: string | null
         }
         Update: {
+          brand_colors?: string[] | null
+          brand_fonts?: string[] | null
+          business_manager_url?: string | null
           created_at?: string
+          description?: string | null
           ghl_api_key?: string | null
           ghl_location_id?: string | null
           id?: string
+          industry?: string | null
+          logo_url?: string | null
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
           name?: string
           public_token?: string | null
+          slug?: string | null
+          sort_order?: number | null
           status?: string
           updated_at?: string
+          webhook_secret?: string | null
         }
         Relationships: []
+      }
+      creatives: {
+        Row: {
+          body_copy: string | null
+          client_id: string
+          comments: Json | null
+          created_at: string
+          cta_text: string | null
+          file_url: string | null
+          headline: string | null
+          id: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body_copy?: string | null
+          client_id: string
+          comments?: Json | null
+          created_at?: string
+          cta_text?: string | null
+          file_url?: string | null
+          headline?: string | null
+          id?: string
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          body_copy?: string | null
+          client_id?: string
+          comments?: Json | null
+          created_at?: string
+          cta_text?: string | null
+          file_url?: string | null
+          headline?: string | null
+          id?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creatives_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      csv_import_logs: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          error_rows: number
+          errors: Json | null
+          file_name: string
+          id: string
+          import_type: string
+          imported_rows: number
+          skipped_rows: number
+          status: string
+          total_rows: number
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          errors?: Json | null
+          file_name: string
+          id?: string
+          import_type: string
+          imported_rows?: number
+          skipped_rows?: number
+          status?: string
+          total_rows?: number
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          errors?: Json | null
+          file_name?: string
+          id?: string
+          import_type?: string
+          imported_rows?: number
+          skipped_rows?: number
+          status?: string
+          total_rows?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "csv_import_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_metrics: {
         Row: {
@@ -164,6 +445,8 @@ export type Database = {
           id: string
           impressions: number | null
           leads: number | null
+          reconnect_calls: number | null
+          reconnect_showed: number | null
           showed_calls: number | null
           spam_leads: number | null
           updated_at: string
@@ -183,6 +466,8 @@ export type Database = {
           id?: string
           impressions?: number | null
           leads?: number | null
+          reconnect_calls?: number | null
+          reconnect_showed?: number | null
           showed_calls?: number | null
           spam_leads?: number | null
           updated_at?: string
@@ -202,6 +487,8 @@ export type Database = {
           id?: string
           impressions?: number | null
           leads?: number | null
+          reconnect_calls?: number | null
+          reconnect_showed?: number | null
           showed_calls?: number | null
           spam_leads?: number | null
           updated_at?: string
@@ -220,6 +507,7 @@ export type Database = {
         Row: {
           calls_to_fund: number | null
           client_id: string
+          commitment_amount: number | null
           created_at: string
           external_id: string
           first_contact_at: string | null
@@ -233,6 +521,7 @@ export type Database = {
         Insert: {
           calls_to_fund?: number | null
           client_id: string
+          commitment_amount?: number | null
           created_at?: string
           external_id: string
           first_contact_at?: string | null
@@ -246,6 +535,7 @@ export type Database = {
         Update: {
           calls_to_fund?: number | null
           client_id?: string
+          commitment_amount?: number | null
           created_at?: string
           external_id?: string
           first_contact_at?: string | null
@@ -275,43 +565,67 @@ export type Database = {
       }
       leads: {
         Row: {
+          assigned_user: string | null
           client_id: string
           created_at: string
+          custom_fields: Json | null
           email: string | null
           external_id: string
           id: string
           is_spam: boolean | null
           name: string | null
           phone: string | null
+          pipeline_value: number | null
           source: string
           status: string | null
           updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
+          assigned_user?: string | null
           client_id: string
           created_at?: string
+          custom_fields?: Json | null
           email?: string | null
           external_id: string
           id?: string
           is_spam?: boolean | null
           name?: string | null
           phone?: string | null
+          pipeline_value?: number | null
           source?: string
           status?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
+          assigned_user?: string | null
           client_id?: string
           created_at?: string
+          custom_fields?: Json | null
           email?: string | null
           external_id?: string
           id?: string
           is_spam?: boolean | null
           name?: string | null
           phone?: string | null
+          pipeline_value?: number | null
           source?: string
           status?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: [
           {
@@ -357,6 +671,91 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sync_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_logs: {
+        Row: {
+          client_id: string
+          error_message: string | null
+          id: string
+          payload: Json | null
+          processed_at: string
+          status: string
+          webhook_type: string
+        }
+        Insert: {
+          client_id: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string
+          status?: string
+          webhook_type: string
+        }
+        Update: {
+          client_id?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string
+          status?: string
+          webhook_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
