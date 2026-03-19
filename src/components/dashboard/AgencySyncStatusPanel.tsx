@@ -103,6 +103,9 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   const [globalSyncingMeta, setGlobalSyncingMeta] = useState(false);
   const [globalRecalculating, setGlobalRecalculating] = useState(false);
   const [globalAccuracyChecking, setGlobalAccuracyChecking] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnoseResults, setDiagnoseResults] = useState<any>(null);
+  const [diagnoseOpen, setDiagnoseOpen] = useState(false);
   
   // Settings form state
   const [editMetaAccountId, setEditMetaAccountId] = useState('');
