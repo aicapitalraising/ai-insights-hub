@@ -75,9 +75,7 @@ export function useSyncMetaAds() {
       return data;
     },
     onSuccess: (data, { clientId }) => {
-      queryClient.invalidateQueries({ queryKey: ['meta-campaigns', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['meta-ad-sets', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['meta-ads', clientId] });
+      invalidateAfterSync(queryClient, clientId);
       toast.success(`Synced ${data.campaigns} campaigns, ${data.adSets} ad sets, ${data.ads} ads (${data.metaApiCalls} API calls)`);
     },
     onError: (error) => {
