@@ -23,7 +23,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { X, Plus, Loader2, Sparkles, Globe } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 
 const formSchema = z.object({

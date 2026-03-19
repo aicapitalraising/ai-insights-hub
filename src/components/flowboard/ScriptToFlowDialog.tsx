@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Sparkles, Wand2, Monitor, Smartphone } from 'lucide-react';
 import { useAvatars, useStockAvatars } from '@/hooks/useAvatars';
 import { useAvatarLooks } from '@/hooks/useAvatarLooks';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { getStoredKeys } from '@/hooks/useApiRateLimiter';
 import { toast } from 'sonner';
 import type { FlowNode, FlowEdge, VideoAspectRatio, VideoModel } from '@/types/flowboard';
