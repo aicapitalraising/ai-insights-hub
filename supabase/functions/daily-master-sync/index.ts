@@ -192,7 +192,69 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Step 6: Creative Brief Auto-Generation (high-CPA clients) ──
+    // ── Step 6: GHL Payment Sync (ecom clients with payment_sync_enabled) ──
+    if (!skipSteps.includes("payments")) {
+      const start = Date.now();
+      console.log(`[daily-master-sync] Step 6: GHL payment sync for ecom clients`);
+      try {
+        // Find clients with ghl_payment_sync_enabled in client_settings
+        const { data: paymentClients } = await supabase
+          .from("client_settings" as any)
+          .select("client_id")
+          .eq("ghl_payment_sync_enabled", true);
+
+        let clientsSynced = 0;
+        const paymentErrors: string[] = [];
+
+        if (paymentClients && paymentClients.length > 0) {
+          for (const pc of paymentClients) {
+            console.log(`[daily-master-sync] Syncing payments for client ${pc.client_id}`);
+            // Sync last 30 days for daily runs (covers any delayed transactions)
+            const endDate = new Date().toISOString().split("T")[0];
+            const startDateObj = new Date();
+            startDateObj.setUTCDate(startDateObj.getUTCDate() - 30);
+            const startDate = startDateObj.toISOString().split("T")[0];
+
+            const res = await callFunction(supabaseUrl, supabaseKey, "sync-ghl-payments", {
+              client_id: pc.client_id,
+              startDate,
+              endDate,
+            }, 90000);
+
+            if (res.success) {
+              clientsSynced++;
+              console.log(`[daily-master-sync] Payment sync OK: ${res.data?.totalSales || 0} sales, ${res.data?.totalRefunds || 0} refunds`);
+            } else {
+              paymentErrors.push(`${pc.client_id}: ${res.error}`);
+            }
+          }
+        }
+
+        results.push({
+          step: "sync-ghl-payments",
+          success: paymentErrors.length === 0,
+          duration_ms: Date.now() - start,
+          details: `${clientsSynced} ecom clients synced${paymentErrors.length > 0 ? `, ${paymentErrors.length} errors` : ""}`,
+          error: paymentErrors.length > 0 ? paymentErrors.join("; ") : undefined,
+        });
+
+        if (paymentErrors.length > 0) {
+          await createAlertTask(supabase,
+            "⚠️ GHL payment sync failed for some clients",
+            `Payment sync errors: ${paymentErrors.join("; ")}`,
+          );
+        }
+      } catch (err) {
+        results.push({
+          step: "sync-ghl-payments",
+          success: false,
+          duration_ms: Date.now() - start,
+          error: err instanceof Error ? err.message : "Unknown",
+        });
+      }
+    }
+
+    // ── Step 7: Creative Brief Auto-Generation (high-CPA clients) ──
     if (!skipSteps.includes("creative")) {
       const start = Date.now();
       console.log(`[daily-master-sync] Step 6: Creative brief auto-generation check`);

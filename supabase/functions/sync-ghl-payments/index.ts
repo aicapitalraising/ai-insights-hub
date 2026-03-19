@@ -68,7 +68,6 @@ async function fetchGHLTransactions(
     
     allTransactions.push(...transactions);
     
-    // Check if there are more pages
     if (transactions.length < limit) {
       hasMore = false;
     } else {
@@ -83,6 +82,13 @@ async function fetchGHLTransactions(
   }
 
   return allTransactions;
+}
+
+interface DailyPaymentTotals {
+  sales_count: number;
+  sales_dollars: number;
+  refund_count: number;
+  refund_dollars: number;
 }
 
 Deno.serve(async (req) => {
@@ -161,25 +167,43 @@ Deno.serve(async (req) => {
 
     console.log(`[sync-ghl-payments] Fetched ${transactions.length} transactions for ${client.name}`);
 
-    // Filter to only successful/completed payments
+    // Categorize transactions: successful payments vs refunds
+    const successStatuses = ["succeeded", "completed", "paid"];
+    const refundStatuses = ["refunded", "partially_refunded", "refund"];
+
     const successfulPayments = transactions.filter(
-      (t) => t.status === "succeeded" || t.status === "completed" || t.status === "paid"
+      (t) => successStatuses.includes(t.status.toLowerCase())
+    );
+    const refundedPayments = transactions.filter(
+      (t) => refundStatuses.includes(t.status.toLowerCase())
     );
 
-    console.log(`[sync-ghl-payments] ${successfulPayments.length} successful payments`);
+    console.log(`[sync-ghl-payments] ${successfulPayments.length} sales, ${refundedPayments.length} refunds`);
 
     // Aggregate by date
-    const dailyTotals: Record<string, { count: number; dollars: number }> = {};
+    const dailyTotals: Record<string, DailyPaymentTotals> = {};
+
+    const ensureDay = (dateStr: string) => {
+      if (!dailyTotals[dateStr]) {
+        dailyTotals[dateStr] = { sales_count: 0, sales_dollars: 0, refund_count: 0, refund_dollars: 0 };
+      }
+    };
+
+    // GHL amounts are typically in cents
+    const normalizeAmount = (amount: number) => amount >= 100 ? amount / 100 : amount;
 
     for (const txn of successfulPayments) {
       const dateStr = new Date(txn.createdAt).toISOString().split("T")[0];
-      if (!dailyTotals[dateStr]) {
-        dailyTotals[dateStr] = { count: 0, dollars: 0 };
-      }
-      dailyTotals[dateStr].count++;
-      // GHL amounts are typically in cents
-      const amount = txn.amount >= 100 ? txn.amount / 100 : txn.amount;
-      dailyTotals[dateStr].dollars += amount;
+      ensureDay(dateStr);
+      dailyTotals[dateStr].sales_count++;
+      dailyTotals[dateStr].sales_dollars += normalizeAmount(txn.amount);
+    }
+
+    for (const txn of refundedPayments) {
+      const dateStr = new Date(txn.createdAt).toISOString().split("T")[0];
+      ensureDay(dateStr);
+      dailyTotals[dateStr].refund_count++;
+      dailyTotals[dateStr].refund_dollars += normalizeAmount(Math.abs(txn.amount));
     }
 
     // Upsert into daily_metrics
@@ -188,13 +212,15 @@ Deno.serve(async (req) => {
 
     for (const [dateStr, totals] of Object.entries(dailyTotals)) {
       const { error: upsertError } = await supabase
-        .from("daily_metrics")
+        .from("daily_metrics" as any)
         .upsert(
           {
             client_id: clientId,
             date: dateStr,
-            sales_count: totals.count,
-            sales_dollars: totals.dollars,
+            sales_count: totals.sales_count,
+            sales_dollars: totals.sales_dollars,
+            refund_count: totals.refund_count,
+            refund_dollars: totals.refund_dollars,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "client_id,date", ignoreDuplicates: false }
@@ -207,35 +233,33 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Also zero out days in range that had no payments (so stale pipeline data is cleared)
+    // Zero out days in range that had no transactions
     const current = new Date(startDate + "T00:00:00Z");
     const end = new Date(endDate + "T00:00:00Z");
     while (current <= end) {
       const ds = current.toISOString().split("T")[0];
       if (!dailyTotals[ds]) {
-        // Only update sales columns, don't touch other metrics
-        const { error: zeroError } = await supabase
-          .from("daily_metrics")
+        await supabase
+          .from("daily_metrics" as any)
           .update({
             sales_count: 0,
             sales_dollars: 0,
+            refund_count: 0,
+            refund_dollars: 0,
             updated_at: new Date().toISOString(),
           })
           .eq("client_id", clientId)
           .eq("date", ds);
-
-        // Ignore "no rows matched" - that's fine
-        if (zeroError) {
-          console.log(`[sync-ghl-payments] Note: could not zero ${ds}: ${zeroError.message}`);
-        }
       }
       current.setUTCDate(current.getUTCDate() + 1);
     }
 
-    const totalRevenue = Object.values(dailyTotals).reduce((s, d) => s + d.dollars, 0);
-    const totalSales = Object.values(dailyTotals).reduce((s, d) => s + d.count, 0);
+    const totalRevenue = Object.values(dailyTotals).reduce((s, d) => s + d.sales_dollars, 0);
+    const totalSales = Object.values(dailyTotals).reduce((s, d) => s + d.sales_count, 0);
+    const totalRefunds = Object.values(dailyTotals).reduce((s, d) => s + d.refund_count, 0);
+    const totalRefundDollars = Object.values(dailyTotals).reduce((s, d) => s + d.refund_dollars, 0);
 
-    console.log(`[sync-ghl-payments] Done: ${totalSales} sales, $${totalRevenue.toFixed(2)} revenue, ${daysUpdated} days updated`);
+    console.log(`[sync-ghl-payments] Done: ${totalSales} sales ($${totalRevenue.toFixed(2)}), ${totalRefunds} refunds ($${totalRefundDollars.toFixed(2)}), ${daysUpdated} days updated`);
 
     return new Response(
       JSON.stringify({
@@ -245,6 +269,8 @@ Deno.serve(async (req) => {
         successfulPayments: successfulPayments.length,
         totalSales,
         totalRevenue,
+        totalRefunds,
+        totalRefundDollars,
         daysUpdated,
         errors,
         dateRange: { startDate, endDate },

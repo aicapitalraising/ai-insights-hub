@@ -887,27 +887,50 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                 </div>
               </div>
 
-              {/* Sync Payments Section */}
+              {/* Sync Payments Section (Ecom / TAGR) */}
               <div className="border-t border-border pt-4 mt-4">
                 <h5 className="font-medium text-sm mb-2 flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
-                  Sync GHL Payments
+                  GHL Payment Sync (Ecom)
                 </h5>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Pull actual payment transactions from GHL to populate Sales &amp; Revenue data
+                  Pull actual payment &amp; refund transactions from GHL 2.0 to populate Sales, Revenue, and Refund data. Enable auto-sync to run 3× daily.
                 </p>
+                <div className="flex items-center justify-between mb-3">
+                  <Label htmlFor="ghl_payment_sync_enabled" className="text-sm">
+                    Auto-sync payments (3×/day)
+                  </Label>
+                  <Switch
+                    id="ghl_payment_sync_enabled"
+                    checked={!!(settings as any)?.ghl_payment_sync_enabled}
+                    onCheckedChange={async (checked) => {
+                      if (!client?.id) return;
+                      try {
+                        await supabase
+                          .from('client_settings' as any)
+                          .update({ ghl_payment_sync_enabled: checked })
+                          .eq('client_id', client.id);
+                        queryClient.invalidateQueries({ queryKey: ['client-settings', client.id] });
+                        toast.success(checked ? 'Payment auto-sync enabled' : 'Payment auto-sync disabled');
+                      } catch (err: any) {
+                        toast.error('Failed to update setting');
+                      }
+                    }}
+                    disabled={!client?.ghl_location_id || !client?.ghl_api_key}
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={async () => {
                     try {
-                      toast.info('Syncing payments from GHL...');
+                      toast.info('Syncing payments & refunds from GHL...');
                       const { data, error } = await supabase.functions.invoke('sync-ghl-payments', {
                         body: { client_id: client.id },
                       });
                       if (error) throw error;
                       if (data?.success) {
-                        toast.success(`Synced ${data.totalSales} sales ($${data.totalRevenue?.toFixed(2)}) across ${data.daysUpdated} days`);
+                        toast.success(`Synced ${data.totalSales} sales ($${data.totalRevenue?.toFixed(2)}), ${data.totalRefunds} refunds ($${data.totalRefundDollars?.toFixed(2)}) across ${data.daysUpdated} days`);
                         queryClient.invalidateQueries({ queryKey: ['daily-metrics'] });
                       } else {
                         toast.error(data?.error || 'Payment sync failed');
@@ -920,7 +943,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                   className="w-full"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Sync Payments (Last 90 Days)
+                  Sync Payments &amp; Refunds (Last 90 Days)
                 </Button>
               </div>
             </div>
