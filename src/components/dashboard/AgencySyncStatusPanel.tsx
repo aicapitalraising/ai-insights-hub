@@ -1171,6 +1171,77 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
       </Dialog>
 
       {/* Master Meta Token Card - shown below the sync table */}
+
+      {/* CRM Diagnose Results Dialog */}
+      <Dialog open={diagnoseOpen} onOpenChange={setDiagnoseOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HeartPulse className="h-5 w-5" />
+              CRM Sync Diagnostic Results
+            </DialogTitle>
+            <DialogDescription>
+              GHL API connectivity and contact count comparison for all clients
+            </DialogDescription>
+          </DialogHeader>
+          
+          {diagnoseResults?.summary && (
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              <div className="bg-muted/50 rounded-md p-3 text-center">
+                <p className="text-2xl font-bold">{diagnoseResults.summary.totalClients}</p>
+                <p className="text-xs text-muted-foreground">Total Clients</p>
+              </div>
+              <div className="bg-chart-2/10 rounded-md p-3 text-center">
+                <p className="text-2xl font-bold text-chart-2">{diagnoseResults.summary.healthy}</p>
+                <p className="text-xs text-muted-foreground">Healthy</p>
+              </div>
+              <div className="bg-destructive/10 rounded-md p-3 text-center">
+                <p className="text-2xl font-bold text-destructive">{diagnoseResults.summary.missingCredentials + diagnoseResults.summary.apiUnreachable}</p>
+                <p className="text-xs text-muted-foreground">Broken</p>
+              </div>
+              <div className="bg-chart-4/10 rounded-md p-3 text-center">
+                <p className="text-2xl font-bold text-chart-4">{diagnoseResults.summary.mismatches}</p>
+                <p className="text-xs text-muted-foreground">Mismatches</p>
+              </div>
+            </div>
+          )}
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Client</TableHead>
+                <TableHead className="text-center">API</TableHead>
+                <TableHead className="text-center">GHL Contacts</TableHead>
+                <TableHead className="text-center">DB Leads</TableHead>
+                <TableHead className="text-center">DB Calls</TableHead>
+                <TableHead>Issue</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {diagnoseResults?.results?.map((r: any) => (
+                <TableRow key={r.clientId} className={r.error || r.mismatch ? 'bg-destructive/5' : ''}>
+                  <TableCell className="font-medium text-sm">{r.clientName}</TableCell>
+                  <TableCell className="text-center">
+                    {!r.hasGhlKey || !r.hasGhlLocation ? (
+                      <AlertCircle className="h-4 w-4 text-muted-foreground mx-auto" />
+                    ) : r.ghlApiReachable ? (
+                      <CheckCircle className="h-4 w-4 text-chart-2 mx-auto" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-destructive mx-auto" />
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center text-sm">{r.ghlContactCount.toLocaleString()}</TableCell>
+                  <TableCell className="text-center text-sm">{r.dbLeadCount.toLocaleString()}</TableCell>
+                  <TableCell className="text-center text-sm">{r.dbCallCount.toLocaleString()}</TableCell>
+                  <TableCell className="text-xs text-destructive max-w-[200px] truncate">
+                    {r.error || (r.mismatch ? `Mismatch: ${r.ghlContactCount} in GHL vs ${r.dbLeadCount} in DB` : '—')}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
