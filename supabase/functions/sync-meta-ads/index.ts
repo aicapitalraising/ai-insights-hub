@@ -24,6 +24,13 @@ function checkCallBudget(label: string) {
   }
 }
 
+class MetaTokenExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MetaTokenExpiredError";
+  }
+}
+
 async function fetchMeta(url: string, accessToken: string, label = "unknown"): Promise<MetaApiResponse> {
   checkCallBudget(label);
   metaApiCallCount++;
@@ -32,6 +39,17 @@ async function fetchMeta(url: string, accessToken: string, label = "unknown"): P
   const res = await fetch(`${url}${separator}access_token=${accessToken}`);
   if (!res.ok) {
     const errBody = await res.text();
+    // Detect expired/invalid token (OAuthException code 190)
+    try {
+      const errJson = JSON.parse(errBody);
+      if (errJson?.error?.code === 190 || errJson?.error?.type === "OAuthException") {
+        throw new MetaTokenExpiredError(
+          `Meta access token expired or invalid — regenerate in Business Manager. Details: ${errJson.error.message || errBody.substring(0, 200)}`
+        );
+      }
+    } catch (parseErr) {
+      if (parseErr instanceof MetaTokenExpiredError) throw parseErr;
+    }
     throw new Error(`Meta API ${res.status}: ${errBody.substring(0, 500)}`);
   }
   return res.json();
@@ -830,9 +848,30 @@ Deno.serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("sync-meta-ads error:", error);
+    
+    // If token expired, update client status with clear error message
+    if (error instanceof MetaTokenExpiredError) {
+      try {
+        const body = await req.clone().json().catch(() => ({}));
+        const cId = (body as any)?.clientId;
+        if (cId) {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+          const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          const sb = createClient(supabaseUrl, supabaseKey);
+          await sb.from("client_settings").upsert({
+            client_id: cId,
+            meta_ads_sync_error: "Meta access token expired — regenerate in Business Manager",
+          }, { onConflict: "client_id" });
+        }
+      } catch (updateErr) {
+        console.error("Failed to update client token error status:", updateErr);
+      }
+    }
+    
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
+      tokenExpired: error instanceof MetaTokenExpiredError,
     }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
