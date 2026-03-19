@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, VolumeX, Sparkles, MessageSquareOff, Film } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import type { VideoClip, Caption } from '@/hooks/useVideoEditor';
 

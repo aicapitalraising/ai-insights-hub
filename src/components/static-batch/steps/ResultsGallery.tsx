@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, ArrowRight, Download, RefreshCw, Loader2, CheckCircle, XCircle, Clock, Video, Sparkles, Pencil, History, ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import type { GeneratedAd, AdStyle, AspectRatio } from '@/types';

@@ -29,7 +29,7 @@ import { Creative } from '@/hooks/useCreatives';
 import { VoiceNote } from '@/hooks/useVoiceNotes';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 
 interface ActivityFeedProps {
   tasks: Task[];

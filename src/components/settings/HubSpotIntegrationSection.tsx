@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, RefreshCw, CheckCircle, XCircle, Plug, Eye, EyeOff } from 'lucide-react';
 import { useHubSpotSync } from '@/hooks/useHubSpotSync';

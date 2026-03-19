@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Client } from '@/hooks/useClients';

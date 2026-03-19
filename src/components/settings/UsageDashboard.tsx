@@ -23,7 +23,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays, startOfDay, differenceInSeconds } from 'date-fns';
 import { getStoredKeys, TIER_CONFIGS, MAX_KEYS } from '@/hooks/useApiRateLimiter';

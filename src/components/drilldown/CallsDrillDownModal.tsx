@@ -20,7 +20,7 @@ import { Download, Trash2, Plus, ChevronLeft, ChevronRight, Eye, Filter, FileTex
 import { useCalls, Call, useLeads } from '@/hooks/useLeadsAndCalls';
 import { useClient } from '@/hooks/useClients';
 import { useDateFilter } from '@/contexts/DateFilterContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { exportToCSV } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';

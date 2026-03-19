@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { useClients } from '@/hooks/useClients';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AdCard } from '@/components/ad-scraping/AdCard';
