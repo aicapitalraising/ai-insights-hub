@@ -25,6 +25,7 @@ import { HubSpotIntegrationSection } from './HubSpotIntegrationSection';
 import { MeetGeekIntegrationSection } from './MeetGeekIntegrationSection';
 import { FathomIntegrationSection } from './FathomIntegrationSection';
 import { SyncHealthIndicator, getSyncStatus } from './SyncHealthIndicator';
+import { ApiInfoTab } from './ApiInfoTab';
 import { useSyncQueue } from '@/hooks/useSyncQueue';
 import { DollarSign, Target, Plug, Loader2, RefreshCw, CheckCircle, XCircle, Users, Lock, Eye, EyeOff, AlertTriangle, ListOrdered, MessageSquare as MessageSquareIcon } from 'lucide-react';
 interface ClientSettingsModalProps {
