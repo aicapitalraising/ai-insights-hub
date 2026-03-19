@@ -146,3 +146,6 @@ verify_jwt = false
 
 [functions.sync-ghl-payments]
 verify_jwt = false
+
+[functions.diagnose-ghl-sync]
+verify_jwt = false
