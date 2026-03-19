@@ -6,30 +6,20 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DateFilterProvider } from "@/contexts/DateFilterContext";
 import { PasswordGate } from "@/components/auth/PasswordGate";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
-// 11.3: Auto-retry dynamic imports with 3 attempts + exponential backoff
+// Auto-retry dynamic imports on failure (handles stale cache after deploys)
 function lazyRetry(fn: () => Promise<any>) {
-  return lazy(() => {
-    const attempt = (retries: number, delayMs: number): Promise<any> =>
-      fn().catch((err) => {
-        if (retries <= 0) {
-          // Final fallback: force reload once
-          const key = 'chunk_reload';
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, '1');
-            window.location.reload();
-          }
-          sessionStorage.removeItem(key);
-          return fn();
-        }
-        return new Promise((resolve) =>
-          setTimeout(() => resolve(attempt(retries - 1, delayMs * 2)), delayMs)
-        );
-      });
-    return attempt(2, 1000); // 3 total attempts: immediate, 1s, 2s
-  });
+  return lazy(() => fn().catch(() => {
+    // Force reload once to get fresh chunks
+    const key = 'chunk_reload';
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1');
+      window.location.reload();
+    }
+    sessionStorage.removeItem(key);
+    return fn();
+  }));
 }
 
 // Core reporting pages (lazy-loaded for code-splitting)
@@ -98,7 +88,6 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Protected routes - require password */}
@@ -145,7 +134,6 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
-          </ErrorBoundary>
         </BrowserRouter>
       </DateFilterProvider>
     </TooltipProvider>

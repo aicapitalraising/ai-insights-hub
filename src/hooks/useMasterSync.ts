@@ -1,8 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { invalidateAfterSync } from '@/lib/invalidateAfterSync';
 
 export interface MasterSyncProgress {
   isLoading: boolean;
@@ -49,68 +48,52 @@ export function useMasterSync(clientId: string | undefined) {
     message: null,
   });
   const [configWarnings, setConfigWarnings] = useState<string[]>([]);
-  const syncLockRef = useRef(false); // 11.5: Prevent duplicate sync triggers
+  const [pollInterval, setPollInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
-  // 1.3: Replace polling with Realtime subscription on clients table
-  useEffect(() => {
-    if (!clientId || !progress.isLoading) return;
+  const invalidateAllQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    queryClient.invalidateQueries({ queryKey: ['calls'] });
+    queryClient.invalidateQueries({ queryKey: ['funded-investors'] });
+    queryClient.invalidateQueries({ queryKey: ['sync-health', clientId] });
+    queryClient.invalidateQueries({ queryKey: ['gap-leads'] });
+    queryClient.invalidateQueries({ queryKey: ['data-discrepancies'] });
+    queryClient.invalidateQueries({ queryKey: ['pipeline-opportunities'] });
+    queryClient.invalidateQueries({ queryKey: ['client-pipelines'] });
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+  }, [queryClient, clientId]);
 
-    const channel = supabase
-      .channel(`sync-status-${clientId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'clients',
-          filter: `id=eq.${clientId}`,
-        },
-        (payload) => {
-          const newStatus = payload.new?.ghl_sync_status;
-          const oldStatus = payload.old?.ghl_sync_status;
-
-          // Only react when status changes FROM 'syncing' to something else
-          if (oldStatus === 'syncing' && newStatus !== 'syncing') {
-            setProgress({ isLoading: false, phase: null, message: null });
-            syncLockRef.current = false;
-            invalidateAfterSync(queryClient, clientId);
-
-            if (newStatus === 'healthy') {
-              toast.success('Master sync complete! All data synchronized.');
-            } else if (newStatus === 'partial') {
-              toast.warning('Master sync completed with some warnings. Check sync status for details.');
-            } else if (newStatus === 'error') {
-              const syncError = payload.new?.ghl_sync_error;
-              toast.error(`Master sync encountered errors: ${syncError || 'Unknown error'}`);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    // Auto-timeout after 10 minutes (safety net)
-    const timeout = setTimeout(() => {
-      setProgress({ isLoading: false, phase: null, message: null });
-      syncLockRef.current = false;
-      invalidateAfterSync(queryClient, clientId);
-      toast.info('Background sync may still be running. Refresh to check status.');
-    }, 600000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearTimeout(timeout);
+  // Poll for sync completion
+  const checkSyncStatus = useCallback(async () => {
+    if (!clientId) return false;
+    
+    const { data: client } = await supabase
+      .from('clients')
+      .select('ghl_sync_status, ghl_sync_error, last_ghl_sync_at')
+      .eq('id', clientId)
+      .maybeSingle();
+    
+    if (client?.ghl_sync_status === 'syncing') {
+      return false; // Still syncing
+    }
+    
+    // Sync complete
+    return {
+      status: client?.ghl_sync_status,
+      error: client?.ghl_sync_error,
     };
-  }, [clientId, progress.isLoading, queryClient]);
+  }, [clientId]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [pollInterval]);
 
   const runMasterSync = useCallback(async (): Promise<MasterSyncResult> => {
     if (!clientId) return { success: false, error: 'No client ID' };
-
-    // 11.5: Prevent duplicate concurrent syncs
-    if (syncLockRef.current) {
-      toast.info('A sync is already in progress.');
-      return { success: false, error: 'Sync already in progress' };
-    }
-    syncLockRef.current = true;
 
     setProgress({ 
       isLoading: true, 
@@ -135,6 +118,7 @@ export function useMasterSync(clientId: string | undefined) {
       setConfigWarnings(warnings);
       
       if (warnings.length > 0) {
+        // Show each warning as a toast
         for (const warning of warnings) {
           toast.warning(warning, { duration: 8000 });
         }
@@ -149,7 +133,38 @@ export function useMasterSync(clientId: string | undefined) {
         message: 'Sync running in background. This may take several minutes...' 
       });
       
-      // Realtime subscription in the useEffect above will handle completion
+      // Start polling for completion
+      const interval = setInterval(async () => {
+        const result = await checkSyncStatus();
+        if (result) {
+          clearInterval(interval);
+          setPollInterval(null);
+          setProgress({ isLoading: false, phase: null, message: null });
+          
+          invalidateAllQueries();
+          
+          if (result.status === 'healthy') {
+            toast.success('Master sync complete! All data synchronized.');
+          } else if (result.status === 'partial') {
+            toast.warning('Master sync completed with some warnings. Check sync status for details.');
+          } else if (result.status === 'error') {
+            toast.error(`Master sync encountered errors: ${result.error || 'Unknown error'}`);
+          }
+        }
+      }, 5000); // Check every 5 seconds
+      
+      setPollInterval(interval);
+      
+      // Auto-stop polling after 10 minutes
+      setTimeout(() => {
+        if (interval) {
+          clearInterval(interval);
+          setPollInterval(null);
+          setProgress({ isLoading: false, phase: null, message: null });
+          invalidateAllQueries();
+          toast.info('Background sync may still be running. Refresh to check status.');
+        }
+      }, 600000);
       
       return { 
         success: true, 
@@ -161,10 +176,9 @@ export function useMasterSync(clientId: string | undefined) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       toast.error(`Master sync failed: ${errorMessage}`);
       setProgress({ isLoading: false, phase: null, message: null });
-      syncLockRef.current = false;
       return { success: false, error: errorMessage };
     }
-  }, [clientId]);
+  }, [clientId, invalidateAllQueries, checkSyncStatus]);
 
   return {
     progress,
