@@ -131,7 +131,12 @@ export function aggregateFromSourceData(
   // Calculate pipeline value
   const pipelineValue = (defaultLeadPipelineValue && defaultLeadPipelineValue > 0)
     ? (totalLeads) * defaultLeadPipelineValue
-    : leads.reduce((sum, l) => sum + Number(l.pipeline_value || 0), 0);
+    : (() => {
+        const leadsWithPipeline = leads.filter(l => l.pipeline_value && l.pipeline_value > 0);
+        return leadsWithPipeline.length > 0
+          ? Math.min(...leadsWithPipeline.map(l => l.pipeline_value || 0))
+          : 0;
+      })();
 
   return {
     totalAdSpend,

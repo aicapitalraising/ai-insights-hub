@@ -38,20 +38,17 @@ Deno.serve(async (req) => {
       startDate = body.startDate;
       endDate = body.endDate;
     } else {
-      // Default lookback: 7 days (configurable via lookbackDays, max 365)
-      const lookbackDays = Math.min(Math.max(body.lookbackDays || 7, 1), 365);
       const today = new Date();
-      const lookbackDate = new Date(today);
-      lookbackDate.setUTCDate(lookbackDate.getUTCDate() - lookbackDays);
-      startDate = lookbackDate.toISOString().split("T")[0];
+      const yesterday = new Date(today);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      startDate = yesterday.toISOString().split("T")[0];
       endDate = today.toISOString().split("T")[0];
     }
   } catch {
-    // Default: last 7 days
     const today = new Date();
-    const lookbackDate = new Date(today);
-    lookbackDate.setUTCDate(lookbackDate.getUTCDate() - 7);
-    startDate = lookbackDate.toISOString().split("T")[0];
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    startDate = yesterday.toISOString().split("T")[0];
     endDate = today.toISOString().split("T")[0];
   }
 
