@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { invalidateAfterSync } from '@/lib/invalidateAfterSync';
 
 export interface FullSyncResult {
   success: boolean;
@@ -42,16 +43,7 @@ export function useFullSync() {
         `Full sync complete: ${summary?.total_contacts_created || 0} created, ${summary?.total_contacts_updated || 0} updated, ${summary?.total_timelines_synced || 0} timelines synced`
       );
       
-      // Invalidate all relevant queries including daily-metrics
-      queryClient.invalidateQueries({ queryKey: ['leads', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['calls', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['contact-timeline'] });
-      queryClient.invalidateQueries({ queryKey: ['sync-health', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['daily-metrics', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['all-daily-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['funded-investors', clientId] });
-      
+      invalidateAfterSync(queryClient, clientId);
       setProgress(null);
     },
     onError: (error: Error) => {

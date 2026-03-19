@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { invalidateAfterSync } from '@/lib/invalidateAfterSync';
 
 export function useSyncQueue() {
   const queryClient = useQueryClient();
@@ -14,10 +15,9 @@ export function useSyncQueue() {
       if (error) throw error;
       return data as number;
     },
-    onSuccess: (jobsCreated, { clientId }) => {
+    onSuccess: (jobsCreated) => {
       toast.success(`Queued ${jobsCreated} sync jobs`);
-      queryClient.invalidateQueries({ queryKey: ['sync-queue-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['sync-queue-jobs'] });
+      invalidateAfterSync(queryClient);
     },
     onError: (error) => {
       toast.error(`Failed to queue sync: ${error.message}`);
@@ -34,8 +34,7 @@ export function useSyncQueue() {
     },
     onSuccess: (jobsCreated) => {
       toast.success(`Queued ${jobsCreated} sync jobs for all clients`);
-      queryClient.invalidateQueries({ queryKey: ['sync-queue-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['sync-queue-jobs'] });
+      invalidateAfterSync(queryClient);
     },
     onError: (error) => {
       toast.error(`Failed to queue all clients: ${error.message}`);
@@ -54,10 +53,7 @@ export function useSyncQueue() {
       } else {
         toast.success(`Processed: ${data.records_processed} records for ${data.client_name}`);
       }
-      queryClient.invalidateQueries({ queryKey: ['sync-queue-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['sync-queue-jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['calls'] });
+      invalidateAfterSync(queryClient);
     },
     onError: (error) => {
       toast.error(`Worker failed: ${error.message}`);
