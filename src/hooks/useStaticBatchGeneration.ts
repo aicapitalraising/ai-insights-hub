@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import type { StaticBatchConfig, GeneratedAd, AdStyle, Client } from '@/types';
 import { toast } from 'sonner';
 

@@ -82,7 +82,7 @@ import { SubtaskRow } from './SubtaskRow';
 import { MentionTextarea, parseMentions } from './MentionTextarea';
 import { useCreateNotification } from './NotificationsTab';
 import { useAgencyPods } from '@/hooks/useAgencyPods';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
  
  interface TaskDetailPanelProps {

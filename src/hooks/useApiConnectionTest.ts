@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ApiTestResult {
   contacts: 'success' | 'error' | 'pending' | 'not_configured';

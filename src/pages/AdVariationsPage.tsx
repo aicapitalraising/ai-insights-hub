@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import { useAssets, useDeleteAsset, useCreateAsset, useUpdateAsset } from '@/hooks/useAssets';
 import { useAdStyles } from '@/hooks/useAdStyles';
 import { AssetGrid } from '@/components/assets/AssetGrid';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { useGeminiKey } from '@/hooks/useGeminiKey';
 import { cn } from '@/lib/utils';
 import type { Asset, AdStyle } from '@/types';

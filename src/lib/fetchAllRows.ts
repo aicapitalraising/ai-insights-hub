@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 
 const PAGE_SIZE = 1000;
 

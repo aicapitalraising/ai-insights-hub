@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, Loader2, Image as ImageIcon, Check, Columns, Grid, CheckSquare, Square, Wand2, LayoutGrid, Eye, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { TemplateGallery, type AdTemplate, type TemplateCustomization } from '@/components/static-ads/TemplateGallery';

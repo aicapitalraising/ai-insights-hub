@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Bell, BellOff, Check, CheckCheck, Clock } from 'lucide-react';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface Notification {

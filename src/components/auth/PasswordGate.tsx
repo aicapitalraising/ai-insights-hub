@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Lock, Loader2 } from 'lucide-react';
 import { TeamMemberProvider, useTeamMember } from '@/contexts/TeamMemberContext';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const SESSION_KEY = 'dashboard_auth';

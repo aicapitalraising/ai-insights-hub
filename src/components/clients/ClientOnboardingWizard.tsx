@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { X, Plus, Loader2, Sparkles, Globe, Check, ArrowRight, ArrowLeft, Upload, Palette, Type, Image as ImageIcon } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { useAdStyles } from '@/hooks/useAdStyles';
 import { toast } from 'sonner';
 

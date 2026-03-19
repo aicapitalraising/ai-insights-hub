@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStripePayments, StripeCustomerData, StripePayment } from '@/hooks/useStripePayments';
 import { useClientSettings, useUpdateClientSettings } from '@/hooks/useClientSettings';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Mic, Square, Loader2, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
  import { useAddVoiceComment, useCreateTask, useAgencyMembers } from '@/hooks/useTasks';
  import { useAgencyPods } from '@/hooks/useAgencyPods';
  import { useSetTaskAssignees } from '@/hooks/useTaskAssignees';

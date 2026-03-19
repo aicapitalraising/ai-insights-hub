@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Phone, Clock, Video, ArrowRight, CheckCircle2, CalendarIcon, Loader2, Shield } from 'lucide-react';
 import { format, addDays, isBefore, startOfDay, getDay } from 'date-fns';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCalendarSlots } from '@/hooks/useCalendarSlots';
 

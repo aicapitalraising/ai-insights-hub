@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClients } from '@/hooks/useClients';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useCreativeBriefs, useUpdateBriefStatus, CreativeBrief } from '@/hooks/useCreativeBriefs';
 import { BriefDetailDialog } from '@/components/briefs/BriefDetailDialog';

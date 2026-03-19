@@ -58,7 +58,7 @@ import { DailyMetric } from '@/hooks/useMetrics';
 import { Lead, Call } from '@/hooks/useLeadsAndCalls';
 import { useClientOpportunities, EnrichedOpportunity } from '@/hooks/usePipelines';
 import { useLeadCallRecordings } from '@/hooks/useLeadEngagementStats';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useSingleContactSync } from '@/hooks/useSingleContactSync';

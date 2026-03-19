@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Download, Save, X, Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useDailyMetrics, useAllDailyMetrics, DailyMetric } from '@/hooks/useMetrics';
 import { useDateFilter } from '@/contexts/DateFilterContext';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';

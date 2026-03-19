@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 
 const routingRules = [
   { tier: 'Qualified', score: '70-100', tag: 'qualified-investor', destination: '30-min Discovery Call', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },

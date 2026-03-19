@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { fetchVideoAsBlob } from '@/lib/video-proxy';
 import { useImageToVideoGeneration } from '@/hooks/useImageToVideoGeneration';
 import { useSaveAssetFromUrl } from '@/hooks/useAssets';

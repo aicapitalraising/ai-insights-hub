@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { History, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { HistoryGrid } from './HistoryGrid';
 import type { Asset } from '@/types';
 import { toast } from 'sonner';

@@ -33,7 +33,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
 import { useClients } from '@/hooks/useClients';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV } from '@/lib/exportUtils';
 import { fetchAllRows } from '@/lib/fetchAllRows';
 import { CSVImportModal, ImportType } from '@/components/import/CSVImportModal';

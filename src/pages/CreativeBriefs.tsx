@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useCreativeBriefs, useUpdateBriefStatus, CreativeBrief } from '@/hooks/useCreativeBriefs';
 import { useAllAdScripts, useUpdateAdScript, useDeleteAdScript, AdScript } from '@/hooks/useAdScripts';
 import { BriefDetailDialog } from '@/components/briefs/BriefDetailDialog';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, isAfter, isBefore, addDays } from 'date-fns';
 import { toast } from 'sonner';
 

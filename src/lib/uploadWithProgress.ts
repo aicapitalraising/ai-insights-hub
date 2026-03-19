@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 
   (supabase as any).supabaseUrl || '';

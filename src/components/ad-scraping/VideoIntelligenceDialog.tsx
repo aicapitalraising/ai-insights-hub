@@ -27,7 +27,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { getEmbedInfo, getPlatformLabel, type EmbedInfo } from '@/lib/video-embed';
 import { cn } from '@/lib/utils';
 

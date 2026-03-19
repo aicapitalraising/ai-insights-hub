@@ -21,7 +21,7 @@ import { useFundedInvestors, FundedInvestor } from '@/hooks/useMetrics';
 import { useLeads } from '@/hooks/useLeadsAndCalls';
 import { useClient } from '@/hooks/useClients';
 import { useDateFilter } from '@/contexts/DateFilterContext';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

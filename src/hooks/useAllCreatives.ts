@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { Creative, CreativeComment } from './useCreatives';
 import { fetchAllRows } from '@/lib/fetchAllRows';
 

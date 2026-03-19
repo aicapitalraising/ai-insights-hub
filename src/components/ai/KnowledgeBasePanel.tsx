@@ -12,7 +12,7 @@ import { useKnowledgeDocuments, useCreateDocument, useDeleteDocument, KnowledgeD
 import { TOKEN_LIMIT, getCapacityPercent, getCapacityColor, estimateTokens } from '@/hooks/useGPTFiles';
 import { Plus, FileText, Globe, Trash2, Upload, Loader2, File, Link, BookOpen, Info, Type } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export function KnowledgeBasePanel() {

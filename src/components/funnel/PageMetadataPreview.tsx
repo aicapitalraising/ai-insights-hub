@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Globe, FileText, Loader2, RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';

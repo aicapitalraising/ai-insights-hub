@@ -1,1 +1,151 @@
-project_id = "futcgfhpiaoingxebfud"
+project_id = "jgwwmtuvjlmzapwqiabu"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[functions.webhook-ingest]
+verify_jwt = false
+
+[functions.ai-analysis]
+verify_jwt = false
+
+[functions.sync-client-data]
+verify_jwt = false
+
+[functions.transcribe-audio]
+verify_jwt = false
+
+[functions.send-task-notification]
+verify_jwt = false
+
+[functions.stripe-payments]
+verify_jwt = false
+
+[functions.sync-ghl-contacts]
+verify_jwt = false
+
+[functions.parse-investor-email]
+verify_jwt = false
+
+[functions.meetgeek-webhook]
+verify_jwt = false
+
+[functions.pagespeed-test]
+verify_jwt = false
+
+[functions.process-voice-note]
+verify_jwt = false
+
+[functions.creative-ai-audit]
+verify_jwt = false
+
+[functions.sync-ghl-pipelines]
+verify_jwt = false
+
+[functions.verify-pixels]
+verify_jwt = false
+
+[functions.scrape-fb-ads]
+verify_jwt = false
+
+[functions.sync-queue-worker]
+verify_jwt = false
+
+[functions.sync-outbound-ghl]
+verify_jwt = false
+
+[functions.sync-hubspot-contacts]
+verify_jwt = false
+
+[functions.external-data-api]
+verify_jwt = false
+
+[functions.ai-agent-full-context]
+verify_jwt = false
+
+[functions.sync-meta-ads]
+verify_jwt = false
+
+[functions.sync-meta-ads-daily]
+verify_jwt = false
+
+[functions.sync-ghl-all-clients]
+verify_jwt = false
+
+[functions.sync-hubspot-all-clients]
+verify_jwt = false
+
+[functions.recalculate-daily-metrics]
+verify_jwt = false
+
+[functions.daily-accuracy-check]
+verify_jwt = false
+
+[functions.daily-master-sync]
+verify_jwt = false
+
+[functions.enrich-lead-retargetiq]
+verify_jwt = false
+
+[functions.run-attribution]
+verify_jwt = false
+
+[functions.fetch-ad-media-hd]
+verify_jwt = false
+
+[functions.fathom-webhook]
+verify_jwt = false
+
+[functions.slack-events]
+verify_jwt = false
+
+[functions.generate-brief]
+verify_jwt = false
+
+[functions.cpl-creative-trigger]
+verify_jwt = false
+
+[functions.weekly-brief-generator]
+verify_jwt = false
+
+[functions.batch-scrape-branding]
+verify_jwt = false
+
+[functions.fetch-ghl-calendars]
+verify_jwt = false
+
+[functions.fetch-page-metadata]
+verify_jwt = false
+
+[functions.scrape-brand-info]
+verify_jwt = false
+
+[functions.sync-calendar-appointments]
+verify_jwt = false
+
+[functions.verify-password]
+verify_jwt = false
+
+[functions.seed-client-directory]
+verify_jwt = false
+
+[functions.generate-ad-variations]
+verify_jwt = false
+
+[functions.sync-ghl-payments]
+verify_jwt = false
+
+[functions.diagnose-ghl-sync]
+verify_jwt = false

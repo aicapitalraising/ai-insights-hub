@@ -20,7 +20,7 @@ import {
 import { Plus, Pencil, Trash2, Users, Loader2 } from 'lucide-react';
 import { useAgencyPods, useCreatePod, useUpdatePod, useDeletePod, useUpdateMemberPod, AgencyPod } from '@/hooks/useAgencyPods';
 import { useAgencyMembers, useAddAgencyMember, AgencyMember } from '@/hooks/useTasks';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 

@@ -21,7 +21,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { getStoredKeys } from '@/hooks/useApiRateLimiter';
 import { fetchVideoAsBlob } from '@/lib/video-proxy';
 

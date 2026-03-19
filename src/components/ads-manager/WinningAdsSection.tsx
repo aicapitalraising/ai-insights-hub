@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Separator } from '@/components/ui/separator';
 import { useUpdateClientSettings, ClientSettings } from '@/hooks/useClientSettings';
 import { useCreateTask } from '@/hooks/useTasks';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 type WinningMetric = 'leads' | 'calls' | 'funded' | 'cpl' | 'cpa' | 'roas';

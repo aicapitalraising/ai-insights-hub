@@ -21,7 +21,7 @@ import { DesktopMockup } from './DesktopMockup';
 import { PageSpeedModal } from './PageSpeedModal';
 import { PixelVerificationModal } from './PixelVerificationModal';
 import { SplitTestModal } from './SplitTestModal';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { FacebookLeadFormMockup } from './FacebookLeadFormMockup';
 import { useLatestPixelVerification, getVerificationStatusInfo } from '@/hooks/usePixelVerification';
 import type { FunnelStep } from '@/hooks/useFunnelSteps';

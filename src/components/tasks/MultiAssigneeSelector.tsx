@@ -14,7 +14,7 @@ import { useAgencyPods } from '@/hooks/useAgencyPods';
 import { useClients, Client } from '@/hooks/useClients';
 import { useTaskAssignees, useSetTaskAssignees, TaskAssignee } from '@/hooks/useTaskAssignees';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MultiAssigneeSelectorProps {
   taskId: string;

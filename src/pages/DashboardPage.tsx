@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { Users, FolderOpen, ImageIcon, Briefcase, TrendingUp, Film, User, Palette, LayoutGrid, Video, ArrowRight, Sparkles, Zap, Scissors } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
