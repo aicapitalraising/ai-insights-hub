@@ -8,8 +8,22 @@ import { DateFilterProvider } from "@/contexts/DateFilterContext";
 import { PasswordGate } from "@/components/auth/PasswordGate";
 import { Loader2 } from "lucide-react";
 
+// Auto-retry dynamic imports on failure (handles stale cache after deploys)
+function lazyRetry(fn: () => Promise<any>) {
+  return lazy(() => fn().catch(() => {
+    // Force reload once to get fresh chunks
+    const key = 'chunk_reload';
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1');
+      window.location.reload();
+    }
+    sessionStorage.removeItem(key);
+    return fn();
+  }));
+}
+
 // Core reporting pages (lazy-loaded for code-splitting)
-const Index = lazy(() => import("./pages/Index"));
+const Index = lazyRetry(() => import("./pages/Index"));
 const ClientDetail = lazy(() => import("./pages/ClientDetail"));
 const ClientRecords = lazy(() => import("./pages/ClientRecords"));
 const DatabaseView = lazy(() => import("./pages/DatabaseView"));
