@@ -886,6 +886,43 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                   </p>
                 </div>
               </div>
+
+              {/* Sync Payments Section */}
+              <div className="border-t border-border pt-4 mt-4">
+                <h5 className="font-medium text-sm mb-2 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Sync GHL Payments
+                </h5>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Pull actual payment transactions from GHL to populate Sales &amp; Revenue data
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      toast.info('Syncing payments from GHL...');
+                      const { data, error } = await supabase.functions.invoke('sync-ghl-payments', {
+                        body: { client_id: client.id },
+                      });
+                      if (error) throw error;
+                      if (data?.success) {
+                        toast.success(`Synced ${data.totalSales} sales ($${data.totalRevenue?.toFixed(2)}) across ${data.daysUpdated} days`);
+                        queryClient.invalidateQueries({ queryKey: ['daily-metrics'] });
+                      } else {
+                        toast.error(data?.error || 'Payment sync failed');
+                      }
+                    } catch (err: any) {
+                      toast.error(err.message || 'Failed to sync payments');
+                    }
+                  }}
+                  disabled={!client?.ghl_location_id || !client?.ghl_api_key}
+                  className="w-full"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync Payments (Last 90 Days)
+                </Button>
+              </div>
             </div>
 
             {/* Sync Health Indicator */}
