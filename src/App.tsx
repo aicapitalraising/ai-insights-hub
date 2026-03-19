@@ -24,43 +24,43 @@ function lazyRetry(fn: () => Promise<any>) {
 
 // Core reporting pages (lazy-loaded for code-splitting)
 const Index = lazyRetry(() => import("./pages/Index"));
-const ClientDetail = lazy(() => import("./pages/ClientDetail"));
-const ClientRecords = lazy(() => import("./pages/ClientRecords"));
-const DatabaseView = lazy(() => import("./pages/DatabaseView"));
-const PublicReport = lazy(() => import("./pages/PublicReport"));
-const SpamBlacklist = lazy(() => import("./pages/SpamBlacklist"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const ClientCreatives = lazy(() => import("./pages/ClientCreatives"));
-const PublicCreatives = lazy(() => import("./pages/PublicCreatives"));
-const MetaAdsOverlay = lazy(() => import("./pages/MetaAdsOverlay"));
-const CreativeBriefs = lazy(() => import("./pages/CreativeBriefs"));
+const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
+const ClientRecords = lazyRetry(() => import("./pages/ClientRecords"));
+const DatabaseView = lazyRetry(() => import("./pages/DatabaseView"));
+const PublicReport = lazyRetry(() => import("./pages/PublicReport"));
+const SpamBlacklist = lazyRetry(() => import("./pages/SpamBlacklist"));
+const NotFound = lazyRetry(() => import("./pages/NotFound"));
+const ClientCreatives = lazyRetry(() => import("./pages/ClientCreatives"));
+const PublicCreatives = lazyRetry(() => import("./pages/PublicCreatives"));
+const MetaAdsOverlay = lazyRetry(() => import("./pages/MetaAdsOverlay"));
+const CreativeBriefs = lazyRetry(() => import("./pages/CreativeBriefs"));
 
 // Creative tools pages (from ad-verse-ally)
-const StaticAdsPage = lazy(() => import("./pages/StaticAdsPage"));
-const StaticCreativesPage = lazy(() => import("./pages/StaticCreativesPage"));
-const BatchVideoPage = lazy(() => import("./pages/BatchVideoPage"));
-const AdScrapingPage = lazy(() => import("./pages/AdScrapingPage"));
-const AdVariationsPage = lazy(() => import("./pages/AdVariationsPage"));
-const AvatarsPage = lazy(() => import("./pages/AvatarsPage"));
-const BrollPage = lazy(() => import("./pages/BrollPage"));
-const VideoEditorPage = lazy(() => import("./pages/VideoEditorPage"));
-const InstagramIntelPage = lazy(() => import("./pages/InstagramIntelPage"));
-const HistoryPage = lazy(() => import("./pages/HistoryPage"));
-const ExportHubPage = lazy(() => import("./pages/ExportHubPage"));
-const ClientProjectsPage = lazy(() => import("./pages/ClientProjectsPage"));
-const ProjectPage = lazy(() => import("./pages/ProjectPage"));
+const StaticAdsPage = lazyRetry(() => import("./pages/StaticAdsPage"));
+const StaticCreativesPage = lazyRetry(() => import("./pages/StaticCreativesPage"));
+const BatchVideoPage = lazyRetry(() => import("./pages/BatchVideoPage"));
+const AdScrapingPage = lazyRetry(() => import("./pages/AdScrapingPage"));
+const AdVariationsPage = lazyRetry(() => import("./pages/AdVariationsPage"));
+const AvatarsPage = lazyRetry(() => import("./pages/AvatarsPage"));
+const BrollPage = lazyRetry(() => import("./pages/BrollPage"));
+const VideoEditorPage = lazyRetry(() => import("./pages/VideoEditorPage"));
+const InstagramIntelPage = lazyRetry(() => import("./pages/InstagramIntelPage"));
+const HistoryPage = lazyRetry(() => import("./pages/HistoryPage"));
+const ExportHubPage = lazyRetry(() => import("./pages/ExportHubPage"));
+const ClientProjectsPage = lazyRetry(() => import("./pages/ClientProjectsPage"));
+const ProjectPage = lazyRetry(() => import("./pages/ProjectPage"));
 
 // Funnel Builder pages
-const FunnelBuilderPage = lazy(() => import("./pages/FunnelBuilderPage"));
-const FunnelBookingPage = lazy(() => import("./pages/FunnelBookingPage"));
-const FunnelOnboardingPage = lazy(() => import("./pages/FunnelOnboardingPage"));
-const FunnelAdminPage = lazy(() => import("./pages/FunnelAdminPage"));
-const FunnelClientPage = lazy(() => import("./pages/FunnelClientPage"));
-const FunnelDeckPage = lazy(() => import("./pages/FunnelDeckPage"));
-const FunnelFulfillmentPage = lazy(() => import("./pages/FunnelFulfillmentPage"));
-const FunnelInvestPage = lazy(() => import("./pages/FunnelInvestPage"));
-const FunnelKickoffPage = lazy(() => import("./pages/FunnelKickoffPage"));
-const FunnelAccessPage = lazy(() => import("./pages/FunnelAccessPage"));
+const FunnelBuilderPage = lazyRetry(() => import("./pages/FunnelBuilderPage"));
+const FunnelBookingPage = lazyRetry(() => import("./pages/FunnelBookingPage"));
+const FunnelOnboardingPage = lazyRetry(() => import("./pages/FunnelOnboardingPage"));
+const FunnelAdminPage = lazyRetry(() => import("./pages/FunnelAdminPage"));
+const FunnelClientPage = lazyRetry(() => import("./pages/FunnelClientPage"));
+const FunnelDeckPage = lazyRetry(() => import("./pages/FunnelDeckPage"));
+const FunnelFulfillmentPage = lazyRetry(() => import("./pages/FunnelFulfillmentPage"));
+const FunnelInvestPage = lazyRetry(() => import("./pages/FunnelInvestPage"));
+const FunnelKickoffPage = lazyRetry(() => import("./pages/FunnelKickoffPage"));
+const FunnelAccessPage = lazyRetry(() => import("./pages/FunnelAccessPage"));
 
 function PageLoader() {
   return (
