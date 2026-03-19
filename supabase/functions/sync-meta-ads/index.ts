@@ -24,6 +24,13 @@ function checkCallBudget(label: string) {
   }
 }
 
+class MetaTokenExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MetaTokenExpiredError";
+  }
+}
+
 async function fetchMeta(url: string, accessToken: string, label = "unknown"): Promise<MetaApiResponse> {
   checkCallBudget(label);
   metaApiCallCount++;
@@ -32,6 +39,17 @@ async function fetchMeta(url: string, accessToken: string, label = "unknown"): P
   const res = await fetch(`${url}${separator}access_token=${accessToken}`);
   if (!res.ok) {
     const errBody = await res.text();
+    // Detect expired/invalid token (OAuthException code 190)
+    try {
+      const errJson = JSON.parse(errBody);
+      if (errJson?.error?.code === 190 || errJson?.error?.type === "OAuthException") {
+        throw new MetaTokenExpiredError(
+          `Meta access token expired or invalid — regenerate in Business Manager. Details: ${errJson.error.message || errBody.substring(0, 200)}`
+        );
+      }
+    } catch (parseErr) {
+      if (parseErr instanceof MetaTokenExpiredError) throw parseErr;
+    }
     throw new Error(`Meta API ${res.status}: ${errBody.substring(0, 500)}`);
   }
   return res.json();
