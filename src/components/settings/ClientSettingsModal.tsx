@@ -447,6 +447,10 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="api-info" className="mt-4">
+            <ApiInfoTab client={client} settings={settings} />
+          </TabsContent>
+
           <TabsContent value="teams" className="space-y-4 mt-4">
             <div className="border-2 border-border p-4 space-y-4">
               <div>
