@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
       const start = Date.now();
       console.log(`[daily-master-sync] Step 6: Meta token health check`);
       try {
-        const metaToken = Deno.env.get("META_SHARED_ACCESS_TOKEN");
+        const metaToken = Deno.env.get("META_SHARED_ACCESS_TOKEN")?.replace(/\s*Debug\s*$/i, "").trim();
         if (metaToken) {
           // Call Meta debug_token to check expiry (15s timeout)
           const tokenController = new AbortController();

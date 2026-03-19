@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       const results: Record<string, any> = {};
 
       // ── Test Meta Graph API ──
-      const metaToken = client.meta_access_token || Deno.env.get('META_SHARED_ACCESS_TOKEN');
+      const metaToken = (client.meta_access_token || Deno.env.get('META_SHARED_ACCESS_TOKEN'))?.replace(/\s*Debug\s*$/i, "").trim();
       const metaAccountId = client.meta_ad_account_id;
       
       if (metaToken && metaAccountId) {

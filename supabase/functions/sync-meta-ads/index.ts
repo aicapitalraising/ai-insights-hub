@@ -483,7 +483,9 @@ Deno.serve(async (req) => {
     }
 
     // Use client-specific token, fall back to shared token
-    const accessToken = client.meta_access_token || Deno.env.get("META_SHARED_ACCESS_TOKEN");
+    // Trim whitespace and trailing "Debug" text that Graph API Explorer sometimes appends
+    const rawToken = client.meta_access_token || Deno.env.get("META_SHARED_ACCESS_TOKEN");
+    const accessToken = rawToken?.replace(/\s*Debug\s*$/i, "").trim();
     if (!accessToken) {
       return new Response(JSON.stringify({
         success: false,

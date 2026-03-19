@@ -51,7 +51,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const accessToken = client.meta_access_token || Deno.env.get("META_SHARED_ACCESS_TOKEN");
+    const rawToken = client.meta_access_token || Deno.env.get("META_SHARED_ACCESS_TOKEN");
+    const accessToken = rawToken?.replace(/\s*Debug\s*$/i, "").trim();
     if (!accessToken) {
       return new Response(JSON.stringify({ success: false, error: "No Meta access token" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
