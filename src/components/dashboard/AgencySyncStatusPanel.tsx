@@ -406,11 +406,11 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
           toast.error(`${c.name}: contact sync failed`);
         }
 
-        // Calendar
+        // Calendar (date range is hardcoded to 365 days inside the function)
         setBackfillProgress(`[${i + 1}/${ghlClients.length}] ${c.name}: syncing calendar...`);
         try {
           await supabase.functions.invoke('sync-calendar-appointments', {
-            body: { clientId: c.id, sinceDateDays: sinceDays },
+            body: { clientId: c.id },
           });
         } catch {}
 
@@ -439,11 +439,13 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
 
       toast.success(`Backfill complete for ${ghlClients.length} clients!`);
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['all-daily-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['calls'] });
       queryClient.invalidateQueries({ queryKey: ['funded-investors'] });
       queryClient.invalidateQueries({ queryKey: ['all-client-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['sync-health'] });
     } catch (err) {
       toast.error(`Backfill failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {

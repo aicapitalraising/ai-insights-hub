@@ -16,46 +16,88 @@ export type Database = {
     Tables: {
       ad_scripts: {
         Row: {
+          ad_format: string | null
+          angle: string | null
+          approved_at: string | null
+          approved_by: string | null
           body: string | null
+          body_copy: string | null
+          body_variants: Json | null
           brief_id: string | null
           client_id: string
           created_at: string
           cta: string | null
           duration_seconds: number | null
+          generated_by: string | null
+          headline: string | null
+          headlines: Json | null
           hook: string | null
           id: string
+          linked_meta_ad_id: string | null
           notes: string | null
-          script_type: string
+          performance_metrics: Json | null
+          platform: string | null
+          rejection_reason: string | null
+          script_body: string | null
+          script_type: string | null
           status: string
           title: string
           updated_at: string
         }
         Insert: {
+          ad_format?: string | null
+          angle?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           body?: string | null
+          body_copy?: string | null
+          body_variants?: Json | null
           brief_id?: string | null
           client_id: string
           created_at?: string
           cta?: string | null
           duration_seconds?: number | null
+          generated_by?: string | null
+          headline?: string | null
+          headlines?: Json | null
           hook?: string | null
           id?: string
+          linked_meta_ad_id?: string | null
           notes?: string | null
-          script_type?: string
+          performance_metrics?: Json | null
+          platform?: string | null
+          rejection_reason?: string | null
+          script_body?: string | null
+          script_type?: string | null
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
+          ad_format?: string | null
+          angle?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           body?: string | null
+          body_copy?: string | null
+          body_variants?: Json | null
           brief_id?: string | null
           client_id?: string
           created_at?: string
           cta?: string | null
           duration_seconds?: number | null
+          generated_by?: string | null
+          headline?: string | null
+          headlines?: Json | null
           hook?: string | null
           id?: string
+          linked_meta_ad_id?: string | null
           notes?: string | null
-          script_type?: string
+          performance_metrics?: Json | null
+          platform?: string | null
+          rejection_reason?: string | null
+          script_body?: string | null
+          script_type?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -1320,44 +1362,89 @@ export type Database = {
       }
       creative_briefs: {
         Row: {
+          ad_format: string | null
+          approved_at: string | null
+          approved_by: string | null
           client_id: string
           client_name: string
           created_at: string
+          creative_direction: string | null
           full_brief_json: Json | null
+          generated_by: string | null
+          generation_reason: string | null
           hook_patterns: string[] | null
           id: string
+          messaging_angles: Json | null
+          notes: string | null
+          objective: string | null
           offer_angles: string[] | null
+          performance_snapshot: Json | null
+          platform: string | null
           recommended_variations: Json | null
+          rejection_reason: string | null
           source: string
+          source_campaigns: Json | null
           status: string
+          target_audience: Json | null
+          title: string | null
           updated_at: string
           winning_ad_summary: Json | null
         }
         Insert: {
+          ad_format?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id: string
           client_name: string
           created_at?: string
+          creative_direction?: string | null
           full_brief_json?: Json | null
+          generated_by?: string | null
+          generation_reason?: string | null
           hook_patterns?: string[] | null
           id?: string
+          messaging_angles?: Json | null
+          notes?: string | null
+          objective?: string | null
           offer_angles?: string[] | null
+          performance_snapshot?: Json | null
+          platform?: string | null
           recommended_variations?: Json | null
+          rejection_reason?: string | null
           source?: string
+          source_campaigns?: Json | null
           status?: string
+          target_audience?: Json | null
+          title?: string | null
           updated_at?: string
           winning_ad_summary?: Json | null
         }
         Update: {
+          ad_format?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string
           client_name?: string
           created_at?: string
+          creative_direction?: string | null
           full_brief_json?: Json | null
+          generated_by?: string | null
+          generation_reason?: string | null
           hook_patterns?: string[] | null
           id?: string
+          messaging_angles?: Json | null
+          notes?: string | null
+          objective?: string | null
           offer_angles?: string[] | null
+          performance_snapshot?: Json | null
+          platform?: string | null
           recommended_variations?: Json | null
+          rejection_reason?: string | null
           source?: string
+          source_campaigns?: Json | null
           status?: string
+          target_audience?: Json | null
+          title?: string | null
           updated_at?: string
           winning_ad_summary?: Json | null
         }

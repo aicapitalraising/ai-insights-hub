@@ -210,12 +210,11 @@ serve(async (req) => {
           scriptInserts.push({
             client_id: client.id,
             brief_id: brief.id,
-            script_type: "video",
+            ad_format: "video",
             title: vs.title,
             hook: vs.hook,
-            body: vs.body,
+            script_body: vs.body,
             cta: vs.cta,
-            duration_seconds: vs.duration_seconds || 15,
             status: "draft",
           });
         }
@@ -223,10 +222,10 @@ serve(async (req) => {
           scriptInserts.push({
             client_id: client.id,
             brief_id: brief.id,
-            script_type: "static",
+            ad_format: "image",
             title: ss.title,
             hook: ss.headline,
-            body: ss.body,
+            body_copy: ss.body,
             cta: ss.cta,
             status: "draft",
           });

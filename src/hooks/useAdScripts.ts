@@ -6,14 +6,22 @@ export interface AdScript {
   id: string;
   client_id: string;
   brief_id: string | null;
-  script_type: 'video' | 'static';
+  /** ad_format: 'video' | 'image' | 'carousel' | 'story' */
+  ad_format: string | null;
   title: string;
+  headline: string | null;
   hook: string | null;
-  body: string | null;
+  /** Primary body text for static/image ads */
+  body_copy: string | null;
+  /** Full script body for video ads */
+  script_body: string | null;
   cta: string | null;
-  duration_seconds: number | null;
+  angle: string | null;
+  platform: string | null;
   notes: string | null;
   status: string;
+  rejection_reason: string | null;
+  generated_by: string | null;
   created_at: string;
   updated_at: string;
 }

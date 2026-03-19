@@ -36,10 +36,12 @@ function ScriptEditDialog({ script, open, onOpenChange }: { script: AdScript | n
   const [cta, setCta] = useState('');
   const [notes, setNotes] = useState('');
 
+  const isVideo = script?.ad_format === 'video';
+
   useState(() => {
     if (script) {
       setHook(script.hook || '');
-      setBody(script.body || '');
+      setBody(isVideo ? (script.script_body || '') : (script.body_copy || ''));
       setCta(script.cta || '');
       setNotes(script.notes || '');
     }
@@ -48,7 +50,10 @@ function ScriptEditDialog({ script, open, onOpenChange }: { script: AdScript | n
   if (!script) return null;
 
   const handleSave = () => {
-    updateScript.mutate({ id: script.id, hook, body, cta, notes });
+    const updates = isVideo
+      ? { id: script.id, hook, script_body: body, cta, notes }
+      : { id: script.id, hook, body_copy: body, cta, notes };
+    updateScript.mutate(updates);
     onOpenChange(false);
   };
 
@@ -63,19 +68,18 @@ function ScriptEditDialog({ script, open, onOpenChange }: { script: AdScript | n
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {script.script_type === 'video' ? <Video className="h-4 w-4" /> : <Type className="h-4 w-4" />}
+            {isVideo ? <Video className="h-4 w-4" /> : <Type className="h-4 w-4" />}
             {script.title}
-            <Badge variant="outline" className="ml-2">{script.script_type}</Badge>
-            {script.duration_seconds && <Badge variant="secondary">{script.duration_seconds}s</Badge>}
+            {script.ad_format && <Badge variant="outline" className="ml-2">{script.ad_format}</Badge>}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">{script.script_type === 'video' ? 'Hook (First 3 seconds)' : 'Headline'}</label>
+            <label className="text-sm font-medium mb-1 block">{isVideo ? 'Hook (First 3 seconds)' : 'Headline'}</label>
             <Textarea value={hook} onChange={e => setHook(e.target.value)} rows={2} />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">{script.script_type === 'video' ? 'Body Script' : 'Primary Text'}</label>
+            <label className="text-sm font-medium mb-1 block">{isVideo ? 'Body Script' : 'Primary Text'}</label>
             <Textarea value={body} onChange={e => setBody(e.target.value)} rows={5} />
           </div>
           <div>
@@ -137,7 +141,7 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
 
   const filteredScripts = useMemo(() => {
     return scripts.filter((s) => {
-      if (scriptTypeFilter !== 'all' && s.script_type !== scriptTypeFilter) return false;
+      if (scriptTypeFilter !== 'all' && s.ad_format !== scriptTypeFilter) return false;
       if (searchQuery && !s.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
@@ -378,11 +382,11 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
                   <p className="text-xs text-muted-foreground">Total Scripts</p>
                 </Card>
                 <Card className="p-4 text-center">
-                  <p className="text-2xl font-bold">{scripts.filter(s => s.script_type === 'video').length}</p>
+                  <p className="text-2xl font-bold">{scripts.filter(s => s.ad_format === 'video').length}</p>
                   <p className="text-xs text-muted-foreground">Video Scripts</p>
                 </Card>
                 <Card className="p-4 text-center">
-                  <p className="text-2xl font-bold">{scripts.filter(s => s.script_type === 'static').length}</p>
+                  <p className="text-2xl font-bold">{scripts.filter(s => s.ad_format === 'image' || !s.ad_format).length}</p>
                   <p className="text-xs text-muted-foreground">Static Ad Copy</p>
                 </Card>
                 <Card className="p-4 text-center">
@@ -405,7 +409,7 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {script.script_type === 'video' ? (
+                            {script.ad_format === 'video' ? (
                               <Video className="h-4 w-4 text-blue-500" />
                             ) : (
                               <Type className="h-4 w-4 text-green-500" />
@@ -419,8 +423,8 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
                             {script.status === 'approved' && (
                               <Badge variant="default" className="text-xs">approved</Badge>
                             )}
-                            {script.duration_seconds && (
-                              <Badge variant="secondary" className="text-xs">{script.duration_seconds}s</Badge>
+                            {script.ad_format && (
+                              <Badge variant="secondary" className="text-xs">{script.ad_format}</Badge>
                             )}
                           </div>
                         </div>
@@ -431,14 +435,14 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
                       <CardContent className="space-y-2">
                         {script.hook && (
                           <div>
-                            <p className="text-xs font-medium text-muted-foreground">{script.script_type === 'video' ? 'Hook' : 'Headline'}</p>
+                            <p className="text-xs font-medium text-muted-foreground">{script.ad_format === 'video' ? 'Hook' : 'Headline'}</p>
                             <p className="text-sm line-clamp-2">{script.hook}</p>
                           </div>
                         )}
-                        {script.body && (
+                        {(script.body_copy || script.script_body) && (
                           <div>
                             <p className="text-xs font-medium text-muted-foreground">Body</p>
-                            <p className="text-sm line-clamp-3">{script.body}</p>
+                            <p className="text-sm line-clamp-3">{script.script_body || script.body_copy}</p>
                           </div>
                         )}
                         <div className="flex items-center gap-2 pt-2">

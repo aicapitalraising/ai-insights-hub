@@ -73,7 +73,7 @@ export function useCreativeBriefs(clientId?: string) {
     queryKey: ['creative_briefs', clientId],
     queryFn: async () => {
       let query = supabase
-        .from('creative_briefs' as any)
+        .from('creative_briefs')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -91,7 +91,7 @@ export function useAdScripts(briefId?: string) {
     queryKey: ['ad_scripts', briefId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('ad_scripts' as any)
+        .from('ad_scripts')
         .select('*')
         .eq('brief_id', briefId!)
         .order('created_at', { ascending: false });
@@ -107,7 +107,7 @@ export function useAdScriptsByClient(clientId?: string) {
     queryKey: ['ad_scripts_client', clientId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('ad_scripts' as any)
+        .from('ad_scripts')
         .select('*')
         .eq('client_id', clientId!)
         .order('created_at', { ascending: false });
@@ -181,7 +181,7 @@ export function useUpdateBriefStatus() {
       const update: Record<string, unknown> = { status };
       if (rejectionReason) update.rejection_reason = rejectionReason;
       const { data, error } = await supabase
-        .from('creative_briefs' as any)
+        .from('creative_briefs')
         .update(update)
         .eq('id', resolvedBriefId)
         .select()
@@ -207,7 +207,7 @@ export function usePendingBriefsCount() {
     queryKey: ['creative_briefs_pending_count'],
     queryFn: async () => {
       const { count, error } = await supabase
-        .from('creative_briefs' as any)
+        .from('creative_briefs')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
@@ -224,7 +224,7 @@ export function useUpdateScriptStatus() {
       const update: Record<string, unknown> = { status };
       if (rejectionReason) update.rejection_reason = rejectionReason;
       const { data, error } = await supabase
-        .from('ad_scripts' as any)
+        .from('ad_scripts')
         .update(update)
         .eq('id', scriptId)
         .select()
