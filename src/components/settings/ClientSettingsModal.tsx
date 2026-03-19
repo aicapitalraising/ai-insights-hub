@@ -25,7 +25,6 @@ import { HubSpotIntegrationSection } from './HubSpotIntegrationSection';
 import { MeetGeekIntegrationSection } from './MeetGeekIntegrationSection';
 import { FathomIntegrationSection } from './FathomIntegrationSection';
 import { SyncHealthIndicator, getSyncStatus } from './SyncHealthIndicator';
-import { ApiInfoTab } from './ApiInfoTab';
 import { useSyncQueue } from '@/hooks/useSyncQueue';
 import { DollarSign, Target, Plug, Loader2, RefreshCw, CheckCircle, XCircle, Users, Lock, Eye, EyeOff, AlertTriangle, ListOrdered, MessageSquare as MessageSquareIcon } from 'lucide-react';
 interface ClientSettingsModalProps {
@@ -435,9 +434,8 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         </DialogHeader>
 
         <Tabs defaultValue="kpis" className="mt-4">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="kpis">KPIs</TabsTrigger>
-            <TabsTrigger value="api-info">API Info</TabsTrigger>
             <TabsTrigger value="teams">Teams</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="integrations">Integrations</TabsTrigger>
@@ -446,10 +444,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
             <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="api-info" className="mt-4">
-            <ApiInfoTab client={client} settings={settings} />
-          </TabsContent>
 
           <TabsContent value="teams" className="space-y-4 mt-4">
             <div className="border-2 border-border p-4 space-y-4">
