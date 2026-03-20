@@ -27,6 +27,7 @@ import { FathomIntegrationSection } from './FathomIntegrationSection';
 import { SyncHealthIndicator, getSyncStatus } from './SyncHealthIndicator';
 import { useSyncQueue } from '@/hooks/useSyncQueue';
 import { DollarSign, Target, Plug, Loader2, RefreshCw, CheckCircle, XCircle, Users, Lock, Eye, EyeOff, AlertTriangle, ListOrdered, MessageSquare as MessageSquareIcon } from 'lucide-react';
+import { SlackChannelMappingSection } from './SlackChannelMappingSection';
 interface ClientSettingsModalProps {
   client: Client | null;
   open: boolean;
@@ -1215,15 +1216,20 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
               </div>
             </div>
 
-            {/* Slack Channel Mapping */}
+            {/* Multi-Channel Slack Integration */}
+            <div className="border-2 border-border p-4 space-y-4">
+              <SlackChannelMappingSection clientId={client.id} />
+            </div>
+
+            {/* Legacy: Slack Bot Channel (kept for backward compat) */}
             <div className="border-2 border-border p-4 space-y-4">
               <div>
                 <h4 className="font-medium mb-1 flex items-center gap-2">
                   <MessageSquareIcon className="h-4 w-4" />
-                  Slack Bot Channel (for @HPA commands)
+                  Legacy Slack Bot Channel
                 </h4>
                 <p className="text-sm text-muted-foreground mb-3">
-                  The Slack channel where clients can @mention the HPA bot to create tasks, ask about data, and manage their account. This channel is tied specifically to this client.
+                  Single channel fallback for @HPA commands. Use the multi-channel mapping above for new setups.
                 </p>
               </div>
               <div className="space-y-2">
@@ -1234,22 +1240,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                   onChange={(e) => setSlackChannelId(e.target.value)}
                   placeholder="C0123456789"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Right-click the channel in Slack → View channel details → copy the Channel ID at the bottom
-                </p>
-              </div>
-            </div>
-
-            {/* Slack Review Notifications */}
-            <div className="border-2 border-border p-4 space-y-4">
-              <div>
-                <h4 className="font-medium mb-1 flex items-center gap-2">
-                  <MessageSquareIcon className="h-4 w-4" />
-                  Slack Review Notifications
-                </h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  When a task moves to "Review", a notification is sent to this Slack channel with the task title, description, and comments.
-                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slackReviewChannelId">Slack Review Channel ID</Label>
@@ -1259,9 +1249,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                   onChange={(e) => setSlackReviewChannelId(e.target.value)}
                   placeholder="C0123456789"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Right-click the channel in Slack → View channel details → copy the Channel ID at the bottom
-                </p>
               </div>
             </div>
           </TabsContent>

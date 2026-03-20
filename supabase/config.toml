@@ -149,3 +149,6 @@ verify_jwt = false
 
 [functions.diagnose-ghl-sync]
 verify_jwt = false
+
+[functions.slack-notify]
+verify_jwt = false
