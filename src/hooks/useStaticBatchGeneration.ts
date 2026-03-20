@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import type { StaticBatchConfig, GeneratedAd, AdStyle, Client } from '@/types';
 import { toast } from 'sonner';
 
@@ -104,14 +104,15 @@ export function useStaticBatchGeneration({
             stylePrompt: style.prompt_template,
             styleName: style.name,
             aspectRatio: ad.aspectRatio,
-            productDescription: config.productDescription || projectOfferDescription || client?.description,
+            productDescription: config.productDescription || projectOfferDescription || client?.offer_description || client?.description,
+            productUrl: config.productUrl || client?.product_url,
             brandColors: config.brandColors.length > 0 ? config.brandColors : client?.brand_colors,
             projectId,
             clientId,
             referenceImages: style.reference_images || [],
             primaryReferenceImage: ad.referenceImageUrl || undefined,
             characterImageUrl: config.characterImageUrl || undefined,
-            offerDescription: projectOfferDescription || client?.description,
+            offerDescription: projectOfferDescription || client?.offer_description,
             includeDisclaimer: config.includeDisclaimer,
             disclaimerText: config.disclaimerText,
             strictBrandAdherence: config.strictBrandAdherence,

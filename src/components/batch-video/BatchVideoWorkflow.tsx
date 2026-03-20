@@ -45,7 +45,7 @@ export function BatchVideoWorkflow({ projectId: propProjectId, clientId: propCli
     const platformRatio = platform === 'tiktok-reels' ? '9:16' as const : platform === 'square' ? '1:1' as const : '16:9' as const;
     
     // Wire brand guide context into config
-    const brandOffer = offerDescription || client?.description;
+    const brandOffer = offerDescription || client?.offer_description || client?.description;
     
     updateConfig({
       projectId: finalProjectId, scriptId, scriptContent, clientId: finalClientId,
@@ -169,7 +169,7 @@ export function BatchVideoWorkflow({ projectId: propProjectId, clientId: propCli
               ))}
             </div>
           )}
-          {client.description && <span className="truncate max-w-xs">{client.description}</span>}
+          {client.offer_description && <span className="truncate max-w-xs">{client.offer_description}</span>}
         </div>
       )}
 
@@ -206,7 +206,7 @@ export function BatchVideoWorkflow({ projectId: propProjectId, clientId: propCli
                 brandContext={client ? {
                   colors: client.brand_colors || [],
                   fonts: client.brand_fonts || [],
-                  offer: client.description || '',
+                  offer: client.offer_description || client.description || '',
                 } : undefined}
               />
             )}

@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, Loader2, Image as ImageIcon, Check, Columns, Grid, CheckSquare, Square, Wand2, LayoutGrid, Eye, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { TemplateGallery, type AdTemplate, type TemplateCustomization } from '@/components/static-ads/TemplateGallery';
@@ -96,7 +96,7 @@ type GeneratedAd = {
   selected: boolean;
 };
 
-export default function StaticAdsPage({ embedded = false }: { embedded?: boolean }) {
+export default function StaticAdsPage() {
   const { data: clients } = useClients();
   const { toast } = useToast();
 
@@ -180,7 +180,7 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
           prompt: variantPrompt,
           styleName: style.label,
           aspectRatio: getAspectRatio(ad.format),
-          productDescription: selectedClient?.description,
+          productDescription: selectedClient?.offer_description || selectedClient?.description,
           brandColors,
           clientId: selectedClientId || undefined,
         },
@@ -252,7 +252,9 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
       if (framework) {
         variantPrompt += `\nCopy Framework: ${framework.label} — ${framework.structure}`;
       }
-      if (selectedClient?.description) {
+      if (selectedClient?.offer_description) {
+        variantPrompt += `\nOffer/Product: ${selectedClient.offer_description}`;
+      } else if (selectedClient?.description) {
         variantPrompt += `\nProduct: ${selectedClient.description}`;
       }
       if (variantCount > 1) {
@@ -266,7 +268,8 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
             prompt: variantPrompt,
             styleName: style.label,
             aspectRatio: getAspectRatio(ad.format),
-            productDescription: selectedClient?.description,
+            productDescription: selectedClient?.offer_description || selectedClient?.description,
+            productUrl: selectedClient?.product_url,
             brandColors,
             clientId: selectedClientId || undefined,
           },
@@ -444,7 +447,8 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
     );
   };
 
-  const content = (
+  return (
+    <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -492,9 +496,9 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedClient?.description && (
+                  {selectedClient?.offer_description && (
                     <p className="text-[10px] text-muted-foreground line-clamp-2">
-                      Info: {selectedClient.description}
+                      Offer: {selectedClient.offer_description}
                     </p>
                   )}
                 </Card>
@@ -743,8 +747,6 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
           </TabsContent>
         </Tabs>
       </div>
+    </AppLayout>
   );
-
-  if (embedded) return content;
-  return <AppLayout>{content}</AppLayout>;
 }

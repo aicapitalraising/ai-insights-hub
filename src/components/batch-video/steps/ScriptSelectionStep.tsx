@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowRight, FileText, Wand2, Check } from 'lucide-react';
 import { useClients, useClient } from '@/hooks/useClients';
 import { useProjects, useProject } from '@/hooks/useProjects';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { IgImportSection } from '../IgImportSection';
@@ -60,7 +60,7 @@ export function ScriptSelectionStep({ onComplete, isProcessing }: ScriptSelectio
   const { data: projects = [] } = useProjects(selectedClientId);
   const { data: selectedClient } = useClient(selectedClientId);
   const { data: selectedProject } = useProject(selectedProjectId);
-  const offerDescription = selectedProject?.offer_description || selectedClient?.description || '';
+  const offerDescription = selectedProject?.offer_description || selectedClient?.offer_description || selectedClient?.description || '';
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -77,7 +77,7 @@ export function ScriptSelectionStep({ onComplete, isProcessing }: ScriptSelectio
       const { data, error } = await supabase
         .from('scripts').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
       if (error) throw error;
-      setScripts((data ?? []) as Script[]);
+      setScripts(data || []);
     } catch {
       toast.error('Failed to load scripts');
     } finally {

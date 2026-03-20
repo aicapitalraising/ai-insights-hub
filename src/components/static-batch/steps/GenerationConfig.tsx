@@ -11,7 +11,7 @@ import type { StaticBatchConfig, AspectRatio } from '@/types';
 import { useAvatars } from '@/hooks/useAvatars';
 import { useAvatarLooks } from '@/hooks/useAvatarLooks';
 import { useAdStyles } from '@/hooks/useAdStyles';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface GenerationConfigProps {

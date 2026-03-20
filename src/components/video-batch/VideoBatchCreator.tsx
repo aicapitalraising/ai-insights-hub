@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, Settings2, Sparkles, Video, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { useAvatars } from '@/hooks/useAvatars';
 import { useVideoGeneration } from '@/hooks/useVideoGeneration';
 import { useGeminiKey } from '@/hooks/useGeminiKey';

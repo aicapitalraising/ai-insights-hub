@@ -23,12 +23,12 @@ interface ProjectSetupProps {
 export function ProjectSetup({ config, updateConfig, client, projectOfferDescription, onOfferChange, onNext, onBack }: ProjectSetupProps) {
   const { data: avatars = [] } = useAvatars(client?.id);
   
-  const [editableOffer, setEditableOffer] = useState(projectOfferDescription || client?.description || '');
+  const [editableOffer, setEditableOffer] = useState(projectOfferDescription || client?.offer_description || '');
   const [editableDescription, setEditableDescription] = useState(config.productDescription || client?.description || '');
 
   useEffect(() => {
-    if (!editableOffer && (projectOfferDescription || client?.description)) {
-      setEditableOffer(projectOfferDescription || client?.description || '');
+    if (!editableOffer && (projectOfferDescription || client?.offer_description)) {
+      setEditableOffer(projectOfferDescription || client?.offer_description || '');
     }
     if (!editableDescription && client?.description) {
       setEditableDescription(client.description);
@@ -49,8 +49,8 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
   // Auto-apply brand assets from client
   const brandColors = client?.brand_colors || [];
   const brandFonts = client?.brand_fonts || [];
-  const productUrl = '';
-  const productImages: string[] = [];
+  const productUrl = client?.product_url || '';
+  const productImages = client?.product_images || [];
 
   const handleSelectAvatar = (avatar: Avatar) => {
     updateConfig({ characterImageUrl: avatar.image_url });
