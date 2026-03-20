@@ -99,13 +99,13 @@ export default function AvatarsPage({ embedded = false }: { embedded?: boolean }
   };
 
   if (isLoading) {
-    return (
-      <AppLayout>
+    const loader = (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </AppLayout>
     );
+    if (embedded) return loader;
+    return <AppLayout>{loader}</AppLayout>;
   }
 
   return (
