@@ -27,6 +27,7 @@ import { FathomIntegrationSection } from './FathomIntegrationSection';
 import { SyncHealthIndicator, getSyncStatus } from './SyncHealthIndicator';
 import { useSyncQueue } from '@/hooks/useSyncQueue';
 import { DollarSign, Target, Plug, Loader2, RefreshCw, CheckCircle, XCircle, Users, Lock, Eye, EyeOff, AlertTriangle, ListOrdered, MessageSquare as MessageSquareIcon } from 'lucide-react';
+import { SlackChannelMappingSection } from './SlackChannelMappingSection';
 interface ClientSettingsModalProps {
   client: Client | null;
   open: boolean;
