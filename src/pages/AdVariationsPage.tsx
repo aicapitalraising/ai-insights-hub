@@ -123,7 +123,7 @@ function useCustomAds() {
   });
 }
 
-export default function AdVariationsPage() {
+export default function AdVariationsPage({ embedded = false }: { embedded?: boolean }) {
   const [sourceMode, setSourceMode] = useState<SourceMode>('upload');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);

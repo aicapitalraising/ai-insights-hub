@@ -743,6 +743,8 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

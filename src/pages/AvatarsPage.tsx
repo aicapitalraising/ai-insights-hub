@@ -32,7 +32,7 @@ import { GenerateLookDialog } from '@/components/avatars/GenerateLookDialog';
 import { toast } from 'sonner';
 import type { Avatar } from '@/types';
 
-export default function AvatarsPage() {
+export default function AvatarsPage({ embedded = false }: { embedded?: boolean }) {
   const { data: avatars = [], isLoading } = useAllAvatars();
   const { data: clients = [] } = useClients();
   const deleteAvatar = useDeleteAvatar();
