@@ -272,8 +272,7 @@ export default function VideoEditorPage({ embedded = false }: { embedded?: boole
     return <AppLayout>{projectHome}</AppLayout>;
   }
 
-  return (
-    <AppLayout>
+  const editorContent = (
       <div className="flex flex-col h-[calc(100vh-48px)] -m-6 bg-[hsl(var(--background))]">
         {/* Editor Header */}
         <EditorHeader
