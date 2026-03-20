@@ -447,8 +447,7 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
     );
   };
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
