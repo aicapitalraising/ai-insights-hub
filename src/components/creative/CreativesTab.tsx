@@ -839,6 +839,48 @@ export function CreativesTab() {
             <AvatarsPage embedded />
           </Suspense>
         </TabsContent>
+
+        {/* Ad Scraping */}
+        <TabsContent value="ad-scraping" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading ad scraping..." />}>
+            <AdScrapingPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Instagram Intel */}
+        <TabsContent value="instagram-intel" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading Instagram Intel..." />}>
+            <InstagramIntelPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Video Editor */}
+        <TabsContent value="video-editor" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading video editor..." />}>
+            <VideoEditorPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* B-Roll Library */}
+        <TabsContent value="broll" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading B-Roll library..." />}>
+            <BrollPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* History */}
+        <TabsContent value="history" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading history..." />}>
+            <HistoryPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Export Hub */}
+        <TabsContent value="export" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading export hub..." />}>
+            <ExportHubPage embedded />
+          </Suspense>
+        </TabsContent>
       </Tabs>
     </div>
   );
