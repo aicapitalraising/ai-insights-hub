@@ -780,7 +780,7 @@ export function CreativesTab() {
         {/* Static Ads */}
         <TabsContent value="static-ads" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading static ads..." />}>
-            <StaticAdsPage />
+            <StaticAdsPage embedded />
           </Suspense>
         </TabsContent>
 
