@@ -375,8 +375,7 @@ export default function AdVariationsPage({ embedded = false }: { embedded?: bool
   const clearUpload = () => { setUploadedImage(null); setUploadedFile(null); setGeneratingVariations([]); };
   const completedCount = generatingVariations.filter(v => v.status === 'completed').length;
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
