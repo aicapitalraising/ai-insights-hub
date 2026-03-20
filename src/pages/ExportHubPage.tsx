@@ -17,7 +17,7 @@ import type { Asset } from '@/types';
 
 type ExportFormat = 'ad-platform' | 'client-delivery' | 'raw';
 
-export default function ExportHubPage() {
+export default function ExportHubPage({ embedded = false }: { embedded?: boolean }) {
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
