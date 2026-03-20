@@ -55,6 +55,12 @@ const StaticAdsPage = lazy(() => import('@/pages/StaticAdsPage'));
 const BatchVideoWorkflow = lazy(() => import('@/components/batch-video/BatchVideoWorkflow').then(m => ({ default: m.BatchVideoWorkflow })));
 const AdVariationsPage = lazy(() => import('@/pages/AdVariationsPage'));
 const AvatarsPage = lazy(() => import('@/pages/AvatarsPage'));
+const AdScrapingPage = lazy(() => import('@/pages/AdScrapingPage'));
+const InstagramIntelPage = lazy(() => import('@/pages/InstagramIntelPage'));
+const VideoEditorPage = lazy(() => import('@/pages/VideoEditorPage'));
+const BrollPage = lazy(() => import('@/pages/BrollPage'));
+const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
+const ExportHubPage = lazy(() => import('@/pages/ExportHubPage'));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
