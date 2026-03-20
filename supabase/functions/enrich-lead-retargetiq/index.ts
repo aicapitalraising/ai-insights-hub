@@ -840,6 +840,12 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error('Enrichment error:', err);
+    // Try to mark as failed
+    try {
+      const supabase2 = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const body = await req.clone().json().catch(() => ({}));
+      await updateEnrichmentStatus(supabase2, body.client_id, body.lead_id, body.external_id, 'failed');
+    } catch {}
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
