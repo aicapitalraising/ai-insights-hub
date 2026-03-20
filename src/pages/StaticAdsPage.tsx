@@ -96,7 +96,7 @@ type GeneratedAd = {
   selected: boolean;
 };
 
-export default function StaticAdsPage() {
+export default function StaticAdsPage({ embedded = false }: { embedded?: boolean }) {
   const { data: clients } = useClients();
   const { toast } = useToast();
 
