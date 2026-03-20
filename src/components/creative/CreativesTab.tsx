@@ -242,6 +242,30 @@ export function CreativesTab() {
             <User className="h-4 w-4" />
             Avatars
           </TabsTrigger>
+          <TabsTrigger value="ad-scraping" className="gap-2">
+            <Radar className="h-4 w-4" />
+            Ad Scraping
+          </TabsTrigger>
+          <TabsTrigger value="instagram-intel" className="gap-2">
+            <Instagram className="h-4 w-4" />
+            IG Intel
+          </TabsTrigger>
+          <TabsTrigger value="video-editor" className="gap-2">
+            <Scissors className="h-4 w-4" />
+            Video Editor
+          </TabsTrigger>
+          <TabsTrigger value="broll" className="gap-2">
+            <Film className="h-4 w-4" />
+            B-Roll
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            History
+          </TabsTrigger>
+          <TabsTrigger value="export" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="approvals" className="mt-4 space-y-6">
