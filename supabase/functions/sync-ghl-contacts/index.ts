@@ -1340,7 +1340,10 @@ async function syncClientContacts(
           // Get opportunity for this contact to sync opportunity data
           const contactOpportunity = opportunityByContactId.get(contact.id);
           const syncResult = await syncContactToDatabase(supabase, client.id, contact, contactOpportunity, fieldNameMap);
-          if (syncResult.action === 'created') result.created++;
+          if (syncResult.action === 'created') {
+            result.created++;
+            triggerEnrichment(client.id, contact);
+          }
           else if (syncResult.action === 'updated') result.updated++;
           else result.skipped++;
           
