@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAllCreatives } from '@/hooks/useAllCreatives';
 import { useClients, Client } from '@/hooks/useClients';
@@ -43,14 +43,25 @@ import {
   Sparkles,
   CheckSquare,
   Download,
+  Film,
+  Wand2,
+  User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Lazy-load sub-section page components
+const CreativeBriefs = lazy(() => import('@/pages/CreativeBriefs'));
+const StaticAdsPage = lazy(() => import('@/pages/StaticAdsPage'));
+const BatchVideoWorkflow = lazy(() => import('@/components/batch-video/BatchVideoWorkflow').then(m => ({ default: m.BatchVideoWorkflow })));
+const AdVariationsPage = lazy(() => import('@/pages/AdVariationsPage'));
+const AvatarsPage = lazy(() => import('@/pages/AvatarsPage'));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
 }
 
 export function CreativesTab() {
+  const [activeSection, setActiveSection] = useState('approvals');
   const { data: creatives = [], isLoading: creativesLoading } = useAllCreatives();
   const { data: clients = [] } = useClients();
   const updateStatus = useUpdateCreativeStatus();
