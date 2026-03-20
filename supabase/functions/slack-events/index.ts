@@ -11,6 +11,13 @@ const corsHeaders = {
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const SLACK_GATEWAY_URL = "https://connector-gateway.lovable.dev/slack/api";
 
+interface Env {
+  LOVABLE_API_KEY: string;
+  SLACK_API_KEY: string;
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,6 +32,8 @@ serve(async (req) => {
   if (!SLACK_SIGNING_SECRET) throw new Error("SLACK_SIGNING_SECRET not configured");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   if (!SLACK_API_KEY) throw new Error("SLACK_API_KEY not configured");
+
+  const env: Env = { LOVABLE_API_KEY, SLACK_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY };
 
   const rawBody = await req.text();
 
@@ -65,59 +74,304 @@ serve(async (req) => {
       return new Response("ok", { status: 200, headers: corsHeaders });
     }
 
-    // Only handle app_mention events
-    if (event.type === "app_mention") {
-      const processingPromise = handleMention(event, {
-        LOVABLE_API_KEY,
-        SLACK_API_KEY,
-        SUPABASE_URL,
-        SUPABASE_SERVICE_ROLE_KEY,
-      });
+    // Process asynchronously — return 200 immediately
+    const processingPromise = routeEvent(event, env);
+    processingPromise.catch((err) => console.error("Error processing event:", err));
 
-      processingPromise.catch((err) =>
-        console.error("Error processing mention:", err)
-      );
-
-      return new Response("ok", { status: 200, headers: corsHeaders });
-    }
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   return new Response("ok", { status: 200, headers: corsHeaders });
 });
 
 // -------------------------------------------------------------------
-// Core handler for @HPA mentions
+// Event Router: dispatches based on event type
 // -------------------------------------------------------------------
-interface Env {
-  LOVABLE_API_KEY: string;
-  SLACK_API_KEY: string;
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_ROLE_KEY: string;
-}
-
-async function handleMention(event: any, env: Env) {
+async function routeEvent(event: any, env: Env) {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
   const channelId = event.channel;
-  const threadTs = event.thread_ts || event.ts;
-  const userText = event.text.replace(/<@[A-Z0-9]+>/g, "").trim();
-  const slackUserId = event.user;
 
-  // Post a thinking indicator
-  const thinkingMsg = await postSlackMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channelId, threadTs, "🤔 Thinking...");
+  // Look up channel mapping
+  const { data: mapping } = await supabase
+    .from("slack_channel_mappings")
+    .select("*")
+    .eq("channel_id", channelId)
+    .maybeSingle();
 
-  // Look up which client this channel belongs to (if any)
-  const { data: settingsRows } = await supabase
+  // Also check legacy client_settings mapping
+  const { data: legacySettings } = await supabase
     .from("client_settings")
     .select("client_id")
     .or(`slack_channel_id.eq.${channelId},slack_review_channel_id.eq.${channelId}`)
     .limit(1);
 
-  const scopedClientId = settingsRows?.[0]?.client_id || null;
+  const clientId = mapping?.client_id || legacySettings?.[0]?.client_id || null;
 
-  // Look up the Slack user's identity
+  if (event.type === "app_mention") {
+    await handleMention(event, env, supabase, clientId, mapping);
+  } else if (event.type === "message" && !event.subtype) {
+    // Regular message — log and optionally analyze
+    await handleMessage(event, env, supabase, clientId, mapping);
+  }
+}
+
+// -------------------------------------------------------------------
+// Handle regular messages: log activity + AI analysis
+// -------------------------------------------------------------------
+async function handleMessage(event: any, env: Env, supabase: any, clientId: string | null, mapping: any) {
+  const channelId = event.channel;
+  const messageTs = event.ts;
+  const threadTs = event.thread_ts || null;
+  const userId = event.user;
+  const text = event.text || "";
+
+  // Skip very short or empty messages
+  if (text.trim().length < 3) return;
+
+  // Get user info
+  const slackUser = await getSlackUserInfo(env.LOVABLE_API_KEY, env.SLACK_API_KEY, userId);
+  const userName = slackUser?.real_name || slackUser?.name || "Unknown";
+
+  // Log the message as activity
+  const { error: logError } = await supabase.from("slack_activity_log").upsert({
+    client_id: clientId,
+    channel_id: channelId,
+    message_ts: messageTs,
+    thread_ts: threadTs,
+    user_id: userId,
+    user_name: userName,
+    message_text: text,
+    message_type: event.files ? "file_share" : "message",
+  }, { onConflict: "channel_id,message_ts" });
+
+  if (logError) {
+    console.error("Failed to log slack activity:", logError);
+  }
+
+  // If monitoring is disabled for this channel, stop here
+  if (mapping && !mapping.monitor_messages) return;
+
+  // If auto_create_tasks is enabled, run AI analysis
+  if (mapping?.auto_create_tasks && clientId) {
+    await analyzeMessageForTasks(event, env, supabase, clientId, text, userName, channelId, messageTs, threadTs);
+  }
+}
+
+// -------------------------------------------------------------------
+// AI Message Analysis: detect actionable items
+// -------------------------------------------------------------------
+async function analyzeMessageForTasks(
+  event: any, env: Env, supabase: any, clientId: string,
+  text: string, userName: string, channelId: string, messageTs: string, threadTs: string | null
+) {
+  try {
+    const response = await fetch(AI_GATEWAY, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `You analyze Slack messages for a marketing agency. Determine if this message contains an actionable task, request, or action item.
+
+Rules:
+- Only flag messages that are clear requests, tasks, or action items
+- Casual conversation, greetings, status updates, questions should be "none"
+- Look for: "can you", "please", "need to", "let's", "TODO", deadlines, deliverable requests
+- If it references an existing task (mentions task title or ID), classify as "update_task"
+- If it's a new actionable request, classify as "create_task"`,
+          },
+          { role: "user", content: text },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "analyze_message",
+            description: "Analyze the message for actionable content",
+            parameters: {
+              type: "object",
+              properties: {
+                action: { type: "string", enum: ["none", "create_task", "update_task"] },
+                confidence: { type: "number", description: "0-1 confidence score" },
+                task_title: { type: "string", description: "Suggested task title if action is create_task" },
+                task_priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
+                update_note: { type: "string", description: "Comment to add if action is update_task" },
+              },
+              required: ["action", "confidence"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "analyze_message" } },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI analysis failed:", await response.text());
+      return;
+    }
+
+    const data = await response.json();
+    let analysis = { action: "none", confidence: 0, task_title: "", task_priority: "medium", update_note: "" };
+
+    try {
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall) {
+        analysis = JSON.parse(toolCall.function.arguments);
+      }
+    } catch { /* use defaults */ }
+
+    // Update the activity log with AI analysis
+    await supabase.from("slack_activity_log")
+      .update({ ai_analysis: analysis })
+      .eq("channel_id", channelId)
+      .eq("message_ts", messageTs);
+
+    // Only act on high-confidence detections
+    if (analysis.confidence < 0.7) return;
+
+    if (analysis.action === "create_task" && analysis.task_title) {
+      const links = extractLinks(text);
+      const images = extractImages(event);
+
+      let description = text;
+      if (links.length > 0) description += `\n\n🔗 Links:\n${links.map(l => `- ${l}`).join("\n")}`;
+      if (images.length > 0) description += `\n\n🖼️ Attached images:\n${images.map(img => `- ${img}`).join("\n")}`;
+
+      const { data: newTask, error } = await supabase.from("tasks").insert({
+        title: analysis.task_title,
+        description,
+        client_id: clientId,
+        priority: analysis.task_priority || "medium",
+        stage: "client_tasks",
+        status: "todo",
+        visible_to_client: true,
+        created_by: `Slack Auto (${userName})`,
+      }).select().single();
+
+      if (!error && newTask) {
+        // Update activity log with linked task
+        await supabase.from("slack_activity_log")
+          .update({ linked_task_id: newTask.id, message_type: "task_action" })
+          .eq("channel_id", channelId)
+          .eq("message_ts", messageTs);
+
+        // React to the message to indicate task was created
+        await reactToMessage(env, channelId, messageTs, "white_check_mark");
+
+        // Reply in thread
+        const replyTs = threadTs || messageTs;
+        await postSlackMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channelId, replyTs,
+          `📋 *Task auto-created:* ${newTask.title}\n🎯 Priority: ${analysis.task_priority}\n👤 From: ${userName}`
+        );
+      }
+    } else if (analysis.action === "update_task" && analysis.update_note) {
+      // Try to find the most recent relevant open task for this client
+      const { data: recentTasks } = await supabase.from("tasks")
+        .select("id, title")
+        .eq("client_id", clientId)
+        .in("status", ["todo", "in_progress"])
+        .order("updated_at", { ascending: false })
+        .limit(5);
+
+      if (recentTasks && recentTasks.length > 0) {
+        // Use AI to match the message to a specific task
+        const matchResponse = await fetch(AI_GATEWAY, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-lite",
+            messages: [
+              {
+                role: "system",
+                content: `Given a Slack message and a list of open tasks, determine which task (if any) the message is about.
+Tasks: ${recentTasks.map((t: any) => `"${t.title}" (${t.id})`).join(", ")}`,
+              },
+              { role: "user", content: text },
+            ],
+            tools: [{
+              type: "function",
+              function: {
+                name: "match_task",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    task_id: { type: "string", description: "UUID of matched task, or 'none'" },
+                  },
+                  required: ["task_id"],
+                  additionalProperties: false,
+                },
+              },
+            }],
+            tool_choice: { type: "function", function: { name: "match_task" } },
+          }),
+        });
+
+        if (matchResponse.ok) {
+          const matchData = await matchResponse.json();
+          try {
+            const tc = matchData.choices?.[0]?.message?.tool_calls?.[0];
+            if (tc) {
+              const parsed = JSON.parse(tc.function.arguments);
+              if (parsed.task_id && parsed.task_id !== "none") {
+                await supabase.from("task_comments").insert({
+                  task_id: parsed.task_id,
+                  author_name: `${userName} (via Slack)`,
+                  content: analysis.update_note || text,
+                  comment_type: "text",
+                });
+
+                await supabase.from("slack_activity_log")
+                  .update({ linked_task_id: parsed.task_id, message_type: "task_action" })
+                  .eq("channel_id", channelId)
+                  .eq("message_ts", messageTs);
+
+                await reactToMessage(env, channelId, messageTs, "memo");
+              }
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("analyzeMessageForTasks error:", err);
+  }
+}
+
+// -------------------------------------------------------------------
+// Core handler for @HPA mentions
+// -------------------------------------------------------------------
+async function handleMention(event: any, env: Env, supabase: any, clientId: string | null, mapping: any) {
+  const channelId = event.channel;
+  const threadTs = event.thread_ts || event.ts;
+  const userText = event.text.replace(/<@[A-Z0-9]+>/g, "").trim();
+  const slackUserId = event.user;
+
+  // Log the mention as activity
   const slackUser = await getSlackUserInfo(env.LOVABLE_API_KEY, env.SLACK_API_KEY, slackUserId);
   const userEmail = slackUser?.profile?.email || null;
   const userName = slackUser?.real_name || slackUser?.name || "User";
+
+  await supabase.from("slack_activity_log").upsert({
+    client_id: clientId,
+    channel_id: channelId,
+    message_ts: event.ts,
+    thread_ts: event.thread_ts || null,
+    user_id: slackUserId,
+    user_name: userName,
+    message_text: userText,
+    message_type: "mention",
+  }, { onConflict: "channel_id,message_ts" });
+
+  // Post a thinking indicator
+  const thinkingMsg = await postSlackMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channelId, threadTs, "🤔 Thinking...");
 
   // Check if this is an agency member
   let agencyMember: any = null;
@@ -137,20 +391,22 @@ async function handleMention(event: any, env: Env) {
 
   switch (intent.action) {
     case "create_task":
-      await handleCreateTask(supabase, env, channelId, threadTs, scopedClientId, userText, event, userName, thinkingMsg?.ts);
+      await handleCreateTask(supabase, env, channelId, threadTs, clientId, userText, event, userName, thinkingMsg?.ts);
       break;
     case "list_tasks":
-      await handleListTasks(supabase, env, channelId, threadTs, scopedClientId, userName, isAgencyUser, thinkingMsg?.ts);
+      await handleListTasks(supabase, env, channelId, threadTs, clientId, userName, isAgencyUser, thinkingMsg?.ts);
+      break;
+    case "summarize":
+      await handleSummarize(supabase, env, channelId, threadTs, clientId, userText, userName, isAgencyUser, thinkingMsg?.ts);
       break;
     default:
-      // Full AI-powered response with rich context
-      await handleAIQuery(supabase, env, channelId, threadTs, scopedClientId, userText, userName, isAgencyUser, agencyMember, thinkingMsg?.ts);
+      await handleAIQuery(supabase, env, channelId, threadTs, clientId, userText, userName, isAgencyUser, agencyMember, thinkingMsg?.ts);
       break;
   }
 }
 
 // -------------------------------------------------------------------
-// Intent detection
+// Intent detection (expanded with summarize)
 // -------------------------------------------------------------------
 async function detectIntent(text: string, apiKey: string): Promise<{ action: string }> {
   const response = await fetch(AI_GATEWAY, {
@@ -165,33 +421,32 @@ async function detectIntent(text: string, apiKey: string): Promise<{ action: str
         {
           role: "system",
           content: `You are an intent classifier. Given a user message, determine the intent.
-Return ONLY one of: create_task, list_tasks, analytics_query
+Return ONLY one of: create_task, list_tasks, summarize, analytics_query
 - create_task: user wants to create a task, request, or action item
 - list_tasks: user wants to see their tasks, open items, or to-do list
-- analytics_query: user wants to know about metrics, KPIs, ad spend, leads, calls, performance, comparisons, or anything data/analytics related, OR any general question or conversation`,
+- summarize: user wants a summary, digest, recap, overview of recent activity or channel messages
+- analytics_query: user wants to know about metrics, KPIs, ad spend, leads, calls, performance, comparisons, or any general question`,
         },
         { role: "user", content: text },
       ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "classify_intent",
-            description: "Classify the user's intent",
-            parameters: {
-              type: "object",
-              properties: {
-                action: {
-                  type: "string",
-                  enum: ["create_task", "list_tasks", "analytics_query"],
-                },
+      tools: [{
+        type: "function",
+        function: {
+          name: "classify_intent",
+          description: "Classify the user's intent",
+          parameters: {
+            type: "object",
+            properties: {
+              action: {
+                type: "string",
+                enum: ["create_task", "list_tasks", "summarize", "analytics_query"],
               },
-              required: ["action"],
-              additionalProperties: false,
             },
+            required: ["action"],
+            additionalProperties: false,
           },
         },
-      ],
+      }],
       tool_choice: { type: "function", function: { name: "classify_intent" } },
     }),
   });
@@ -204,24 +459,122 @@ Return ONLY one of: create_task, list_tasks, analytics_query
   const data = await response.json();
   try {
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall) {
-      return JSON.parse(toolCall.function.arguments);
-    }
-  } catch {
-    // fallback
-  }
+    if (toolCall) return JSON.parse(toolCall.function.arguments);
+  } catch { /* fallback */ }
   return { action: "analytics_query" };
 }
 
 // -------------------------------------------------------------------
-// BUILD FULL CONTEXT: Gathers all data for AI (mirrors ai-agent-full-context)
+// SUMMARIZE: AI-powered digest of recent activity
+// -------------------------------------------------------------------
+async function handleSummarize(
+  supabase: any, env: Env, channel: string, thread: string,
+  clientId: string | null, userText: string, userName: string,
+  isAgencyUser: boolean, thinkingTs?: string
+) {
+  try {
+    // Get recent activity from the log
+    let activityQuery = supabase
+      .from("slack_activity_log")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (clientId) {
+      activityQuery = activityQuery.eq("client_id", clientId);
+    } else {
+      activityQuery = activityQuery.eq("channel_id", channel);
+    }
+
+    const { data: recentActivity } = await activityQuery;
+
+    // Get open tasks
+    let taskQuery = supabase
+      .from("tasks")
+      .select("id, title, status, priority, stage, due_date, assigned_to, created_at, updated_at")
+      .in("status", ["todo", "in_progress"])
+      .order("updated_at", { ascending: false })
+      .limit(20);
+
+    if (clientId) taskQuery = taskQuery.eq("client_id", clientId);
+
+    const { data: openTasks } = await taskQuery;
+
+    // Build activity summary
+    const activitySummary = (recentActivity || [])
+      .map((a: any) => `[${a.created_at?.split("T")[0]}] ${a.user_name}: ${a.message_text?.slice(0, 200)}`)
+      .join("\n");
+
+    const tasksSummary = (openTasks || [])
+      .map((t: any) => `- "${t.title}" [${t.priority}] (${t.stage}) ${t.due_date ? `due ${t.due_date}` : ""}`)
+      .join("\n");
+
+    const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
+    const aiEndpoint = XAI_API_KEY ? "https://api.x.ai/v1/chat/completions" : AI_GATEWAY;
+    const aiKey = XAI_API_KEY || env.LOVABLE_API_KEY;
+    const aiModel = XAI_API_KEY ? "grok-4-fast" : "google/gemini-3-flash-preview";
+
+    const aiResponse = await fetch(aiEndpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${aiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: aiModel,
+        messages: [
+          {
+            role: "system",
+            content: `You are HPA, an agency assistant creating a concise summary/digest. Use Slack markdown (*bold*, _italic_).
+Format the summary as:
+1. 📊 *Key Activity Highlights* — most important things that happened
+2. 📋 *Task Status* — open tasks, overdue items, recently completed
+3. ⚡ *Action Items* — things that need attention
+4. 💡 *Insights* — patterns or trends noticed
+
+Keep it under 2000 characters. Be specific with names and details.`,
+          },
+          {
+            role: "user",
+            content: `Summarize recent activity. User asked: "${userText}"
+
+Recent Slack Messages (${(recentActivity || []).length}):
+${activitySummary || "No recent messages logged"}
+
+Open Tasks (${(openTasks || []).length}):
+${tasksSummary || "No open tasks"}`,
+          },
+        ],
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error("AI summarize error:", aiResponse.status, errText);
+      await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
+        "❌ Couldn't generate summary right now. Please try again.");
+      return;
+    }
+
+    const aiData = await aiResponse.json();
+    const summary = aiData.choices?.[0]?.message?.content || "Couldn't generate a summary.";
+
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, summary);
+  } catch (err) {
+    console.error("handleSummarize error:", err);
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
+      "❌ An error occurred generating the summary. Please try again.");
+  }
+}
+
+// -------------------------------------------------------------------
+// BUILD FULL CONTEXT
 // -------------------------------------------------------------------
 async function buildFullContext(supabase: any, scopedClientId: string | null, isAgencyUser: boolean): Promise<string> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
 
-  // Build client query — agency users see all, client users see only their client
   const clientQuery = supabase.from("clients").select("id, name, status, industry, slug");
   if (!isAgencyUser && scopedClientId) {
     clientQuery.eq("id", scopedClientId);
@@ -238,41 +591,13 @@ async function buildFullContext(supabase: any, scopedClientId: string | null, is
     { data: briefs },
   ] = await Promise.all([
     clientQuery,
-    supabase
-      .from("daily_metrics")
-      .select("client_id, date, ad_spend, leads, calls, showed_calls, funded_investors, funded_dollars, spam_leads, commitment_dollars, commitments, reconnect_calls, reconnect_showed, clicks, impressions")
-      .gte("date", thirtyDaysAgoStr),
-    supabase
-      .from("leads")
-      .select("id, client_id, source, status, is_spam, created_at, name, utm_source, utm_campaign, opportunity_value")
-      .gte("created_at", thirtyDaysAgo.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(500),
-    supabase
-      .from("calls")
-      .select("id, client_id, showed, outcome, scheduled_at, contact_name, is_reconnect, appointment_status")
-      .gte("created_at", thirtyDaysAgo.toISOString())
-      .limit(500),
-    supabase
-      .from("funded_investors")
-      .select("id, client_id, name, funded_amount, funded_at, commitment_amount, source, time_to_fund_days, calls_to_fund")
-      .order("funded_at", { ascending: false })
-      .limit(300),
-    supabase
-      .from("tasks")
-      .select("id, client_id, title, status, priority, due_date, stage, assigned_client_name")
-      .in("status", ["todo", "in_progress"]),
-    supabase
-      .from("agency_meetings")
-      .select("id, client_id, title, meeting_date, summary, duration_minutes, action_items")
-      .gte("meeting_date", thirtyDaysAgo.toISOString())
-      .order("meeting_date", { ascending: false })
-      .limit(50),
-    supabase
-      .from("creative_briefs")
-      .select("id, client_id, client_name, status, hook_patterns, offer_angles, created_at")
-      .order("created_at", { ascending: false })
-      .limit(20),
+    supabase.from("daily_metrics").select("client_id, date, ad_spend, leads, calls, showed_calls, funded_investors, funded_dollars, spam_leads, commitment_dollars, commitments, reconnect_calls, reconnect_showed, clicks, impressions").gte("date", thirtyDaysAgoStr),
+    supabase.from("leads").select("id, client_id, source, status, is_spam, created_at, name, utm_source, utm_campaign").gte("created_at", thirtyDaysAgo.toISOString()).order("created_at", { ascending: false }).limit(500),
+    supabase.from("calls").select("id, client_id, showed, outcome, scheduled_at, contact_name, is_reconnect, appointment_status").gte("created_at", thirtyDaysAgo.toISOString()).limit(500),
+    supabase.from("funded_investors").select("id, client_id, name, funded_amount, funded_at, commitment_amount, time_to_fund_days, calls_to_fund").order("funded_at", { ascending: false }).limit(300),
+    supabase.from("tasks").select("id, client_id, title, status, priority, due_date, stage").in("status", ["todo", "in_progress"]),
+    supabase.from("agency_meetings").select("id, client_id, title, meeting_date, summary, action_items").gte("meeting_date", thirtyDaysAgo.toISOString()).order("meeting_date", { ascending: false }).limit(50),
+    supabase.from("creative_briefs").select("id, client_id, client_name, status, hook_patterns, offer_angles, created_at").order("created_at", { ascending: false }).limit(20),
   ]);
 
   const clientList = clients || [];
@@ -286,7 +611,6 @@ async function buildFullContext(supabase: any, scopedClientId: string | null, is
     const cFunded = (fundedInvestors || []).filter((f: any) => f.client_id === cId);
     const cTasks = (tasks || []).filter((t: any) => t.client_id === cId);
     const cMeetings = (meetings || []).filter((m: any) => m.client_id === cId);
-    const cBriefs = (briefs || []).filter((b: any) => b.client_id === cId);
 
     const totalAdSpend = cMetrics.reduce((s: number, m: any) => s + (m.ad_spend || 0), 0);
     const totalLeads = cMetrics.reduce((s: number, m: any) => s + (m.leads || 0), 0);
@@ -294,52 +618,30 @@ async function buildFullContext(supabase: any, scopedClientId: string | null, is
     const totalShowed = cMetrics.reduce((s: number, m: any) => s + (m.showed_calls || 0), 0);
     const totalFundedCount = cMetrics.reduce((s: number, m: any) => s + (m.funded_investors || 0), 0);
     const totalFundedDollars = cMetrics.reduce((s: number, m: any) => s + (m.funded_dollars || 0), 0);
-    const totalSpam = cMetrics.reduce((s: number, m: any) => s + (m.spam_leads || 0), 0);
-    const totalClicks = cMetrics.reduce((s: number, m: any) => s + (m.clicks || 0), 0);
-    const totalImpressions = cMetrics.reduce((s: number, m: any) => s + (m.impressions || 0), 0);
     const cpl = totalLeads > 0 ? totalAdSpend / totalLeads : 0;
     const cpc = totalCalls > 0 ? totalAdSpend / totalCalls : 0;
     const costOfCapital = totalFundedDollars > 0 ? (totalAdSpend / totalFundedDollars) * 100 : 0;
-    const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-
-    // Lead sources breakdown
-    const sourceMap: Record<string, number> = {};
-    cLeads.forEach((l: any) => {
-      const src = l.utm_source || l.source || "unknown";
-      sourceMap[src] = (sourceMap[src] || 0) + 1;
-    });
 
     const openTasks = cTasks.filter((t: any) => t.status !== "done");
     const overdueTasks = openTasks.filter((t: any) => t.due_date && new Date(t.due_date) < new Date());
 
     let block = `\n## ${client.name} (${client.status})${client.industry ? ` | ${client.industry}` : ""}
 *30-Day Metrics:*
-- Ad Spend: $${totalAdSpend.toLocaleString()} | Leads: ${totalLeads} (${totalSpam} spam) | CPL: $${cpl.toFixed(2)}
-- Calls: ${totalCalls} | Shows: ${totalShowed} (${totalCalls > 0 ? ((totalShowed / totalCalls) * 100).toFixed(1) : 0}%) | CPC: $${cpc.toFixed(2)}
-- CTR: ${ctr.toFixed(2)}% | Clicks: ${totalClicks} | Impressions: ${totalImpressions.toLocaleString()}
-- Funded: ${totalFundedCount} investors, $${totalFundedDollars.toLocaleString()} | Cost of Capital: ${costOfCapital.toFixed(2)}%`;
-
-    if (Object.keys(sourceMap).length > 0) {
-      block += `\n*Lead Sources:* ${Object.entries(sourceMap).map(([s, c]) => `${s}: ${c}`).join(", ")}`;
-    }
+- Ad Spend: $${totalAdSpend.toLocaleString()} | Leads: ${totalLeads} | CPL: $${cpl.toFixed(2)}
+- Calls: ${totalCalls} | Shows: ${totalShowed} | CPC: $${cpc.toFixed(2)}
+- Funded: ${totalFundedCount} investors, $${totalFundedDollars.toLocaleString()} | CoC: ${costOfCapital.toFixed(2)}%`;
 
     if (cFunded.length > 0) {
       const recentFunded = cFunded.slice(0, 5);
-      block += `\n*Recent Funded:* ${recentFunded.map((f: any) => `${f.name || "Unknown"} ($${(f.funded_amount || 0).toLocaleString()}, ${f.time_to_fund_days || "?"} days)`).join("; ")}`;
+      block += `\n*Recent Funded:* ${recentFunded.map((f: any) => `${f.name || "Unknown"} ($${(f.funded_amount || 0).toLocaleString()})`).join("; ")}`;
     }
 
     if (openTasks.length > 0) {
       block += `\n*Open Tasks:* ${openTasks.length} (${overdueTasks.length} overdue)`;
-      const topTasks = openTasks.slice(0, 3);
-      block += ` — ${topTasks.map((t: any) => `"${t.title}" [${t.priority}]`).join(", ")}`;
     }
 
     if (cMeetings.length > 0) {
       block += `\n*Recent Meetings:* ${cMeetings.slice(0, 3).map((m: any) => `${m.title} (${m.meeting_date?.split("T")[0] || "?"})`).join(", ")}`;
-    }
-
-    if (cBriefs.length > 0) {
-      block += `\n*Creative Briefs:* ${cBriefs.length} (${cBriefs.filter((b: any) => b.status === "pending").length} pending)`;
     }
 
     clientDataBlocks.push(block);
@@ -353,7 +655,7 @@ ${clientDataBlocks.join("\n")}`;
 }
 
 // -------------------------------------------------------------------
-// AI QUERY: Full AI response with complete analytics context
+// AI QUERY
 // -------------------------------------------------------------------
 async function handleAIQuery(
   supabase: any, env: Env, channel: string, thread: string,
@@ -365,8 +667,8 @@ async function handleAIQuery(
 
     const scopeLabel = scopedClientId ? "this client's" : "all clients'";
     const roleDesc = isAgencyUser
-      ? `You are HPA, an expert agency performance analyst and task manager for ${agencyMember?.name || userName}. You have COMPLETE access to ${scopeLabel} data across the portfolio. You can answer any question about ad performance, leads, calls, funded investors, tasks, meetings, creative briefs, and more.`
-      : `You are HPA, a performance assistant. You have access to ${scopeLabel} data. Answer questions about their metrics, tasks, and campaign performance.`;
+      ? `You are HPA, an expert agency performance analyst and task manager for ${agencyMember?.name || userName}. You have COMPLETE access to ${scopeLabel} data.`
+      : `You are HPA, a performance assistant. You have access to ${scopeLabel} data.`;
 
     const systemPrompt = `${roleDesc}
 
@@ -379,26 +681,22 @@ RULES:
 - Compare clients when relevant (agency users only).
 - Flag concerning trends proactively.
 - If asked about creating tasks, tell them to say "@HPA create task: [description]"
-- If asked about listing tasks, tell them to say "@HPA show tasks"
-- Always sign off responses with relevant emoji
+- If asked about summarizing, tell them to say "@HPA summarize"
 - Keep responses under 3000 characters for Slack readability`;
 
-    // Use Grok 4 fast reasoning via xAI API for full context window support
     const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
-    if (!XAI_API_KEY) {
-      await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
-        "❌ xAI API key is not configured. Please add it in Agency Settings → API Keys.");
-      return;
-    }
+    const aiEndpoint = XAI_API_KEY ? "https://api.x.ai/v1/chat/completions" : AI_GATEWAY;
+    const aiKey = XAI_API_KEY || env.LOVABLE_API_KEY;
+    const aiModel = XAI_API_KEY ? "grok-4-fast" : "google/gemini-3-flash-preview";
 
-    const aiResponse = await fetch("https://api.x.ai/v1/chat/completions", {
+    const aiResponse = await fetch(aiEndpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${XAI_API_KEY}`,
+        Authorization: `Bearer ${aiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "grok-4-fast",
+        model: aiModel,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userText },
@@ -426,58 +724,33 @@ RULES:
 }
 
 // -------------------------------------------------------------------
-// CREATE TASK: AI generates structured task, creates it, replies
+// CREATE TASK
 // -------------------------------------------------------------------
 async function handleCreateTask(
   supabase: any, env: Env, channel: string, thread: string,
   scopedClientId: string | null, userText: string, event: any, userName: string, thinkingTs?: string
 ) {
-  // If no client is scoped, try to figure out which client from text
   let clientId = scopedClientId;
   let clientName = "Unknown";
 
   if (clientId) {
-    const { data: client } = await supabase
-      .from("clients").select("name").eq("id", clientId).single();
+    const { data: client } = await supabase.from("clients").select("name").eq("id", clientId).single();
     clientName = client?.name || "Unknown";
   } else {
-    // Agency user in non-client channel — ask AI to detect client from message
-    const { data: allClients } = await supabase
-      .from("clients").select("id, name").eq("status", "active");
-    
+    const { data: allClients } = await supabase.from("clients").select("id, name").eq("status", "active");
+
     if (allClients && allClients.length > 0) {
       const clientNames = allClients.map((c: any) => `${c.name} (${c.id})`).join(", ");
       const detectResponse = await fetch(AI_GATEWAY, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${env.LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash-lite",
           messages: [
-            {
-              role: "system",
-              content: `Given the user message and list of clients, determine which client this task is for. If unclear, return "unknown".
-Clients: ${clientNames}`,
-            },
+            { role: "system", content: `Given the user message and list of clients, determine which client this task is for. Clients: ${clientNames}` },
             { role: "user", content: userText },
           ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "identify_client",
-              parameters: {
-                type: "object",
-                properties: {
-                  client_id: { type: "string", description: "The UUID of the client, or 'unknown'" },
-                  client_name: { type: "string" },
-                },
-                required: ["client_id", "client_name"],
-                additionalProperties: false,
-              },
-            },
-          }],
+          tools: [{ type: "function", function: { name: "identify_client", parameters: { type: "object", properties: { client_id: { type: "string" }, client_name: { type: "string" } }, required: ["client_id", "client_name"], additionalProperties: false } } }],
           tool_choice: { type: "function", function: { name: "identify_client" } },
         }),
       });
@@ -499,7 +772,7 @@ Clients: ${clientNames}`,
 
     if (!clientId) {
       await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
-        "⚠️ I couldn't determine which client this task is for. Please mention the client name in your request, or use this command in a client-specific channel.");
+        "⚠️ I couldn't determine which client this task is for. Please mention the client name or use a client-specific channel.");
       return;
     }
   }
@@ -509,98 +782,50 @@ Clients: ${clientNames}`,
 
   const response = await fetch(AI_GATEWAY, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${env.LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        {
-          role: "system",
-          content: `You are a task creation assistant for ${clientName}. Given a message, generate a structured task.
-- Create a clear, actionable title (max 80 chars)
-- Write a detailed description that captures the full request
-- Include any links or URLs mentioned
-- Set appropriate priority (low/medium/high/urgent) based on urgency cues
-- If images are attached, mention them in the description`,
-        },
-        {
-          role: "user",
-          content: `Create a task from this request:\n\n"${userText}"${
-            links.length > 0 ? `\n\nLinks found: ${links.join(", ")}` : ""
-          }${images.length > 0 ? `\n\nImages attached: ${images.length} file(s)` : ""}`,
-        },
+        { role: "system", content: `You are a task creation assistant for ${clientName}. Generate a structured task from the message. Create a clear, actionable title (max 80 chars), detailed description, and set priority.` },
+        { role: "user", content: `Create a task from: "${userText}"${links.length > 0 ? `\nLinks: ${links.join(", ")}` : ""}${images.length > 0 ? `\nImages: ${images.length} file(s)` : ""}` },
       ],
-      tools: [{
-        type: "function",
-        function: {
-          name: "create_task",
-          description: "Create a structured task from the user's request",
-          parameters: {
-            type: "object",
-            properties: {
-              title: { type: "string" },
-              description: { type: "string" },
-              priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
-            },
-            required: ["title", "description", "priority"],
-            additionalProperties: false,
-          },
-        },
-      }],
+      tools: [{ type: "function", function: { name: "create_task", parameters: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, priority: { type: "string", enum: ["low", "medium", "high", "urgent"] } }, required: ["title", "description", "priority"], additionalProperties: false } } }],
       tool_choice: { type: "function", function: { name: "create_task" } },
     }),
   });
 
   if (!response.ok) {
-    console.error("AI task generation failed:", await response.text());
-    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
-      "❌ Sorry, I couldn't generate the task. Please try again.");
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, "❌ Couldn't generate the task. Please try again.");
     return;
   }
 
   const data = await response.json();
   let taskData = { title: userText.slice(0, 80), description: userText, priority: "medium" };
-
   try {
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall) {
-      taskData = JSON.parse(toolCall.function.arguments);
-    }
+    if (toolCall) taskData = JSON.parse(toolCall.function.arguments);
   } catch { /* use defaults */ }
 
   let fullDescription = taskData.description;
-  if (links.length > 0) {
-    fullDescription += `\n\n🔗 Links:\n${links.map((l) => `- ${l}`).join("\n")}`;
-  }
-  if (images.length > 0) {
-    fullDescription += `\n\n🖼️ Attached images:\n${images.map((img) => `- ${img}`).join("\n")}`;
-  }
+  if (links.length > 0) fullDescription += `\n\n🔗 Links:\n${links.map(l => `- ${l}`).join("\n")}`;
+  if (images.length > 0) fullDescription += `\n\n🖼️ Attached images:\n${images.map(img => `- ${img}`).join("\n")}`;
 
-  const { data: newTask, error: taskErr } = await supabase
-    .from("tasks")
-    .insert({
-      title: taskData.title,
-      description: fullDescription,
-      client_id: clientId,
-      priority: taskData.priority,
-      stage: "client_tasks",
-      status: "todo",
-      visible_to_client: true,
-      created_by: `Slack (${userName})`,
-    })
-    .select()
-    .single();
+  const { data: newTask, error: taskErr } = await supabase.from("tasks").insert({
+    title: taskData.title,
+    description: fullDescription,
+    client_id: clientId,
+    priority: taskData.priority,
+    stage: "client_tasks",
+    status: "todo",
+    visible_to_client: true,
+    created_by: `Slack (${userName})`,
+  }).select().single();
 
   if (taskErr) {
-    console.error("Failed to create task:", taskErr);
-    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
-      "❌ Failed to create the task. Please try again or contact your agency.");
+    await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, "❌ Failed to create the task.");
     return;
   }
 
-  // Add a comment
   await supabase.from("task_comments").insert({
     task_id: newTask.id,
     author_name: `${userName} (via Slack)`,
@@ -611,18 +836,9 @@ Clients: ${clientNames}`,
   const appUrl = Deno.env.get("APP_URL") || "https://funding-sonar.lovable.app";
   const taskLink = `${appUrl}/client/${clientId}?task=${newTask.id}`;
 
-  const readback = [
-    `✅ *Task Created for ${clientName}!*`,
-    ``,
-    `📋 *Title:* ${newTask.title}`,
-    `📝 *Description:* ${taskData.description}`,
-    `🎯 *Priority:* ${taskData.priority.charAt(0).toUpperCase() + taskData.priority.slice(1)}`,
-    `📌 *Stage:* Client Tasks`,
-    `👤 *Created by:* ${userName}`,
-    `🔗 <${taskLink}|View Task in Dashboard>`,
-  ].join("\n");
-
-  await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, readback);
+  await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
+    `✅ *Task Created for ${clientName}!*\n\n📋 *Title:* ${newTask.title}\n📝 *Description:* ${taskData.description}\n🎯 *Priority:* ${taskData.priority}\n👤 *Created by:* ${userName}\n🔗 <${taskLink}|View Task in Dashboard>`
+  );
 }
 
 // -------------------------------------------------------------------
@@ -632,75 +848,52 @@ async function handleListTasks(
   supabase: any, env: Env, channel: string, thread: string,
   scopedClientId: string | null, userName: string, isAgencyUser: boolean, thinkingTs?: string
 ) {
-  let query = supabase
-    .from("tasks")
+  let query = supabase.from("tasks")
     .select("id, title, stage, priority, due_date, client_id, assigned_to")
     .neq("stage", "done")
     .is("parent_task_id", null)
     .order("created_at", { ascending: false })
     .limit(20);
 
-  if (scopedClientId) {
-    query = query.eq("client_id", scopedClientId);
-  }
+  if (scopedClientId) query = query.eq("client_id", scopedClientId);
 
   const { data: tasks } = await query;
 
   if (!tasks || tasks.length === 0) {
-    const scope = scopedClientId ? "this client" : "any client";
     await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
-      `📋 No open tasks for ${scope} right now. Type \`@HPA create task: [your request]\` to create one!`);
+      `📋 No open tasks right now. Type \`@HPA create task: [your request]\` to create one!`);
     return;
   }
 
-  // Get client names for agency view
   let clientNames: Record<string, string> = {};
   if (!scopedClientId) {
     const clientIds = [...new Set(tasks.map((t: any) => t.client_id).filter(Boolean))];
     if (clientIds.length > 0) {
-      const { data: clients } = await supabase
-        .from("clients").select("id, name").in("id", clientIds);
-      for (const c of clients || []) {
-        clientNames[c.id] = c.name;
-      }
+      const { data: clients } = await supabase.from("clients").select("id, name").in("id", clientIds);
+      for (const c of clients || []) clientNames[c.id] = c.name;
     }
   }
 
   const appUrl = Deno.env.get("APP_URL") || "https://funding-sonar.lovable.app";
   const stageEmoji: Record<string, string> = {
-    client_tasks: "📥",
-    todo: "📝",
-    in_progress: "🔧",
-    stuck: "🚨",
-    review: "👀",
-    revisions: "🔄",
+    client_tasks: "📥", todo: "📝", in_progress: "🔧", stuck: "🚨", review: "👀", revisions: "🔄",
   };
 
   const lines = tasks.map((t: any) => {
     const emoji = stageEmoji[t.stage] || "📌";
     const due = t.due_date ? ` · Due: ${t.due_date}` : "";
     const clientLabel = !scopedClientId && clientNames[t.client_id] ? ` · ${clientNames[t.client_id]}` : "";
-    const link = `<${appUrl}/client/${t.client_id}?task=${t.id}|${t.title}>`;
-    return `${emoji} ${link} [${t.priority}]${clientLabel}${due}`;
+    return `${emoji} <${appUrl}/client/${t.client_id}?task=${t.id}|${t.title}> [${t.priority}]${clientLabel}${due}`;
   });
 
-  const scopeLabel = scopedClientId ? "" : " (All Clients)";
-  const message = [
-    `📋 *Open Tasks${scopeLabel}* (${tasks.length})`,
-    ``,
-    ...lines,
-    ``,
-    `_Type \`@HPA create task: [request]\` to add a new task_`,
-  ].join("\n");
-
-  await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs, message);
+  await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
+    `📋 *Open Tasks* (${tasks.length})\n\n${lines.join("\n")}\n\n_Type \`@HPA create task: [request]\` to add a new task_`
+  );
 }
 
 // -------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------
-
-/** Update the "thinking" message with the real answer, or post new if no thinking msg */
 async function updateOrPostMessage(lovableKey: string, slackKey: string, channel: string, threadTs: string, thinkingTs?: string, text?: string) {
   if (thinkingTs) {
     const res = await fetch(`${SLACK_GATEWAY_URL}/chat.update`, {
@@ -710,12 +903,7 @@ async function updateOrPostMessage(lovableKey: string, slackKey: string, channel
         "X-Connection-Api-Key": slackKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        channel,
-        ts: thinkingTs,
-        text: text || "",
-        unfurl_links: false,
-      }),
+      body: JSON.stringify({ channel, ts: thinkingTs, text: text || "", unfurl_links: false }),
     });
     const data = await res.json();
     if (!data.ok) {
@@ -735,19 +923,27 @@ async function postSlackMessage(lovableKey: string, slackKey: string, channel: s
       "X-Connection-Api-Key": slackKey,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      channel,
-      thread_ts: threadTs,
-      text,
-      unfurl_links: false,
-    }),
+    body: JSON.stringify({ channel, thread_ts: threadTs, text, unfurl_links: false }),
   });
-
   const data = await res.json();
-  if (!data.ok) {
-    console.error("Failed to post Slack message:", data.error);
-  }
+  if (!data.ok) console.error("Failed to post Slack message:", data.error);
   return data;
+}
+
+async function reactToMessage(env: Env, channel: string, timestamp: string, emoji: string) {
+  try {
+    await fetch(`${SLACK_GATEWAY_URL}/reactions.add`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": env.SLACK_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ channel, timestamp, name: emoji }),
+    });
+  } catch (err) {
+    console.error("Failed to add reaction:", err);
+  }
 }
 
 async function getSlackUserInfo(lovableKey: string, slackKey: string, userId: string): Promise<any> {
@@ -770,9 +966,7 @@ function extractLinks(text: string): string[] {
   const linkRegex = /<(https?:\/\/[^|>]+)(?:\|[^>]*)?>/g;
   const links: string[] = [];
   let match;
-  while ((match = linkRegex.exec(text)) !== null) {
-    links.push(match[1]);
-  }
+  while ((match = linkRegex.exec(text)) !== null) links.push(match[1]);
   return links;
 }
 
@@ -780,9 +974,7 @@ function extractImages(event: any): string[] {
   const images: string[] = [];
   if (event.files) {
     for (const file of event.files) {
-      if (file.mimetype?.startsWith("image/") && file.url_private) {
-        images.push(file.url_private);
-      }
+      if (file.mimetype?.startsWith("image/") && file.url_private) images.push(file.url_private);
     }
   }
   return images;
