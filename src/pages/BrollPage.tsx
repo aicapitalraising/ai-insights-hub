@@ -219,8 +219,7 @@ export default function BrollPage({ embedded = false }: { embedded?: boolean }) 
   const isTextReady = mode === 'text' && prompt.trim();
   const canGenerate = !isGenerating && (isKeyframeReady || isTextReady);
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

@@ -125,8 +125,7 @@ export default function ExportHubPage({ embedded = false }: { embedded?: boolean
 
   const isVideo = (a: Asset) => a.type === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(a.public_url || '');
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Export Hub</h1>
