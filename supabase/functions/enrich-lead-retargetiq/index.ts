@@ -5,6 +5,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to update enrichment_status on the leads table
+async function updateEnrichmentStatus(
+  supabase: any,
+  clientId: string | null,
+  leadId: string | null,
+  externalId: string | null,
+  status: 'pending' | 'enriched' | 'failed'
+) {
+  try {
+    const update: Record<string, any> = { enrichment_status: status };
+    if (status === 'enriched') update.enriched_at = new Date().toISOString();
+    
+    if (leadId) {
+      await supabase.from('leads').update(update).eq('id', leadId);
+    } else if (externalId && clientId) {
+      await supabase.from('leads').update(update).eq('external_id', externalId).eq('client_id', clientId);
+    }
+  } catch (err) {
+    console.warn(`[RetargetIQ] Failed to update enrichment_status to ${status}:`, err);
+  }
+}
+
 interface EnrichResult {
   identity: any;
   allIdentities: any[];
