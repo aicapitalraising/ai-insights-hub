@@ -1206,6 +1206,87 @@ export type Database = {
         }
         Relationships: []
       }
+      slack_activity_log: {
+        Row: {
+          ai_analysis: Json | null
+          channel_id: string
+          client_id: string | null
+          created_at: string
+          id: string
+          linked_task_id: string | null
+          message_text: string | null
+          message_ts: string
+          message_type: string | null
+          thread_ts: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          channel_id: string
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          linked_task_id?: string | null
+          message_text?: string | null
+          message_ts: string
+          message_type?: string | null
+          thread_ts?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          channel_id?: string
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          linked_task_id?: string | null
+          message_text?: string | null
+          message_ts?: string
+          message_type?: string | null
+          thread_ts?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      slack_channel_mappings: {
+        Row: {
+          auto_create_tasks: boolean | null
+          channel_id: string
+          channel_name: string | null
+          channel_type: string | null
+          client_id: string
+          created_at: string
+          id: string
+          monitor_messages: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          auto_create_tasks?: boolean | null
+          channel_id: string
+          channel_name?: string | null
+          channel_type?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          monitor_messages?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          auto_create_tasks?: boolean | null
+          channel_id?: string
+          channel_name?: string | null
+          channel_type?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          monitor_messages?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sync_accuracy_log: {
         Row: {
           actual_value: number | null
