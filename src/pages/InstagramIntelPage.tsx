@@ -5,9 +5,8 @@ import { InstagramMediaGrid } from '@/components/instagram/InstagramMediaGrid';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Instagram, Search, Image, History } from 'lucide-react';
 
-export default function InstagramIntelPage() {
-  return (
-    <AppLayout>
+export default function InstagramIntelPage({ embedded = false }: { embedded?: boolean }) {
+  const content = (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -52,6 +51,8 @@ export default function InstagramIntelPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

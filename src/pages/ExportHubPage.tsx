@@ -250,6 +250,8 @@ export default function ExportHubPage({ embedded = false }: { embedded?: boolean
           </Card>
         )}
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

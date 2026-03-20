@@ -95,27 +95,6 @@ const navStructure = [
     icon: Palette,
   },
   {
-    title: 'Intelligence',
-    value: 'intelligence',
-    icon: Radar,
-    children: [
-      { title: 'Ad Scraping', value: 'ad-scraping', icon: Radar },
-      { title: 'Instagram Intel', value: 'instagram-intel', icon: Instagram },
-      { title: 'Swipe File', value: 'swipe-file', icon: Inbox },
-    ],
-  },
-  {
-    title: 'Tools',
-    value: 'tools',
-    icon: Scissors,
-    children: [
-      { title: 'Video Editor', value: 'video-editor', icon: Scissors },
-      { title: 'B-Roll Library', value: 'broll', icon: Film },
-      { title: 'History', value: 'history', icon: History },
-      { title: 'Export Hub', value: 'export', icon: Download },
-    ],
-  },
-  {
     title: 'Funnel Builder',
     value: 'funnel-group',
     icon: Smartphone,

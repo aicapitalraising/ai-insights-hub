@@ -459,6 +459,8 @@ export default function BrollPage({ embedded = false }: { embedded?: boolean }) 
           </div>
         </div>
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }
