@@ -257,8 +257,7 @@ export default function VideoEditorPage({ embedded = false }: { embedded?: boole
 
   // ──── Render ────
   if (!activeProjectId && !srcUrl && !clipsParam) {
-    return (
-      <AppLayout>
+    const projectHome = (
         <VideoProjectHome
           projects={projectManager.projects}
           isLoading={projectManager.isLoading}
@@ -268,8 +267,9 @@ export default function VideoEditorPage({ embedded = false }: { embedded?: boole
           onDuplicateProject={projectManager.duplicateProject}
           onRenameProject={projectManager.renameProject}
         />
-      </AppLayout>
     );
+    if (embedded) return projectHome;
+    return <AppLayout>{projectHome}</AppLayout>;
   }
 
   return (
