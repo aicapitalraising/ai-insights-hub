@@ -768,6 +768,43 @@ export function CreativesTab() {
           )}
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        {/* Briefs & Scripts */}
+        <TabsContent value="briefs" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading briefs..." />}>
+            <CreativeBriefs embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Static Ads */}
+        <TabsContent value="static-ads" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading static ads..." />}>
+            <StaticAdsPage />
+          </Suspense>
+        </TabsContent>
+
+        {/* Batch Video */}
+        <TabsContent value="batch-video" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading batch video..." />}>
+            <BatchVideoWorkflow />
+          </Suspense>
+        </TabsContent>
+
+        {/* Ad Variations */}
+        <TabsContent value="ad-variations" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading ad variations..." />}>
+            <AdVariationsPage />
+          </Suspense>
+        </TabsContent>
+
+        {/* Avatars */}
+        <TabsContent value="avatars" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading avatars..." />}>
+            <AvatarsPage />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
