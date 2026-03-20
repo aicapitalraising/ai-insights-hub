@@ -228,8 +228,7 @@ const Index = () => {
             {/* Spam utility page */}
             {activeTab === 'spam' && <SpamBlacklist embedded />}
 
-            {/* Briefs utility page */}
-            {activeTab === 'briefs' && <CreativeBriefs embedded />}
+            {/* Briefs - now part of Creatives tab */}
 
             {/* Ads Manager */}
             {activeTab === 'ads-manager' && <AdminAdsManagerTab platform="all" />}
@@ -398,8 +397,8 @@ const Index = () => {
             {activeTab === 'creatives' && (
               <SectionErrorBoundary sectionName="Creatives">
                 <div className="mb-4">
-                  <h2 className="text-lg font-bold">Creative Approvals</h2>
-                  <p className="text-sm text-muted-foreground">Manage creative assets across all clients</p>
+                  <h2 className="text-lg font-bold">Creatives</h2>
+                  <p className="text-sm text-muted-foreground">Manage all creative assets, briefs, and tools</p>
                 </div>
                 <CreativesTab />
               </SectionErrorBoundary>

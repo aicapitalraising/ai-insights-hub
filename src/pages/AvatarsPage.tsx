@@ -32,7 +32,7 @@ import { GenerateLookDialog } from '@/components/avatars/GenerateLookDialog';
 import { toast } from 'sonner';
 import type { Avatar } from '@/types';
 
-export default function AvatarsPage() {
+export default function AvatarsPage({ embedded = false }: { embedded?: boolean }) {
   const { data: avatars = [], isLoading } = useAllAvatars();
   const { data: clients = [] } = useClients();
   const deleteAvatar = useDeleteAvatar();
@@ -99,17 +99,17 @@ export default function AvatarsPage() {
   };
 
   if (isLoading) {
-    return (
-      <AppLayout>
+    const loader = (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </AppLayout>
     );
+    if (embedded) return loader;
+    return <AppLayout>{loader}</AppLayout>;
   }
 
-  return (
-    <AppLayout>
+  const content = (
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -314,6 +314,9 @@ export default function AvatarsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppLayout>
+    </>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

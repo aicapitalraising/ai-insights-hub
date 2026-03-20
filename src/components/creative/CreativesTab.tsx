@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAllCreatives } from '@/hooks/useAllCreatives';
 import { useClients, Client } from '@/hooks/useClients';
@@ -43,14 +43,25 @@ import {
   Sparkles,
   CheckSquare,
   Download,
+  Film,
+  Wand2,
+  User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Lazy-load sub-section page components
+const CreativeBriefs = lazy(() => import('@/pages/CreativeBriefs'));
+const StaticAdsPage = lazy(() => import('@/pages/StaticAdsPage'));
+const BatchVideoWorkflow = lazy(() => import('@/components/batch-video/BatchVideoWorkflow').then(m => ({ default: m.BatchVideoWorkflow })));
+const AdVariationsPage = lazy(() => import('@/pages/AdVariationsPage'));
+const AvatarsPage = lazy(() => import('@/pages/AvatarsPage'));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
 }
 
 export function CreativesTab() {
+  const [activeSection, setActiveSection] = useState('approvals');
   const { data: creatives = [], isLoading: creativesLoading } = useAllCreatives();
   const { data: clients = [] } = useClients();
   const updateStatus = useUpdateCreativeStatus();
@@ -91,10 +102,12 @@ export function CreativesTab() {
       activityType: c.status === 'pending' ? 'uploaded' : c.status,
     }));
 
+  const pendingCount = creativesWithClients.filter(c => c.status === 'pending').length;
+
   const statusCounts = {
     all: creativesWithClients.length,
     draft: creativesWithClients.filter(c => c.status === 'draft').length,
-    pending: creativesWithClients.filter(c => c.status === 'pending').length,
+    pending: pendingCount,
     approved: creativesWithClients.filter(c => c.status === 'approved').length,
     launched: creativesWithClients.filter(c => c.status === 'launched').length,
     revisions: creativesWithClients.filter(c => c.status === 'revisions').length,
@@ -186,6 +199,41 @@ export function CreativesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Section Tabs */}
+      <Tabs value={activeSection} onValueChange={setActiveSection}>
+        <TabsList className="bg-muted/50 flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="approvals" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Approvals
+            {pendingCount > 0 && (
+              <Badge variant="default" className="ml-1 h-5 min-w-[20px] flex items-center justify-center text-[10px] px-1.5">
+                {pendingCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="briefs" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Briefs & Scripts
+          </TabsTrigger>
+          <TabsTrigger value="static-ads" className="gap-2">
+            <Image className="h-4 w-4" />
+            Static Ads
+          </TabsTrigger>
+          <TabsTrigger value="batch-video" className="gap-2">
+            <Film className="h-4 w-4" />
+            Batch Video
+          </TabsTrigger>
+          <TabsTrigger value="ad-variations" className="gap-2">
+            <Wand2 className="h-4 w-4" />
+            Ad Variations
+          </TabsTrigger>
+          <TabsTrigger value="avatars" className="gap-2">
+            <User className="h-4 w-4" />
+            Avatars
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="approvals" className="mt-4 space-y-6">
       {/* Search and Filters */}
       <div className="flex flex-wrap gap-4">
         <div className="relative flex-1 min-w-[200px]">
@@ -720,6 +768,43 @@ export function CreativesTab() {
           )}
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        {/* Briefs & Scripts */}
+        <TabsContent value="briefs" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading briefs..." />}>
+            <CreativeBriefs embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Static Ads */}
+        <TabsContent value="static-ads" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading static ads..." />}>
+            <StaticAdsPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Batch Video */}
+        <TabsContent value="batch-video" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading batch video..." />}>
+            <BatchVideoWorkflow />
+          </Suspense>
+        </TabsContent>
+
+        {/* Ad Variations */}
+        <TabsContent value="ad-variations" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading ad variations..." />}>
+            <AdVariationsPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Avatars */}
+        <TabsContent value="avatars" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading avatars..." />}>
+            <AvatarsPage embedded />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

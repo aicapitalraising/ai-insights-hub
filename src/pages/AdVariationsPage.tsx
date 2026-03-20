@@ -123,7 +123,7 @@ function useCustomAds() {
   });
 }
 
-export default function AdVariationsPage() {
+export default function AdVariationsPage({ embedded = false }: { embedded?: boolean }) {
   const [sourceMode, setSourceMode] = useState<SourceMode>('upload');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -375,8 +375,7 @@ export default function AdVariationsPage() {
   const clearUpload = () => { setUploadedImage(null); setUploadedFile(null); setGeneratingVariations([]); };
   const completedCount = generatingVariations.filter(v => v.status === 'completed').length;
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -729,6 +728,8 @@ export default function AdVariationsPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

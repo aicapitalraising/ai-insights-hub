@@ -93,14 +93,6 @@ const navStructure = [
     title: 'Creatives',
     value: 'creatives',
     icon: Palette,
-    children: [
-      { title: 'Approvals', value: 'creatives', icon: Upload },
-      { title: 'Briefs & Scripts', value: 'briefs', icon: FileText },
-      { title: 'Static Ads', value: 'static-ads', icon: ImageIcon },
-      { title: 'Batch Video', value: 'batch-video', icon: Film },
-      { title: 'Ad Variations', value: 'ad-variations', icon: Wand2 },
-      { title: 'Avatars', value: 'avatars', icon: User },
-    ],
   },
   {
     title: 'Intelligence',
