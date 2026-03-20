@@ -26,7 +26,7 @@ import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import type { Asset } from '@/types';
 
-export default function HistoryPage() {
+export default function HistoryPage({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState('all');
