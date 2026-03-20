@@ -54,7 +54,7 @@ const PROMPT_SUGGESTIONS = [
   'Product showcase on clean white background',
 ];
 
-export default function BrollPage() {
+export default function BrollPage({ embedded = false }: { embedded?: boolean }) {
   const { data: clients = [] } = useClients();
   const { generateVideo, generateFromKeyframes, isGenerating: isApiGenerating, stopPolling } = useBrollGeneration();
 
