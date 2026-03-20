@@ -102,10 +102,12 @@ export function CreativesTab() {
       activityType: c.status === 'pending' ? 'uploaded' : c.status,
     }));
 
+  const pendingCount = creativesWithClients.filter(c => c.status === 'pending').length;
+
   const statusCounts = {
     all: creativesWithClients.length,
     draft: creativesWithClients.filter(c => c.status === 'draft').length,
-    pending: creativesWithClients.filter(c => c.status === 'pending').length,
+    pending: pendingCount,
     approved: creativesWithClients.filter(c => c.status === 'approved').length,
     launched: creativesWithClients.filter(c => c.status === 'launched').length,
     revisions: creativesWithClients.filter(c => c.status === 'revisions').length,
