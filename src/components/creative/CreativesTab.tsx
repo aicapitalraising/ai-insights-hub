@@ -46,6 +46,11 @@ import {
   Film,
   Wand2,
   User,
+  Radar,
+  Instagram,
+  Scissors,
+  History,
+  Inbox,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
