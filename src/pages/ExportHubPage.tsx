@@ -17,7 +17,7 @@ import type { Asset } from '@/types';
 
 type ExportFormat = 'ad-platform' | 'client-delivery' | 'raw';
 
-export default function ExportHubPage() {
+export default function ExportHubPage({ embedded = false }: { embedded?: boolean }) {
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -125,8 +125,7 @@ export default function ExportHubPage() {
 
   const isVideo = (a: Asset) => a.type === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(a.public_url || '');
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Export Hub</h1>
@@ -250,6 +249,8 @@ export default function ExportHubPage() {
           </Card>
         )}
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

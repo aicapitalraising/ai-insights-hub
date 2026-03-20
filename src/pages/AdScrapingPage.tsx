@@ -79,7 +79,7 @@ const ADS_PER_PAGE = 12;
 
 type SortKey = 'date' | 'reach' | 'saves' | 'views';
 
-export default function AdScrapingPage() {
+export default function AdScrapingPage({ embedded = false }: { embedded?: boolean }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
@@ -281,8 +281,8 @@ export default function AdScrapingPage() {
     }
   };
 
-  return (
-    <AppLayout>
+  const content = (
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between">
@@ -764,6 +764,9 @@ export default function AdScrapingPage() {
           });
         }}
       />
-    </AppLayout>
+    </>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

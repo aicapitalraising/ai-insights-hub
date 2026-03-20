@@ -46,6 +46,11 @@ import {
   Film,
   Wand2,
   User,
+  Radar,
+  Instagram,
+  Scissors,
+  History,
+  Inbox,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -55,6 +60,12 @@ const StaticAdsPage = lazy(() => import('@/pages/StaticAdsPage'));
 const BatchVideoWorkflow = lazy(() => import('@/components/batch-video/BatchVideoWorkflow').then(m => ({ default: m.BatchVideoWorkflow })));
 const AdVariationsPage = lazy(() => import('@/pages/AdVariationsPage'));
 const AvatarsPage = lazy(() => import('@/pages/AvatarsPage'));
+const AdScrapingPage = lazy(() => import('@/pages/AdScrapingPage'));
+const InstagramIntelPage = lazy(() => import('@/pages/InstagramIntelPage'));
+const VideoEditorPage = lazy(() => import('@/pages/VideoEditorPage'));
+const BrollPage = lazy(() => import('@/pages/BrollPage'));
+const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
+const ExportHubPage = lazy(() => import('@/pages/ExportHubPage'));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
@@ -230,6 +241,30 @@ export function CreativesTab() {
           <TabsTrigger value="avatars" className="gap-2">
             <User className="h-4 w-4" />
             Avatars
+          </TabsTrigger>
+          <TabsTrigger value="ad-scraping" className="gap-2">
+            <Radar className="h-4 w-4" />
+            Ad Scraping
+          </TabsTrigger>
+          <TabsTrigger value="instagram-intel" className="gap-2">
+            <Instagram className="h-4 w-4" />
+            IG Intel
+          </TabsTrigger>
+          <TabsTrigger value="video-editor" className="gap-2">
+            <Scissors className="h-4 w-4" />
+            Video Editor
+          </TabsTrigger>
+          <TabsTrigger value="broll" className="gap-2">
+            <Film className="h-4 w-4" />
+            B-Roll
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            History
+          </TabsTrigger>
+          <TabsTrigger value="export" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export
           </TabsTrigger>
         </TabsList>
 
@@ -802,6 +837,48 @@ export function CreativesTab() {
         <TabsContent value="avatars" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading avatars..." />}>
             <AvatarsPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Ad Scraping */}
+        <TabsContent value="ad-scraping" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading ad scraping..." />}>
+            <AdScrapingPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Instagram Intel */}
+        <TabsContent value="instagram-intel" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading Instagram Intel..." />}>
+            <InstagramIntelPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Video Editor */}
+        <TabsContent value="video-editor" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading video editor..." />}>
+            <VideoEditorPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* B-Roll Library */}
+        <TabsContent value="broll" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading B-Roll library..." />}>
+            <BrollPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* History */}
+        <TabsContent value="history" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading history..." />}>
+            <HistoryPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Export Hub */}
+        <TabsContent value="export" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading export hub..." />}>
+            <ExportHubPage embedded />
           </Suspense>
         </TabsContent>
       </Tabs>

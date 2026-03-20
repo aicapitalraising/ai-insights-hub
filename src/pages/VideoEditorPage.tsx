@@ -12,7 +12,7 @@ import { useVideoCaptions } from '@/hooks/useVideoCaptions';
 import { useVideoProjects, VideoProject } from '@/hooks/useVideoProjects';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
-export default function VideoEditorPage() {
+export default function VideoEditorPage({ embedded = false }: { embedded?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const srcUrl = searchParams.get('src') || '';
   const clipsParam = searchParams.get('clips') || '';
@@ -257,8 +257,7 @@ export default function VideoEditorPage() {
 
   // ──── Render ────
   if (!activeProjectId && !srcUrl && !clipsParam) {
-    return (
-      <AppLayout>
+    const projectHome = (
         <VideoProjectHome
           projects={projectManager.projects}
           isLoading={projectManager.isLoading}
@@ -268,12 +267,12 @@ export default function VideoEditorPage() {
           onDuplicateProject={projectManager.duplicateProject}
           onRenameProject={projectManager.renameProject}
         />
-      </AppLayout>
     );
+    if (embedded) return projectHome;
+    return <AppLayout>{projectHome}</AppLayout>;
   }
 
-  return (
-    <AppLayout>
+  const editorContent = (
       <div className="flex flex-col h-[calc(100vh-48px)] -m-6 bg-[hsl(var(--background))]">
         {/* Editor Header */}
         <EditorHeader
@@ -426,6 +425,8 @@ export default function VideoEditorPage() {
           onZoomChange={setZoom}
         />
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return editorContent;
+  return <AppLayout>{editorContent}</AppLayout>;
 }

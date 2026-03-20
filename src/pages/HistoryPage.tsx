@@ -26,7 +26,7 @@ import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import type { Asset } from '@/types';
 
-export default function HistoryPage() {
+export default function HistoryPage({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState('all');
@@ -103,8 +103,7 @@ export default function HistoryPage() {
     return clients.find(c => c.id === clientId)?.name || 'Unknown';
   };
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -338,6 +337,8 @@ export default function HistoryPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }

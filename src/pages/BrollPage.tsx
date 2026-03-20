@@ -54,7 +54,7 @@ const PROMPT_SUGGESTIONS = [
   'Product showcase on clean white background',
 ];
 
-export default function BrollPage() {
+export default function BrollPage({ embedded = false }: { embedded?: boolean }) {
   const { data: clients = [] } = useClients();
   const { generateVideo, generateFromKeyframes, isGenerating: isApiGenerating, stopPolling } = useBrollGeneration();
 
@@ -219,8 +219,7 @@ export default function BrollPage() {
   const isTextReady = mode === 'text' && prompt.trim();
   const canGenerate = !isGenerating && (isKeyframeReady || isTextReady);
 
-  return (
-    <AppLayout>
+  const content = (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -459,6 +458,8 @@ export default function BrollPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }
