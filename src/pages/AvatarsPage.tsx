@@ -314,7 +314,7 @@ export default function AvatarsPage({ embedded = false }: { embedded?: boolean }
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </div>
+    </>
   );
 
   if (embedded) return content;
