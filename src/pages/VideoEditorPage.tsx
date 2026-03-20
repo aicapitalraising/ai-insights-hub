@@ -12,7 +12,7 @@ import { useVideoCaptions } from '@/hooks/useVideoCaptions';
 import { useVideoProjects, VideoProject } from '@/hooks/useVideoProjects';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
-export default function VideoEditorPage() {
+export default function VideoEditorPage({ embedded = false }: { embedded?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const srcUrl = searchParams.get('src') || '';
   const clipsParam = searchParams.get('clips') || '';

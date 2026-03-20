@@ -763,6 +763,8 @@ export default function AdScrapingPage({ embedded = false }: { embedded?: boolea
           });
         }}
       />
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }
