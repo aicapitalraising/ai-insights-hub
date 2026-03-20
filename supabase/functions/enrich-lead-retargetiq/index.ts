@@ -524,6 +524,8 @@ Deno.serve(async (req) => {
     const merged = mergeResults(results, knownFirstName, knownLastName);
 
     if (!merged.primary) {
+      // Mark lead as enrichment failed
+      await updateEnrichmentStatus(supabase, client_id, lead_id, external_id, 'failed');
       return new Response(JSON.stringify({ success: false, error: 'No enrichment data found for this contact' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
