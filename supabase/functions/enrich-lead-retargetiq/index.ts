@@ -614,10 +614,14 @@ Deno.serve(async (req) => {
 
     if (upsertError) {
       console.error('Upsert error:', upsertError);
+      await updateEnrichmentStatus(supabase, client_id, lead_id, external_id, 'failed');
       return new Response(JSON.stringify({ success: false, error: upsertError.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Mark lead as enriched
+    await updateEnrichmentStatus(supabase, client_id, lead_id, external_id, 'enriched');
 
     // Write enrichment data back to leads table if we have a lead_id or external_id
     if (lead_id || external_id) {
