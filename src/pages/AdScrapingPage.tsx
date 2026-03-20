@@ -283,6 +283,7 @@ export default function AdScrapingPage({ embedded = false }: { embedded?: boolea
 
   const content = (
     <>
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
