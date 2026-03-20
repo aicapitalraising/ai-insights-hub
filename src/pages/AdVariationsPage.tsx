@@ -728,6 +728,8 @@ export default function AdVariationsPage({ embedded = false }: { embedded?: bool
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return content;
+  return <AppLayout>{content}</AppLayout>;
 }
