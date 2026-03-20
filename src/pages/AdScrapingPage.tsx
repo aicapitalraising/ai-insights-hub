@@ -763,6 +763,7 @@ export default function AdScrapingPage({ embedded = false }: { embedded?: boolea
           });
         }}
       />
+    </>
   );
 
   if (embedded) return content;
