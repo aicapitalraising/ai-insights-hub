@@ -24,19 +24,10 @@ export interface ClientSyncStatus {
   source: 'ghl' | 'hubspot' | 'none';
 }
 
-export interface EnrichmentStats {
-  totalLeads: number;
-  enrichedCount: number;
-  pendingCount: number;
-  failedCount: number;
-  enrichmentRate: number; // percentage
-}
-
 export interface SyncHealthData {
   items: SyncHealthItem[];
   quickChecks: QuickCheckItem[];
   clientSync: ClientSyncStatus;
-  enrichment: EnrichmentStats;
 }
 
 function getSyncStatus(lastSynced: string | null): 'healthy' | 'stale' | 'critical' {
@@ -65,6 +56,7 @@ function getClientSyncStatus(
     hasCredentials: boolean;
   }
 ): ClientSyncStatus {
+  // Check HubSpot first (if configured)
   if (hubspotData.hasCredentials) {
     if (hubspotData.syncStatus) {
       return {
@@ -75,14 +67,31 @@ function getClientSyncStatus(
         source: 'hubspot',
       };
     }
+    
+    // Fall back to time-based calculation
     if (!hubspotData.lastSyncAt) {
-      return { status: 'not_configured', lastSyncAt: null, syncError: null, hasCredentials: true, source: 'hubspot' };
+      return {
+        status: 'not_configured',
+        lastSyncAt: null,
+        syncError: null,
+        hasCredentials: true,
+        source: 'hubspot',
+      };
     }
+    
     const hoursDiff = (new Date().getTime() - new Date(hubspotData.lastSyncAt).getTime()) / (1000 * 60 * 60);
-    const status: 'healthy' | 'stale' | 'error' = hoursDiff <= 2 ? 'healthy' : hoursDiff <= 24 ? 'stale' : 'error';
-    return { status, lastSyncAt: hubspotData.lastSyncAt, syncError: hubspotData.syncError, hasCredentials: true, source: 'hubspot' };
+    let status: 'healthy' | 'stale' | 'error' = hoursDiff <= 2 ? 'healthy' : hoursDiff <= 24 ? 'stale' : 'error';
+    
+    return {
+      status,
+      lastSyncAt: hubspotData.lastSyncAt,
+      syncError: hubspotData.syncError,
+      hasCredentials: true,
+      source: 'hubspot',
+    };
   }
   
+  // Check GHL
   if (ghlData.hasCredentials) {
     if (ghlData.syncStatus) {
       return {
@@ -93,15 +102,38 @@ function getClientSyncStatus(
         source: 'ghl',
       };
     }
+    
+    // Fall back to time-based calculation
     if (!ghlData.lastSyncAt) {
-      return { status: 'not_configured', lastSyncAt: null, syncError: null, hasCredentials: true, source: 'ghl' };
+      return {
+        status: 'not_configured',
+        lastSyncAt: null,
+        syncError: null,
+        hasCredentials: true,
+        source: 'ghl',
+      };
     }
+    
     const hoursDiff = (new Date().getTime() - new Date(ghlData.lastSyncAt).getTime()) / (1000 * 60 * 60);
-    const status: 'healthy' | 'stale' | 'error' = hoursDiff <= 2 ? 'healthy' : hoursDiff <= 24 ? 'stale' : 'error';
-    return { status, lastSyncAt: ghlData.lastSyncAt, syncError: ghlData.syncError, hasCredentials: true, source: 'ghl' };
+    let status: 'healthy' | 'stale' | 'error' = hoursDiff <= 2 ? 'healthy' : hoursDiff <= 24 ? 'stale' : 'error';
+    
+    return {
+      status,
+      lastSyncAt: ghlData.lastSyncAt,
+      syncError: ghlData.syncError,
+      hasCredentials: true,
+      source: 'ghl',
+    };
   }
   
-  return { status: 'not_configured', lastSyncAt: null, syncError: null, hasCredentials: false, source: 'none' };
+  // No CRM configured
+  return {
+    status: 'not_configured',
+    lastSyncAt: null,
+    syncError: null,
+    hasCredentials: false,
+    source: 'none',
+  };
 }
 
 export function useSyncHealth(clientId: string | undefined) {
@@ -112,11 +144,17 @@ export function useSyncHealth(clientId: string | undefined) {
         return { 
           items: [], 
           quickChecks: [],
-          clientSync: { status: 'not_configured', lastSyncAt: null, syncError: null, hasCredentials: false, source: 'none' },
-          enrichment: { totalLeads: 0, enrichedCount: 0, pendingCount: 0, failedCount: 0, enrichmentRate: 0 },
+          clientSync: {
+            status: 'not_configured',
+            lastSyncAt: null,
+            syncError: null,
+            hasCredentials: false,
+            source: 'none',
+          }
         };
       }
 
+      // Fetch sync health data in parallel
       const [
         clientResult,
         leadsResult,
@@ -124,59 +162,51 @@ export function useSyncHealth(clientId: string | undefined) {
         fundedResult,
         callsMissingLeadResult,
         fundedMissingLeadResult,
-        enrichedCountResult,
-        pendingCountResult,
-        failedCountResult,
       ] = await Promise.all([
+        // Get client sync status (both GHL and HubSpot)
         supabase
           .from('clients')
           .select('ghl_api_key, ghl_location_id, last_ghl_sync_at, ghl_sync_status, ghl_sync_error, hubspot_portal_id, hubspot_access_token, last_hubspot_sync_at, hubspot_sync_status, hubspot_sync_error')
           .eq('id', clientId)
           .single(),
+        
+        // Leads count and last sync
         supabase
           .from('leads')
           .select('ghl_synced_at', { count: 'exact' })
           .eq('client_id', clientId)
           .order('ghl_synced_at', { ascending: false, nullsFirst: false })
           .limit(1),
+        
+        // Calls count and last sync
         supabase
           .from('calls')
           .select('ghl_synced_at', { count: 'exact' })
           .eq('client_id', clientId)
           .order('ghl_synced_at', { ascending: false, nullsFirst: false })
           .limit(1),
+        
+        // Funded investors count
         supabase
           .from('funded_investors')
           .select('created_at', { count: 'exact' })
           .eq('client_id', clientId)
           .order('created_at', { ascending: false })
           .limit(1),
+        
+        // Quick check: Calls missing lead link
         supabase
           .from('calls')
           .select('id', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .is('lead_id', null),
+        
+        // Quick check: Funded without lead
         supabase
           .from('funded_investors')
           .select('id', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .is('lead_id', null),
-        // Enrichment counts
-        supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', clientId)
-          .eq('enrichment_status', 'enriched'),
-        supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', clientId)
-          .eq('enrichment_status', 'pending'),
-        supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', clientId)
-          .eq('enrichment_status', 'failed'),
       ]);
 
       const clientData = clientResult.data;
@@ -201,16 +231,12 @@ export function useSyncHealth(clientId: string | undefined) {
       const leadsLastSync = leadsResult.data?.[0]?.ghl_synced_at || null;
       const callsLastSync = callsResult.data?.[0]?.ghl_synced_at || null;
       const fundedLastSync = fundedResult.data?.[0]?.created_at || null;
-      const totalLeads = leadsResult.count || 0;
-      const enrichedCount = enrichedCountResult.count || 0;
-      const pendingCount = pendingCountResult.count || 0;
-      const failedCount = failedCountResult.count || 0;
 
       const items: SyncHealthItem[] = [
         {
           recordType: 'leads',
           label: 'Leads',
-          count: totalLeads,
+          count: leadsResult.count || 0,
           lastSynced: leadsLastSync,
           status: getSyncStatus(leadsLastSync),
         },
@@ -245,17 +271,10 @@ export function useSyncHealth(clientId: string | undefined) {
         },
       ];
 
-      const enrichment: EnrichmentStats = {
-        totalLeads,
-        enrichedCount,
-        pendingCount,
-        failedCount,
-        enrichmentRate: totalLeads > 0 ? Math.round((enrichedCount / totalLeads) * 100) : 0,
-      };
-
-      return { items, quickChecks, clientSync, enrichment };
+      return { items, quickChecks, clientSync };
     },
     enabled: !!clientId,
-    staleTime: 30000,
+    staleTime: 30000, // 30 seconds
   });
 }
+
