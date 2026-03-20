@@ -197,6 +197,41 @@ export function CreativesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Section Tabs */}
+      <Tabs value={activeSection} onValueChange={setActiveSection}>
+        <TabsList className="bg-muted/50 flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="approvals" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Approvals
+            {pendingCount > 0 && (
+              <Badge variant="default" className="ml-1 h-5 min-w-[20px] flex items-center justify-center text-[10px] px-1.5">
+                {pendingCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="briefs" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Briefs & Scripts
+          </TabsTrigger>
+          <TabsTrigger value="static-ads" className="gap-2">
+            <Image className="h-4 w-4" />
+            Static Ads
+          </TabsTrigger>
+          <TabsTrigger value="batch-video" className="gap-2">
+            <Film className="h-4 w-4" />
+            Batch Video
+          </TabsTrigger>
+          <TabsTrigger value="ad-variations" className="gap-2">
+            <Wand2 className="h-4 w-4" />
+            Ad Variations
+          </TabsTrigger>
+          <TabsTrigger value="avatars" className="gap-2">
+            <User className="h-4 w-4" />
+            Avatars
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="approvals" className="mt-4 space-y-6">
       {/* Search and Filters */}
       <div className="flex flex-wrap gap-4">
         <div className="relative flex-1 min-w-[200px]">
