@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGPTFiles, useCreateGPTFile, useDeleteGPTFile, TOKEN_LIMIT, getCapacityPercent, getCapacityColor, estimateTokens } from '@/hooks/useGPTFiles';
 import { Plus, FileText, Globe, Type, Trash2, ChevronDown, Loader2, Info, Upload } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 

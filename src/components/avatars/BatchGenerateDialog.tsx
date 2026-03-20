@@ -22,7 +22,7 @@ import {
   CAMERA_DEVICE_OPTIONS,
   ASPECT_RATIO_OPTIONS,
 } from '@/hooks/useAvatarGeneration';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 

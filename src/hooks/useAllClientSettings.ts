@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { ClientSettings, KPIThresholds, getThresholdsFromSettings } from './useClientSettings';
 
 const defaultSettings: Omit<ClientSettings, 'id' | 'client_id'> = {
