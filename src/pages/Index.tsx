@@ -228,8 +228,7 @@ const Index = () => {
             {/* Spam utility page */}
             {activeTab === 'spam' && <SpamBlacklist embedded />}
 
-            {/* Briefs utility page */}
-            {activeTab === 'briefs' && <CreativeBriefs embedded />}
+            {/* Briefs - now part of Creatives tab */}
 
             {/* Ads Manager */}
             {activeTab === 'ads-manager' && <AdminAdsManagerTab platform="all" />}
