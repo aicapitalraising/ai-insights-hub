@@ -907,6 +907,7 @@ async function syncContactToDatabase(
   if (!existingLead) {
     upsertData.created_at = ghlCreatedAt;
     upsertData.status = 'new';
+    upsertData.enrichment_status = 'pending';
   }
 
   const { data: upsertedLead, error } = await supabase
