@@ -6,6 +6,42 @@ declare const EdgeRuntime: {
   waitUntil: (promise: Promise<any>) => void;
 } | undefined;
 
+// Fire-and-forget enrichment for newly created leads
+function triggerEnrichment(
+  clientId: string,
+  contact: GHLContact,
+) {
+  const enrichUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/enrich-lead-retargetiq`;
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || '';
+
+  const firstName = contact.firstName || (contact.name ? contact.name.split(' ')[0] : '') || '';
+  const lastName = contact.lastName || (contact.name ? contact.name.split(' ').slice(1).join(' ') : '') || '';
+
+  const enrichPromise = fetch(enrichUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
+      client_id: clientId,
+      external_id: contact.id,
+      phone: contact.phone || null,
+      email: contact.email || null,
+      first_name: firstName,
+      last_name: lastName,
+    }),
+  }).then(res => {
+    console.log(`[Enrich] Triggered for new lead ${contact.id}: ${res.status}`);
+  }).catch(err => {
+    console.error(`[Enrich] Failed to trigger for ${contact.id}:`, err);
+  });
+
+  if (typeof EdgeRuntime !== 'undefined') {
+    EdgeRuntime.waitUntil(enrichPromise);
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
