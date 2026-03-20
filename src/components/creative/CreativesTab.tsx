@@ -794,7 +794,7 @@ export function CreativesTab() {
         {/* Ad Variations */}
         <TabsContent value="ad-variations" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading ad variations..." />}>
-            <AdVariationsPage />
+            <AdVariationsPage embedded />
           </Suspense>
         </TabsContent>
 
