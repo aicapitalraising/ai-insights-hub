@@ -801,7 +801,7 @@ export function CreativesTab() {
         {/* Avatars */}
         <TabsContent value="avatars" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading avatars..." />}>
-            <AvatarsPage />
+            <AvatarsPage embedded />
           </Suspense>
         </TabsContent>
       </Tabs>
