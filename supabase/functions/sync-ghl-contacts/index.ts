@@ -1981,6 +1981,11 @@ async function syncSingleContact(
   // --- 2. Sync contact to database (with opportunity data) ---
   const syncResult = await syncContactToDatabase(supabase, clientId, contact, contactOpportunity, fieldNameMap);
   
+  // Trigger instant enrichment for brand-new leads
+  if (syncResult.action === 'created') {
+    triggerEnrichment(clientId, contact);
+  }
+  
   // Update ghl_synced_at timestamp and ghl_notes for lead
   const { data: updatedLead, error: updateError } = await supabase
     .from('leads')
