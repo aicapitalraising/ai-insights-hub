@@ -109,6 +109,7 @@ export default function AvatarsPage({ embedded = false }: { embedded?: boolean }
   }
 
   const content = (
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
