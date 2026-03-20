@@ -109,26 +109,85 @@ Deno.serve(async (req) => {
       await new Promise(r => setTimeout(r, 10000));
     }
 
-    // ── Step 2: GHL All Clients (contacts, calendar, pipelines) ──
+    // ── Step 2: GHL Per-Client Contact Sync (with enrichment) ──
     if (!skipSteps.includes("ghl")) {
       const start = Date.now();
-      console.log(`[daily-master-sync] Step 2: sync-ghl-all-clients`);
-      const res = await callFunction(supabaseUrl, supabaseKey, "sync-ghl-all-clients");
+      console.log(`[daily-master-sync] Step 2: sync-ghl-contacts per client`);
+      
+      // Fetch all clients with GHL credentials
+      const { data: ghlClients } = await supabase
+        .from("clients")
+        .select("id, name, ghl_api_key, ghl_location_id")
+        .not("ghl_api_key", "is", null)
+        .not("ghl_location_id", "is", null);
+      
+      let clientsSynced = 0;
+      const ghlErrors: string[] = [];
+      
+      if (ghlClients && ghlClients.length > 0) {
+        console.log(`[daily-master-sync] Found ${ghlClients.length} GHL-configured clients`);
+        
+        for (const client of ghlClients) {
+          console.log(`[daily-master-sync] Syncing GHL contacts for ${client.name} (${client.id})`);
+          const clientStart = Date.now();
+          
+          try {
+            const res = await callFunction(supabaseUrl, supabaseKey, "sync-ghl-contacts", {
+              clientId: client.id,
+              mode: "incremental",
+            }, 180000); // 3 min timeout per client
+            
+            if (res.success) {
+              clientsSynced++;
+              const d = res.data;
+              console.log(`[daily-master-sync] ${client.name}: created=${d?.created || 0}, updated=${d?.updated || 0} in ${Date.now() - clientStart}ms`);
+              
+              // Update last sync time on client
+              await supabase.from("clients").update({
+                last_ghl_sync_at: new Date().toISOString(),
+                ghl_sync_status: "healthy",
+                ghl_sync_error: null,
+              }).eq("id", client.id);
+            } else {
+              ghlErrors.push(`${client.name}: ${res.error}`);
+              await supabase.from("clients").update({
+                ghl_sync_status: "error",
+                ghl_sync_error: res.error || "Sync failed",
+              }).eq("id", client.id);
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : "Unknown";
+            ghlErrors.push(`${client.name}: ${msg}`);
+            await supabase.from("clients").update({
+              ghl_sync_status: "error",
+              ghl_sync_error: msg,
+            }).eq("id", client.id);
+          }
+          
+          // Rate limit between clients
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+      
+      // Also call the legacy all-clients sync for calendar/pipeline data
+      const allClientsRes = await callFunction(supabaseUrl, supabaseKey, "sync-ghl-all-clients");
+      
       const duration = Date.now() - start;
       results.push({
-        step: "sync-ghl-all-clients",
-        success: res.success,
+        step: "sync-ghl-contacts-all",
+        success: ghlErrors.length === 0,
         duration_ms: duration,
-        details: res.data?.message,
-        error: res.error,
+        details: `${clientsSynced}/${ghlClients?.length || 0} clients synced${ghlErrors.length > 0 ? `, ${ghlErrors.length} errors` : ""}`,
+        error: ghlErrors.length > 0 ? ghlErrors.join("; ") : undefined,
       });
-      if (!res.success) {
+      
+      if (ghlErrors.length > 0) {
         await createAlertTask(supabase,
-          "⚠️ GHL sync failed",
-          `The daily GHL all-clients sync failed: ${res.error}. Check GHL API keys.`
+          `⚠️ GHL sync failed for ${ghlErrors.length} client(s)`,
+          `GHL contact sync errors:\n${ghlErrors.join("\n")}. Check API keys and location IDs.`
         );
       }
-      await new Promise(r => setTimeout(r, 10000));
+      await new Promise(r => setTimeout(r, 5000));
     }
 
     // ── Step 3: HubSpot All Clients ──

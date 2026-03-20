@@ -5,6 +5,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to update enrichment_status on the leads table
+async function updateEnrichmentStatus(
+  supabase: any,
+  clientId: string | null,
+  leadId: string | null,
+  externalId: string | null,
+  status: 'pending' | 'enriched' | 'failed'
+) {
+  try {
+    const update: Record<string, any> = { enrichment_status: status };
+    if (status === 'enriched') update.enriched_at = new Date().toISOString();
+    
+    if (leadId) {
+      await supabase.from('leads').update(update).eq('id', leadId);
+    } else if (externalId && clientId) {
+      await supabase.from('leads').update(update).eq('external_id', externalId).eq('client_id', clientId);
+    }
+  } catch (err) {
+    console.warn(`[RetargetIQ] Failed to update enrichment_status to ${status}:`, err);
+  }
+}
+
 interface EnrichResult {
   identity: any;
   allIdentities: any[];
@@ -524,6 +546,8 @@ Deno.serve(async (req) => {
     const merged = mergeResults(results, knownFirstName, knownLastName);
 
     if (!merged.primary) {
+      // Mark lead as enrichment failed
+      await updateEnrichmentStatus(supabase, client_id, lead_id, external_id, 'failed');
       return new Response(JSON.stringify({ success: false, error: 'No enrichment data found for this contact' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -612,10 +636,14 @@ Deno.serve(async (req) => {
 
     if (upsertError) {
       console.error('Upsert error:', upsertError);
+      await updateEnrichmentStatus(supabase, client_id, lead_id, external_id, 'failed');
       return new Response(JSON.stringify({ success: false, error: upsertError.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Mark lead as enriched
+    await updateEnrichmentStatus(supabase, client_id, lead_id, external_id, 'enriched');
 
     // Write enrichment data back to leads table if we have a lead_id or external_id
     if (lead_id || external_id) {
@@ -834,6 +862,12 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error('Enrichment error:', err);
+    // Try to mark as failed
+    try {
+      const supabase2 = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const body = await req.clone().json().catch(() => ({}));
+      await updateEnrichmentStatus(supabase2, body.client_id, body.lead_id, body.external_id, 'failed');
+    } catch {}
     return new Response(JSON.stringify({ success: false, error: err.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
