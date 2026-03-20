@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/collapsible';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 

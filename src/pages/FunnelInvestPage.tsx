@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import logo from '@/assets/logo-aicra.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import {
   DollarSign,
   ArrowRight,

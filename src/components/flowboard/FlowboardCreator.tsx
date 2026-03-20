@@ -10,7 +10,7 @@ import { useFlowboard } from '@/hooks/useFlowboard';
 import { useFlowExecution } from '@/hooks/useFlowExecution';
 import { useClients } from '@/hooks/useClients';
 import { useAvatars, useStockAvatars } from '@/hooks/useAvatars';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import type { FlowNodeType, FlowNode, FlowEdge } from '@/types/flowboard';
 import type { Avatar } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';

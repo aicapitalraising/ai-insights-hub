@@ -44,7 +44,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { getEmbedInfo, getPlatformLabel } from '@/lib/video-embed';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 
 const PLATFORMS = ['TikTok', 'Instagram Reels', 'YouTube Shorts'] as const;
 const PLATFORM_MAP: Record<string, string> = {
