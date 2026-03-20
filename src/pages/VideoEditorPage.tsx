@@ -425,6 +425,8 @@ export default function VideoEditorPage({ embedded = false }: { embedded?: boole
           onZoomChange={setZoom}
         />
       </div>
-    </AppLayout>
   );
+
+  if (embedded) return editorContent;
+  return <AppLayout>{editorContent}</AppLayout>;
 }
