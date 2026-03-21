@@ -278,6 +278,10 @@ export default function ClientDetail() {
               <Layers className="h-4 w-4" />
               Pipeline
             </TabsTrigger>
+            <TabsTrigger value="slack" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Slack
+            </TabsTrigger>
             <TabsTrigger value="client-settings" className="gap-2">
               <Cog className="h-4 w-4" />
               Settings
