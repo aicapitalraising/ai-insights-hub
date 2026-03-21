@@ -1,7 +1,7 @@
 import {
   LayoutDashboard,
   BarChart3,
-  LayoutGrid,
+  ClipboardCheck,
   Bot,
   Video,
   MessageSquare,
