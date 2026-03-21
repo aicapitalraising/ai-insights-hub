@@ -174,7 +174,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     }
   }, [settings]);
 
-  // Load client business manager URL, GHL credentials, and Meta Ad Account
+  // Load client business manager URL, GHL credentials, Meta Ad Account, and brand info
   useEffect(() => {
     if (client?.business_manager_url) {
       setBusinessManagerUrl(client.business_manager_url);
@@ -203,6 +203,13 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     } else {
       setConnectionStatus('unknown');
     }
+    // Load brand info
+    setBrandDescription(client?.description || '');
+    setOfferDescription((client as any)?.offer_description || '');
+    setBrandColors(client?.brand_colors || []);
+    setBrandFonts(client?.brand_fonts || []);
+    setLogoUrl(client?.logo_url || '');
+    setWebsiteUrl((client as any)?.website_url || '');
   }, [client]);
 
   // Calculate projected annual revenue
