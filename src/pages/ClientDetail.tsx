@@ -419,6 +419,14 @@ export default function ClientDetail() {
             </SectionErrorBoundary>
           </TabsContent>
 
+          {/* ─── SLACK TAB ─── */}
+          <TabsContent value="slack" className="space-y-6">
+            <SectionErrorBoundary sectionName="Slack Chat">
+              <h2 className="text-lg font-bold mb-3">Slack Channels</h2>
+              <SlackChatTab clientId={client.id} clientName={client.name} />
+            </SectionErrorBoundary>
+          </TabsContent>
+
           {/* ─── SETTINGS TAB ─── */}
           <TabsContent value="client-settings" className="space-y-6">
             {/* Billing */}
