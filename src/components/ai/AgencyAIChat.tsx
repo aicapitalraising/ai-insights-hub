@@ -156,6 +156,21 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
     }
   }, [messages]);
 
+  // Auto-execute task creation when AI finishes streaming
+  useEffect(() => {
+    if (isLoading) return;
+    messages.forEach((msg, idx) => {
+      if (msg.role === 'assistant' && !processedIndexes.has(idx)) {
+        const { tasks } = extractTaskBlocks(msg.content);
+        if (tasks.length > 0) {
+          setProcessedIndexes(prev => new Set([...prev, idx]));
+          setCreatedTaskCount(prev => prev + tasks.length);
+          executeTaskCreation(tasks);
+        }
+      }
+    });
+  }, [messages, isLoading, processedIndexes]);
+
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
