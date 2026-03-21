@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Users, FolderOpen, Palette, ArrowLeft } from 'lucide-react';
 
-export default function StaticCreativesPage() {
+export default function StaticCreativesPage({ embedded = false }: { embedded?: boolean }) {
   const { data: clients = [] } = useClients();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState('');
