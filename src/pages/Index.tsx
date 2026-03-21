@@ -58,6 +58,7 @@ import DatabaseView from './DatabaseView';
 import SpamBlacklist from './SpamBlacklist';
 import CreativeBriefs from './CreativeBriefs';
 import { AdminAdsManagerTab } from '@/components/ads-manager/AdminAdsManagerTab';
+import { AdminOffersTab } from '@/components/offers/AdminOffersTab';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -232,8 +233,17 @@ const Index = () => {
 
             {/* Ads Manager */}
             {activeTab === 'ads-manager' && <AdminAdsManagerTab platform="all" />}
-            {activeTab === 'ads-manager-meta' && <AdminAdsManagerTab platform="meta" />}
-            {activeTab === 'ads-manager-google' && <AdminAdsManagerTab platform="google" />}
+
+            {/* Offers */}
+            {activeTab === 'offers' && (
+              <SectionErrorBoundary sectionName="Offers">
+                <div className="mb-4">
+                  <h2 className="text-lg font-bold">Offers</h2>
+                  <p className="text-sm text-muted-foreground">Manage offers across all clients — the main feed for building statics & videos</p>
+                </div>
+                <AdminOffersTab clients={clients} />
+              </SectionErrorBoundary>
+            )}
 
             {/* Dashboard */}
             {activeTab === 'dashboard' && (
