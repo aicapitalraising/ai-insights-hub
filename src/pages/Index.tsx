@@ -58,6 +58,7 @@ import DatabaseView from './DatabaseView';
 import SpamBlacklist from './SpamBlacklist';
 import CreativeBriefs from './CreativeBriefs';
 import { AdminAdsManagerTab } from '@/components/ads-manager/AdminAdsManagerTab';
+import { AdminOffersTab } from '@/components/offers/AdminOffersTab';
 
 const Index = () => {
   const navigate = useNavigate();
