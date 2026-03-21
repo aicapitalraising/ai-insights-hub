@@ -2803,9 +2803,11 @@ async function recalculateHistoricalMetrics(
     while (currentDate <= today) {
       const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
       
-      // Use UTC boundaries to avoid timezone issues
+      // Use UTC boundaries — exclusive upper bound (.lt) for consistency
       const dayStart = `${dateStr}T00:00:00.000Z`;
-      const dayEnd = `${dateStr}T23:59:59.999Z`;
+      const nextDay = new Date(currentDate);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      const dayNext = `${nextDay.toISOString().split('T')[0]}T00:00:00.000Z`;
       
       try {
         // Count leads created on this date (using is_spam for non-spam count later)
@@ -2815,7 +2817,7 @@ async function recalculateHistoricalMetrics(
           .eq('client_id', clientId)
           .eq('is_spam', false)
           .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
+          .lt('created_at', dayNext);
         
         // Count spam leads created on this date
         const { count: spamCount } = await supabase
@@ -2824,7 +2826,7 @@ async function recalculateHistoricalMetrics(
           .eq('client_id', clientId)
           .eq('is_spam', true)
           .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
+          .lt('created_at', dayNext);
         
         // Also count leads where is_spam is null (treat as non-spam)
         const { count: nullSpamCount } = await supabase
@@ -2833,29 +2835,28 @@ async function recalculateHistoricalMetrics(
           .eq('client_id', clientId)
           .is('is_spam', null)
           .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
+          .lt('created_at', dayNext);
         
         const totalValidLeads = (leadsCount || 0) + (nullSpamCount || 0);
         
         // Count calls BOOKED on this date (not reconnects)
-        // Use .neq instead of .or for clarity
         const { count: callsCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .neq('is_reconnect', true)
           .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .lt('booked_at', dayNext);
         
-        // Count showed calls BOOKED on this date (not reconnects)
+        // Count showed calls by SCHEDULED date (not booked) — matches recalculate-daily-metrics
         const { count: showedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('showed', true)
           .neq('is_reconnect', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .gte('scheduled_at', dayStart)
+          .lt('scheduled_at', dayNext);
         
         // Count reconnect calls BOOKED on this date
         const { count: reconnectCount } = await supabase
@@ -2864,17 +2865,17 @@ async function recalculateHistoricalMetrics(
           .eq('client_id', clientId)
           .eq('is_reconnect', true)
           .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .lt('booked_at', dayNext);
         
-        // Count reconnect showed calls BOOKED on this date
+        // Count reconnect showed calls by SCHEDULED date
         const { count: reconnectShowedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('is_reconnect', true)
           .eq('showed', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .gte('scheduled_at', dayStart)
+          .lt('scheduled_at', dayNext);
         
         // Get funded investors for this date
         const { data: fundedData, count: fundedCount } = await supabase
@@ -2882,7 +2883,7 @@ async function recalculateHistoricalMetrics(
           .select('funded_amount, commitment_amount', { count: 'exact' })
           .eq('client_id', clientId)
           .gte('funded_at', dayStart)
-          .lte('funded_at', dayEnd);
+          .lt('funded_at', dayNext);
         
         const fundedDollars = (fundedData || []).reduce((sum: number, f: any) => {
           const amount = (f.funded_amount && f.funded_amount > 0) ? f.funded_amount : (f.commitment_amount || 0);
@@ -2971,7 +2972,9 @@ async function recalculateRecentMetrics(
     while (currentDate <= today) {
       const dateStr = currentDate.toISOString().split('T')[0];
       const dayStart = `${dateStr}T00:00:00.000Z`;
-      const dayEnd = `${dateStr}T23:59:59.999Z`;
+      const nextDay = new Date(currentDate);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      const dayNext = `${nextDay.toISOString().split('T')[0]}T00:00:00.000Z`;
       
       try {
         // Count leads where is_spam = false
@@ -2981,7 +2984,7 @@ async function recalculateRecentMetrics(
           .eq('client_id', clientId)
           .eq('is_spam', false)
           .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
+          .lt('created_at', dayNext);
         
         // Count spam leads
         const { count: spamCount } = await supabase
@@ -2990,7 +2993,7 @@ async function recalculateRecentMetrics(
           .eq('client_id', clientId)
           .eq('is_spam', true)
           .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
+          .lt('created_at', dayNext);
         
         // Count leads with null is_spam (treat as non-spam)
         const { count: nullSpamCount } = await supabase
@@ -2999,7 +3002,7 @@ async function recalculateRecentMetrics(
           .eq('client_id', clientId)
           .is('is_spam', null)
           .gte('created_at', dayStart)
-          .lte('created_at', dayEnd);
+          .lt('created_at', dayNext);
         
         const totalValidLeads = (leadsCount || 0) + (nullSpamCount || 0);
         
@@ -3010,17 +3013,17 @@ async function recalculateRecentMetrics(
           .eq('client_id', clientId)
           .neq('is_reconnect', true)
           .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .lt('booked_at', dayNext);
         
-        // Count showed calls BOOKED on this date (not reconnects)
+        // Count showed calls by SCHEDULED date — matches recalculate-daily-metrics
         const { count: showedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('showed', true)
           .neq('is_reconnect', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .gte('scheduled_at', dayStart)
+          .lt('scheduled_at', dayNext);
         
         // Count reconnect calls BOOKED on this date
         const { count: reconnectCount } = await supabase
@@ -3029,17 +3032,17 @@ async function recalculateRecentMetrics(
           .eq('client_id', clientId)
           .eq('is_reconnect', true)
           .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .lt('booked_at', dayNext);
         
-        // Count reconnect showed calls BOOKED on this date
+        // Count reconnect showed calls by SCHEDULED date
         const { count: reconnectShowedCount } = await supabase
           .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', clientId)
           .eq('is_reconnect', true)
           .eq('showed', true)
-          .gte('booked_at', dayStart)
-          .lte('booked_at', dayEnd);
+          .gte('scheduled_at', dayStart)
+          .lt('scheduled_at', dayNext);
         
         // Get funded investors for this date
         const { data: fundedData, count: fundedCount } = await supabase
@@ -3047,7 +3050,7 @@ async function recalculateRecentMetrics(
           .select('funded_amount, commitment_amount', { count: 'exact' })
           .eq('client_id', clientId)
           .gte('funded_at', dayStart)
-          .lte('funded_at', dayEnd);
+          .lt('funded_at', dayNext);
         
         const fundedDollars = (fundedData || []).reduce((sum: number, f: any) => {
           const amount = (f.funded_amount && f.funded_amount > 0) ? f.funded_amount : (f.commitment_amount || 0);
