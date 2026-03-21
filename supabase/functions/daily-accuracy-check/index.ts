@@ -89,7 +89,9 @@ Deno.serve(async (req) => {
   while (current <= end) {
     const checkDate = current.toISOString().split("T")[0];
     const dayStart = `${checkDate}T00:00:00.000Z`;
-    const dayEnd = `${checkDate}T23:59:59.999Z`;
+    const nextDay = new Date(current);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    const dayNext = `${nextDay.toISOString().split("T")[0]}T00:00:00.000Z`;
 
     for (const client of clients) {
       // Get current daily_metrics row
