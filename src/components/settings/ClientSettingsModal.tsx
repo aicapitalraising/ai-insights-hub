@@ -101,6 +101,16 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
   const [slackReviewChannelId, setSlackReviewChannelId] = useState('');
   const [slackChannelId, setSlackChannelId] = useState('');
 
+  // Brand info state
+  const [brandDescription, setBrandDescription] = useState('');
+  const [offerDescription, setOfferDescription] = useState('');
+  const [brandColors, setBrandColors] = useState<string[]>([]);
+  const [brandFonts, setBrandFonts] = useState<string[]>([]);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [newColor, setNewColor] = useState('#6366f1');
+  const [newFont, setNewFont] = useState('');
+
   // Load settings when available
   useEffect(() => {
     if (settings) {
@@ -164,7 +174,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     }
   }, [settings]);
 
-  // Load client business manager URL, GHL credentials, and Meta Ad Account
+  // Load client business manager URL, GHL credentials, Meta Ad Account, and brand info
   useEffect(() => {
     if (client?.business_manager_url) {
       setBusinessManagerUrl(client.business_manager_url);
@@ -193,6 +203,13 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
     } else {
       setConnectionStatus('unknown');
     }
+    // Load brand info
+    setBrandDescription(client?.description || '');
+    setOfferDescription((client as any)?.offer_description || '');
+    setBrandColors(client?.brand_colors || []);
+    setBrandFonts(client?.brand_fonts || []);
+    setLogoUrl(client?.logo_url || '');
+    setWebsiteUrl((client as any)?.website_url || '');
   }, [client]);
 
   // Calculate projected annual revenue
@@ -304,6 +321,13 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
       if (metaAdAccountId !== ((client as any).meta_ad_account_id || '')) {
         clientUpdates.meta_ad_account_id = metaAdAccountId || null;
       }
+      // Brand info updates
+      clientUpdates.description = brandDescription || null;
+      clientUpdates.offer_description = offerDescription || null;
+      clientUpdates.brand_colors = brandColors as any;
+      clientUpdates.brand_fonts = brandFonts as any;
+      clientUpdates.logo_url = logoUrl || null;
+      clientUpdates.website_url = websiteUrl || null;
 
       if (Object.keys(clientUpdates).length > 0) {
         await supabase
@@ -435,7 +459,8 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         </DialogHeader>
 
         <Tabs defaultValue="kpis" className="mt-4">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
+            <TabsTrigger value="brand">Brand</TabsTrigger>
             <TabsTrigger value="kpis">KPIs</TabsTrigger>
             <TabsTrigger value="teams">Teams</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
@@ -445,6 +470,139 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
             <TabsTrigger value="thresholds">Thresholds</TabsTrigger>
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
           </TabsList>
+
+          {/* Brand Info Tab */}
+          <TabsContent value="brand" className="space-y-4 mt-4">
+            <div className="border-2 border-border p-4 space-y-4">
+              <h4 className="font-medium mb-1">Brand Identity</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="logoUrl">Logo URL</Label>
+                  <Input
+                    id="logoUrl"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="https://example.com/logo.png"
+                  />
+                  {logoUrl && (
+                    <img src={logoUrl} alt="Logo" className="h-10 w-auto rounded border border-border" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="websiteUrl">Website URL</Label>
+                  <Input
+                    id="websiteUrl"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://example.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-2 border-border p-4 space-y-4">
+              <h4 className="font-medium mb-1">Description &amp; Offer</h4>
+              <div className="space-y-2">
+                <Label htmlFor="brandDescription">Business Description</Label>
+                <textarea
+                  id="brandDescription"
+                  value={brandDescription}
+                  onChange={(e) => setBrandDescription(e.target.value)}
+                  placeholder="Brief description of the client's business..."
+                  className="w-full h-20 px-3 py-2 border-2 border-border bg-background text-sm rounded-md resize-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="offerDescription">Offer / Product Description</Label>
+                <textarea
+                  id="offerDescription"
+                  value={offerDescription}
+                  onChange={(e) => setOfferDescription(e.target.value)}
+                  placeholder="What product/service is being offered? Used for AI creative generation..."
+                  className="w-full h-20 px-3 py-2 border-2 border-border bg-background text-sm rounded-md resize-none"
+                />
+                <p className="text-xs text-muted-foreground">Used by AI for script writing &amp; ad generation</p>
+              </div>
+            </div>
+
+            <div className="border-2 border-border p-4 space-y-4">
+              <h4 className="font-medium mb-1">Brand Colors</h4>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {brandColors.map((color, i) => (
+                  <div key={i} className="flex items-center gap-1 border border-border rounded px-2 py-1">
+                    <div className="h-4 w-4 rounded" style={{ backgroundColor: color }} />
+                    <span className="text-xs font-mono">{color}</span>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-destructive ml-1"
+                      onClick={() => setBrandColors(brandColors.filter((_, idx) => idx !== i))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={newColor}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  className="h-9 w-12 rounded border border-border cursor-pointer"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!brandColors.includes(newColor)) {
+                      setBrandColors([...brandColors, newColor]);
+                    }
+                  }}
+                >
+                  Add Color
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-2 border-border p-4 space-y-4">
+              <h4 className="font-medium mb-1">Brand Fonts</h4>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {brandFonts.map((font, i) => (
+                  <div key={i} className="flex items-center gap-1 border border-border rounded px-2 py-1">
+                    <span className="text-xs">{font}</span>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-destructive ml-1"
+                      onClick={() => setBrandFonts(brandFonts.filter((_, idx) => idx !== i))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newFont}
+                  onChange={(e) => setNewFont(e.target.value)}
+                  placeholder="e.g. Inter, Playfair Display"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (newFont.trim() && !brandFonts.includes(newFont.trim())) {
+                      setBrandFonts([...brandFonts, newFont.trim()]);
+                      setNewFont('');
+                    }
+                  }}
+                >
+                  Add Font
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="teams" className="space-y-4 mt-4">
             <div className="border-2 border-border p-4 space-y-4">
