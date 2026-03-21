@@ -53,75 +53,81 @@ export default function StaticCreativesPage({ embedded = false }: { embedded?: b
     );
   }
 
-  return (
-    <AppLayout breadcrumbs={[{ label: 'Static Creatives' }]}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Static Creatives</h1>
-            <p className="text-sm text-muted-foreground">Generate static ad creatives using your brand styles and references.</p>
-          </div>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowStyles(true)}>
-            <Palette className="h-4 w-4" />
-            Manage Styles
-          </Button>
+  const mainContent = (
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Static Creatives</h1>
+          <p className="text-sm text-muted-foreground">Generate static ad creatives using your brand styles and references.</p>
         </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowStyles(true)}>
+          <Palette className="h-4 w-4" />
+          Manage Styles
+        </Button>
+      </div>
 
-        {/* Client & Project Selector */}
-        <Card className="p-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+      {/* Client & Project Selector */}
+      <Card className="p-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" />
+              Client
+            </Label>
+            <Select value={selectedClientId} onValueChange={handleClientChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a client..." />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedClientId && staticProjects.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-sm flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" />
-                Client
+                <FolderOpen className="h-3.5 w-3.5" />
+                Project (optional)
               </Label>
-              <Select value={selectedClientId} onValueChange={handleClientChange}>
+              <Select value={selectedProjectId} onValueChange={handleProjectChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a client..." />
+                  <SelectValue placeholder="Select a project..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  {staticProjects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          )}
+        </div>
+      </Card>
 
-            {selectedClientId && (
-              <div className="space-y-1.5">
-                <Label className="text-sm flex items-center gap-1.5">
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  Project
-                </Label>
-                <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={staticProjects.length ? 'Select a project...' : 'No static projects'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staticProjects.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </Card>
+      {/* Generator - works with or without a project */}
+      {selectedClientId ? (
+        <StaticBatchCreator
+          projectId={selectedProjectId || `client-${selectedClientId}`}
+          clientId={selectedClientId}
+          projectOfferDescription={selectedProject?.offer_description}
+        />
+      ) : (
+        <div className="text-center py-16 text-muted-foreground">
+          <p className="text-lg font-medium">Select a client to start generating</p>
+          <p className="text-sm mt-1">Choose a client above to access the batch creator.</p>
+        </div>
+      )}
+    </div>
+  );
 
-        {/* Generator */}
-        {selectedClientId && selectedProjectId ? (
-          <StaticBatchCreator
-            projectId={selectedProjectId}
-            clientId={selectedClientId}
-            projectOfferDescription={selectedProject?.offer_description}
-          />
-        ) : (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-lg font-medium">Select a client and project to start generating</p>
-            <p className="text-sm mt-1">Choose a client above, then pick a static batch project.</p>
-          </div>
-        )}
-      </div>
+  if (embedded) return mainContent;
+
+  return (
+    <AppLayout breadcrumbs={[{ label: 'Static Creatives' }]}>
+      {mainContent}
     </AppLayout>
   );
 }
