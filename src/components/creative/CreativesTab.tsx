@@ -56,7 +56,7 @@ import { toast } from 'sonner';
 
 // Lazy-load sub-section page components
 const CreativeBriefs = lazy(() => import('@/pages/CreativeBriefs'));
-const StaticAdsPage = lazy(() => import('@/pages/StaticAdsPage'));
+const StaticCreativesPage = lazy(() => import('@/pages/StaticCreativesPage'));
 const BatchVideoWorkflow = lazy(() => import('@/components/batch-video/BatchVideoWorkflow').then(m => ({ default: m.BatchVideoWorkflow })));
 const AdVariationsPage = lazy(() => import('@/pages/AdVariationsPage'));
 const AvatarsPage = lazy(() => import('@/pages/AvatarsPage'));
