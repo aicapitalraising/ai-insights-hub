@@ -132,3 +132,18 @@ export function useSyncSlackChannels() {
     },
   });
 }
+
+export function useSendSlackMessage() {
+  return useMutation({
+    mutationFn: async ({ channel, text, thread_ts }: { channel: string; text: string; thread_ts?: string }) => {
+      const { data, error } = await supabase.functions.invoke('slack-send-message', {
+        body: { channel, text, thread_ts },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onError: (err: any) => {
+      toast.error(`Failed to send message: ${err.message}`);
+    },
+  });
+}
