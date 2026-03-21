@@ -2779,19 +2779,8 @@ async function recalculateHistoricalMetrics(
     const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
     const today = new Date();
     
-    // CRITICAL FIX: Delete existing daily_metrics for this client
-    // This ensures we don't have stale data conflicting with new calculations
-    console.log(`Clearing existing daily_metrics for client ${clientId}...`);
-    const { error: deleteError } = await supabase
-      .from('daily_metrics')
-      .delete()
-      .eq('client_id', clientId);
-    
-    if (deleteError) {
-      console.error('Error clearing daily_metrics:', deleteError);
-      result.errors.push(`Failed to clear existing metrics: ${deleteError.message}`);
-      // Continue anyway - upsert should still work
-    }
+    // UPSERT pattern — preserves ad_spend/impressions/clicks/ctr columns
+    console.log(`Recalculating daily_metrics for client ${clientId} using UPSERT (preserving ad spend)...`);
     
     // Iterate through each day from earliest to today
     const currentDate = new Date(earliestDate);
