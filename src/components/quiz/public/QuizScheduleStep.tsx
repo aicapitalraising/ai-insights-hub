@@ -17,6 +17,20 @@ interface QuizScheduleStepProps {
 
 export const QuizScheduleStep = forwardRef<HTMLDivElement, QuizScheduleStepProps>(
   ({ onConfirm, calendarUrl }, ref) => {
+    const today = startOfDay(new Date());
+    const [weekStart, setWeekStart] = useState(() => startOfWeek(today, { weekStartsOn: 1 }));
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedTime, setSelectedTime] = useState<string | null>(null);
+
+    const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+
+    const hasPrevWeek = useMemo(() => {
+      const prev = addDays(weekStart, -7);
+      return Array.from({ length: 7 }, (_, i) => addDays(prev, i)).some(d => !isWeekend(d) && !isBefore(d, today));
+    }, [weekStart, today]);
+
+    const weekRange = `${format(weekStart, 'MMM d')} - ${format(addDays(weekStart, 6), 'MMM d, yyyy')}`;
+
     // If external calendar URL, show an iframe
     if (calendarUrl) {
       return (
@@ -32,20 +46,6 @@ export const QuizScheduleStep = forwardRef<HTMLDivElement, QuizScheduleStepProps
         </motion.div>
       );
     }
-
-    const today = startOfDay(new Date());
-    const [weekStart, setWeekStart] = useState(() => startOfWeek(today, { weekStartsOn: 1 }));
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [selectedTime, setSelectedTime] = useState<string | null>(null);
-
-    const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
-
-    const hasPrevWeek = useMemo(() => {
-      const prev = addDays(weekStart, -7);
-      return Array.from({ length: 7 }, (_, i) => addDays(prev, i)).some(d => !isWeekend(d) && !isBefore(d, today));
-    }, [weekStart, today]);
-
-    const weekRange = `${format(weekStart, 'MMM d')} - ${format(addDays(weekStart, 6), 'MMM d, yyyy')}`;
 
     return (
       <motion.div ref={ref} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}
