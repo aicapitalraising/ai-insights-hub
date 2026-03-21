@@ -62,7 +62,57 @@ const clientQuickQuestions = [
   "What are their key improvement areas?",
   "How is their funnel performing?",
   "What's their cost efficiency trend?",
+  "Create follow-up tasks for this client",
 ];
+
+// Parse create_tasks blocks from AI response
+function extractTaskBlocks(content: string): { tasks: any[]; cleanContent: string } {
+  const regex = /```create_tasks\n([\s\S]*?)```/g;
+  const allTasks: any[] = [];
+  let cleanContent = content;
+
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (Array.isArray(parsed)) {
+        allTasks.push(...parsed);
+      }
+    } catch (e) {
+      console.error('Failed to parse task block:', e);
+    }
+    cleanContent = cleanContent.replace(match[0], '');
+  }
+
+  return { tasks: allTasks, cleanContent: cleanContent.trim() };
+}
+
+async function executeTaskCreation(tasks: any[]) {
+  if (tasks.length === 0) return;
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-create-tasks`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ tasks }),
+      }
+    );
+    if (response.ok) {
+      const { results } = await response.json();
+      const created = results.filter((r: any) => r.success);
+      toast.success(`Created ${created.length} task${created.length !== 1 ? 's' : ''}`);
+    } else {
+      toast.error('Failed to create tasks');
+    }
+  } catch (e) {
+    console.error('Task creation failed:', e);
+    toast.error('Failed to create tasks');
+  }
+}
 
 export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAIChatProps) {
   const [isOpen, setIsOpen] = useState(false);
