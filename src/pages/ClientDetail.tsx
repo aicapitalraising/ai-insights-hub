@@ -396,9 +396,7 @@ export default function ClientDetail() {
           {/* ─── OFFERS TAB ─── */}
           <TabsContent value="offers" className="space-y-6">
             <SectionErrorBoundary sectionName="Offers">
-              <h2 className="text-lg font-bold mb-3">Offers</h2>
-              <p className="text-sm text-muted-foreground mb-4">Main feed for building statics and videos</p>
-              <ClientOffersSection clientId={client.id} clientName={client.name} />
+              <ClientFulfillmentWorkspace client={client} />
             </SectionErrorBoundary>
           </TabsContent>
 
