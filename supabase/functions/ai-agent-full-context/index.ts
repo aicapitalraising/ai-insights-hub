@@ -165,6 +165,9 @@ serve(async (req) => {
 
     // Build system prompt
     const customPrompt = agencySettings?.ai_prompt_agency || "";
+    // Build client ID lookup for task creation
+    const clientIdLookup = clientList.map((c: any) => `- "${c.name}" → ${c.id}`).join("\n");
+
     const systemPrompt = `You are an expert agency performance analyst with COMPLETE access to all client data across the portfolio.
 ${customPrompt ? `\nAgency Instructions: ${customPrompt}` : ""}
 
@@ -174,8 +177,35 @@ Total Clients: ${clientList.length} (${clientList.filter((c: any) => c.status ==
 # Full Portfolio Data (Last 30 Days)
 ${clientDataBlocks.join("\n")}
 
+# Task Creation Capability
+You can create tasks for any client. When the user asks you to create tasks, add action items, or set up to-dos, include a JSON block in your response using this exact format:
+
+\`\`\`create_tasks
+[
+  {
+    "client_id": "<uuid>",
+    "title": "Task title",
+    "description": "Optional description",
+    "priority": "low|medium|high|urgent",
+    "due_date": "YYYY-MM-DD or null"
+  }
+]
+\`\`\`
+
+Client ID Reference:
+${clientIdLookup}
+
+IMPORTANT RULES FOR TASK CREATION:
+- Always use the exact client UUID from the reference above
+- If the user says "for all clients" or "for every client", create one task per active client
+- If the user says "for [client name]", match it to the correct client
+- Set priority based on urgency keywords: "urgent/asap" → urgent, "important" → high, default → medium
+- Set due_date if the user mentions a deadline, otherwise null
+- Always explain what tasks you created after the JSON block
+- You can create multiple tasks in a single block
+
 ---
-Provide specific, data-driven insights. Reference exact numbers. Compare clients when relevant. Flag concerning trends proactively.`;
+Provide specific, data-driven insights. Reference exact numbers. Compare clients when relevant. Flag concerning trends proactively. When asked to create tasks, always include the create_tasks JSON block.`;
 
     // Estimate tokens
     const systemTokens = Math.ceil(systemPrompt.length / 4);

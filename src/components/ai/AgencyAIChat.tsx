@@ -13,7 +13,8 @@ import {
   FileText,
   Image as ImageIcon,
   Film,
-  Database
+  Database,
+  CheckSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,8 @@ import { AggregatedMetrics } from '@/hooks/useMetrics';
 import { useMeetings } from '@/hooks/useMeetings';
 import { TokenUsageBar, FULL_MODEL_OPTIONS, MODEL_LIMITS } from './TokenUsageBar';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 type AIModel = 'gemini-2.5-pro' | 'gemini-3-flash' | 'gemini-3-pro' | 'gpt-5';
 
@@ -50,8 +53,9 @@ const modelLabels: Record<AIModel, string> = {
 const agencyQuickQuestions = [
   "Which client needs immediate attention?",
   "Compare all clients' CPL performance",
-  "What's the agency-wide conversion rate?",
+  "Create weekly check-in tasks for all active clients",
   "Identify our best performing client",
+  "Create follow-up tasks for underperforming clients",
 ];
 
 const clientQuickQuestions = [
@@ -59,7 +63,57 @@ const clientQuickQuestions = [
   "What are their key improvement areas?",
   "How is their funnel performing?",
   "What's their cost efficiency trend?",
+  "Create follow-up tasks for this client",
 ];
+
+// Parse create_tasks blocks from AI response
+function extractTaskBlocks(content: string): { tasks: any[]; cleanContent: string } {
+  const regex = /```create_tasks\n([\s\S]*?)```/g;
+  const allTasks: any[] = [];
+  let cleanContent = content;
+
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (Array.isArray(parsed)) {
+        allTasks.push(...parsed);
+      }
+    } catch (e) {
+      console.error('Failed to parse task block:', e);
+    }
+    cleanContent = cleanContent.replace(match[0], '');
+  }
+
+  return { tasks: allTasks, cleanContent: cleanContent.trim() };
+}
+
+async function executeTaskCreation(tasks: any[]) {
+  if (tasks.length === 0) return;
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-create-tasks`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ tasks }),
+      }
+    );
+    if (response.ok) {
+      const { results } = await response.json();
+      const created = results.filter((r: any) => r.success);
+      toast.success(`Created ${created.length} task${created.length !== 1 ? 's' : ''}`);
+    } else {
+      toast.error('Failed to create tasks');
+    }
+  } catch (e) {
+    console.error('Task creation failed:', e);
+    toast.error('Failed to create tasks');
+  }
+}
 
 export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAIChatProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,7 +124,8 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [fullPortfolioMode, setFullPortfolioMode] = useState(true);
   const [tokenUsage, setTokenUsage] = useState({ used: 0, system: 0 });
-  
+  const [processedIndexes, setProcessedIndexes] = useState<Set<number>>(new Set());
+  const [createdTaskCount, setCreatedTaskCount] = useState(0);
   const { messages, isLoading, sendMessage, sendFullContextMessage, clearMessages } = useAgencyAIAnalysis();
   const { data: meetings = [] } = useMeetings();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -101,6 +156,21 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Auto-execute task creation when AI finishes streaming
+  useEffect(() => {
+    if (isLoading) return;
+    messages.forEach((msg, idx) => {
+      if (msg.role === 'assistant' && !processedIndexes.has(idx)) {
+        const { tasks } = extractTaskBlocks(msg.content);
+        if (tasks.length > 0) {
+          setProcessedIndexes(prev => new Set([...prev, idx]));
+          setCreatedTaskCount(prev => prev + tasks.length);
+          executeTaskCreation(tasks);
+        }
+      }
+    });
+  }, [messages, isLoading, processedIndexes]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -440,11 +510,24 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
                         ))}
                       </div>
                     )}
-                    {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
-                    ) : (
+                    {msg.role === 'assistant' ? (() => {
+                      const { tasks, cleanContent } = extractTaskBlocks(msg.content);
+                      return (
+                        <>
+                          {tasks.length > 0 && (
+                            <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-border/50">
+                              <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
+                              <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200 bg-emerald-500/10">
+                                {tasks.length} task{tasks.length !== 1 ? 's' : ''} created
+                              </Badge>
+                            </div>
+                          )}
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                            <ReactMarkdown>{cleanContent}</ReactMarkdown>
+                          </div>
+                        </>
+                      );
+                    })() : (
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     )}
                   </div>
