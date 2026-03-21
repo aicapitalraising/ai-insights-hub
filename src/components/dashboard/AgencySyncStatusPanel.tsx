@@ -10,7 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Activity, Settings2, Calendar, Users, TrendingUp, Save, ArrowUpDown, ShieldCheck, Plug, Eye, EyeOff, Key, Stethoscope, HeartPulse } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Activity, Settings2, Calendar, Users, TrendingUp, Save, ArrowUpDown, ShieldCheck, Plug, Eye, EyeOff, Key, Stethoscope, HeartPulse, History } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
