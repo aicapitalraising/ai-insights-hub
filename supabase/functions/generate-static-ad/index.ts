@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { checkRateLimit, rateLimitedResponse, checkIdempotency, logApiUsage, fetchWithRetry, COST_ESTIMATES } from '../_shared/edge-utils.ts';
+import { getGeminiApiKey } from '../_shared/get-gemini-key.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
