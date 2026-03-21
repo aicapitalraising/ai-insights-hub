@@ -335,6 +335,30 @@ export default function ClientDetail() {
             </SectionErrorBoundary>
           </TabsContent>
 
+          {/* ─── ATTRIBUTION & RECORDS TAB ─── */}
+          <TabsContent value="records" className="space-y-6">
+            <SectionErrorBoundary sectionName="Records">
+              <h2 className="text-lg font-bold mb-3">Detailed Records</h2>
+              <InlineRecordsView
+                dailyMetrics={dailyMetrics}
+                leads={leads}
+                calls={calls}
+                fundedInvestors={fundedInvestors}
+                isLoading={metricsLoading || leadsLoading}
+                onRecordSelect={handleRecordSelect}
+                selectedRecord={selectedRecord}
+                selectedType={selectedType}
+                clientId={clientId}
+                ghlLocationId={client.ghl_location_id}
+              />
+            </SectionErrorBoundary>
+            {clientId && (
+              <SectionErrorBoundary sectionName="Data Audit">
+                <DataAuditSection clientId={clientId} />
+              </SectionErrorBoundary>
+            )}
+          </TabsContent>
+
           {/* ─── ADS MANAGER TAB ─── */}
           <TabsContent value="ads-manager" className="space-y-6">
             <SectionErrorBoundary sectionName="Ads Manager">
