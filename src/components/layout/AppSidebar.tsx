@@ -60,7 +60,7 @@ const navStructure = [
   {
     title: 'Tasks',
     value: 'tasks',
-    icon: LayoutGrid,
+    icon: CheckCircle2,
   },
   {
     title: 'Reporting',
