@@ -51,6 +51,8 @@ export interface ClientSettings {
   variation_schedule_days?: string[] | null; // e.g. ['monday', 'thursday']
   variation_schedule_time?: string | null; // e.g. '07:00'
   variation_auto_enabled?: boolean;
+  // Webhook/attribution mappings
+  webhook_mappings?: Record<string, any> | null;
 }
 
 export interface KPIThresholds {

@@ -46,26 +46,30 @@ export function AttributionSettings({ clientId }: AttributionSettingsProps) {
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    if (settings?.webhook_mappings && typeof settings.webhook_mappings === 'object') {
-      const saved = (settings.webhook_mappings as any)?.attribution;
-      if (saved) {
-        setConfig({ ...defaultConfig, ...saved });
-      }
+    const saved = settings?.webhook_mappings?.attribution;
+    if (saved) {
+      setConfig({ ...defaultConfig, ...saved });
     }
   }, [settings]);
 
   const handleSave = () => {
-    const existingMappings = (settings?.webhook_mappings as any) || {};
+    const existingMappings = settings?.webhook_mappings || {};
     updateSettings.mutate(
       {
-        clientId,
-        settings: {
-          webhook_mappings: {
-            ...existingMappings,
-            attribution: config,
-          },
+        client_id: clientId,
+        webhook_mappings: {
+          ...existingMappings,
+          attribution: config,
         },
       },
+      {
+        onSuccess: () => {
+          toast.success('Attribution settings saved');
+          setDirty(false);
+        },
+      }
+    );
+  };
       {
         onSuccess: () => {
           toast.success('Attribution settings saved');
