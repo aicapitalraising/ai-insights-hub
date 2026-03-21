@@ -1059,6 +1059,185 @@ export type Database = {
           },
         ]
       }
+      quiz_funnels: {
+        Row: {
+          badge_text: string | null
+          bottom_stats: Json | null
+          brand_logo_url: string | null
+          brand_name: string | null
+          calendar_url: string | null
+          client_id: string
+          collect_contact: boolean | null
+          created_at: string
+          cta_text: string | null
+          disclaimer_text: string | null
+          hero_description: string | null
+          hero_heading: string | null
+          hero_stats: Json | null
+          id: string
+          is_active: boolean | null
+          meta_pixel_id: string | null
+          name: string
+          primary_color: string | null
+          questions: Json
+          show_calendar: boolean | null
+          slug: string | null
+          subtitle: string | null
+          thank_you_heading: string | null
+          thank_you_message: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          badge_text?: string | null
+          bottom_stats?: Json | null
+          brand_logo_url?: string | null
+          brand_name?: string | null
+          calendar_url?: string | null
+          client_id: string
+          collect_contact?: boolean | null
+          created_at?: string
+          cta_text?: string | null
+          disclaimer_text?: string | null
+          hero_description?: string | null
+          hero_heading?: string | null
+          hero_stats?: Json | null
+          id?: string
+          is_active?: boolean | null
+          meta_pixel_id?: string | null
+          name?: string
+          primary_color?: string | null
+          questions?: Json
+          show_calendar?: boolean | null
+          slug?: string | null
+          subtitle?: string | null
+          thank_you_heading?: string | null
+          thank_you_message?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          badge_text?: string | null
+          bottom_stats?: Json | null
+          brand_logo_url?: string | null
+          brand_name?: string | null
+          calendar_url?: string | null
+          client_id?: string
+          collect_contact?: boolean | null
+          created_at?: string
+          cta_text?: string | null
+          disclaimer_text?: string | null
+          hero_description?: string | null
+          hero_heading?: string | null
+          hero_stats?: Json | null
+          id?: string
+          is_active?: boolean | null
+          meta_pixel_id?: string | null
+          name?: string
+          primary_color?: string | null
+          questions?: Json
+          show_calendar?: boolean | null
+          slug?: string | null
+          subtitle?: string | null
+          thank_you_heading?: string | null
+          thank_you_message?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_funnels_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_submissions: {
+        Row: {
+          answers: Json | null
+          booking_date: string | null
+          booking_time: string | null
+          client_id: string
+          completed: boolean | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          ip_address: string | null
+          last_name: string | null
+          phone: string | null
+          quiz_funnel_id: string
+          step_reached: number | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          answers?: Json | null
+          booking_date?: string | null
+          booking_time?: string | null
+          client_id: string
+          completed?: boolean | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          last_name?: string | null
+          phone?: string | null
+          quiz_funnel_id: string
+          step_reached?: number | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          answers?: Json | null
+          booking_date?: string | null
+          booking_time?: string | null
+          client_id?: string
+          completed?: boolean | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          last_name?: string | null
+          phone?: string | null
+          quiz_funnel_id?: string
+          step_reached?: number | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_submissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_submissions_quiz_funnel_id_fkey"
+            columns: ["quiz_funnel_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reconciliation_items: {
         Row: {
           amount: number | null
