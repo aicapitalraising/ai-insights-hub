@@ -313,33 +313,6 @@ export default function ClientDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            <Collapsible open={recordsOpen} onOpenChange={setRecordsOpen}>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
-                <h2 className="text-lg font-bold">Attribution & Records</h2>
-                <span className="text-xs text-muted-foreground">{recordsOpen ? '▾' : '▸'}</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-6">
-                <SectionErrorBoundary sectionName="Records">
-                  <InlineRecordsView
-                    dailyMetrics={dailyMetrics}
-                    leads={leads}
-                    calls={calls}
-                    fundedInvestors={fundedInvestors}
-                    isLoading={metricsLoading || leadsLoading}
-                    onRecordSelect={handleRecordSelect}
-                    selectedRecord={selectedRecord}
-                    selectedType={selectedType}
-                    clientId={clientId}
-                    ghlLocationId={client.ghl_location_id}
-                  />
-                </SectionErrorBoundary>
-                {clientId && (
-                  <SectionErrorBoundary sectionName="Data Audit">
-                    <DataAuditSection clientId={clientId} />
-                  </SectionErrorBoundary>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
 
             {meetings.length > 0 && (
               <Collapsible open={meetingsOpen} onOpenChange={setMeetingsOpen}>
