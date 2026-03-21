@@ -230,6 +230,20 @@ export function useUpdateCreativeStatus() {
         .single();
       
       if (error) throw error;
+
+      // Auto-create task for media buyer team when creative is approved
+      if (status === 'approved' && clientId) {
+        const title = creativeTitle
+          ? `Launch approved creative: ${creativeTitle}`
+          : 'Launch approved creative';
+        await supabase.from('tasks').insert({
+          client_id: clientId,
+          title,
+          description: `Creative "${creativeTitle || id}" has been approved. Please launch this creative across the appropriate ad platforms.`,
+          status: 'todo',
+          priority: 'high',
+        });
+      }
       
       return data;
     },
