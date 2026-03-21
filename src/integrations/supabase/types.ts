@@ -533,6 +533,8 @@ export type Database = {
           meta_access_token: string | null
           meta_ad_account_id: string | null
           name: string
+          offer_description: string | null
+          product_url: string | null
           public_token: string | null
           slug: string | null
           sort_order: number | null
@@ -564,6 +566,8 @@ export type Database = {
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
           name: string
+          offer_description?: string | null
+          product_url?: string | null
           public_token?: string | null
           slug?: string | null
           sort_order?: number | null
@@ -595,6 +599,8 @@ export type Database = {
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
           name?: string
+          offer_description?: string | null
+          product_url?: string | null
           public_token?: string | null
           slug?: string | null
           sort_order?: number | null
