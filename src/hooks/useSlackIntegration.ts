@@ -111,3 +111,24 @@ export function useSlackActivityLog(clientId: string | undefined) {
     refetchInterval: 30000,
   });
 }
+
+export function useSyncSlackChannels() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ client_id, channel_id }: { client_id?: string; channel_id?: string }) => {
+      const { data, error } = await supabase.functions.invoke('slack-sync-channels', {
+        body: { client_id, channel_id, limit: 100, auto_create_tasks: true },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['slack-activity-log', vars.client_id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success(`Synced ${data?.total_messages || 0} messages, created ${data?.tasks_created || 0} tasks`);
+    },
+    onError: (err: any) => {
+      toast.error(`Slack sync failed: ${err.message}`);
+    },
+  });
+}

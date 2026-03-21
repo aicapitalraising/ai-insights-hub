@@ -5,13 +5,17 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, MessageSquare, Zap, Eye, Bot } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Trash2, Plus, Zap, Eye, Bot, RefreshCw, Loader2, MessageSquare } from 'lucide-react';
 import {
   useSlackChannelMappings,
   useAddSlackChannel,
   useUpdateSlackChannel,
   useRemoveSlackChannel,
+  useSlackActivityLog,
+  useSyncSlackChannels,
 } from '@/hooks/useSlackIntegration';
+import { formatDistanceToNow } from 'date-fns';
 
 interface SlackChannelMappingSectionProps {
   clientId: string;
@@ -28,13 +32,16 @@ const CHANNEL_TYPES = [
 
 export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSectionProps) {
   const { data: mappings = [], isLoading } = useSlackChannelMappings(clientId);
+  const { data: activityLog = [] } = useSlackActivityLog(clientId);
   const addChannel = useAddSlackChannel();
   const updateChannel = useUpdateSlackChannel();
   const removeChannel = useRemoveSlackChannel();
+  const syncChannels = useSyncSlackChannels();
 
   const [newChannelId, setNewChannelId] = useState('');
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState('general');
+  const [showActivity, setShowActivity] = useState(false);
 
   const handleAdd = () => {
     if (!newChannelId.trim()) return;
@@ -53,14 +60,38 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
 
   return (
     <div className="space-y-4">
-      <div>
-        <h4 className="font-medium mb-1 flex items-center gap-2">
-          <Bot className="h-4 w-4" />
-          Slack Channel Integration
-        </h4>
-        <p className="text-sm text-muted-foreground">
-          Map multiple Slack channels to this client. Messages are logged as activity, and the AI bot can auto-create tasks, update existing ones, and provide summaries.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="font-medium mb-1 flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            Slack Channel Integration
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            Map Slack channels to this client. AI reads all messages and auto-creates tasks.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowActivity(!showActivity)}
+          >
+            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+            Activity ({activityLog.length})
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => syncChannels.mutate({ client_id: clientId })}
+            disabled={syncChannels.isPending || mappings.length === 0}
+          >
+            {syncChannels.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+            )}
+            Sync All Channels
+          </Button>
+        </div>
       </div>
 
       {/* Existing mappings */}
@@ -83,14 +114,29 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
                       {mapping.channel_id}
                     </code>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive"
-                    onClick={() => removeChannel.mutate({ id: mapping.id, client_id: clientId })}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => syncChannels.mutate({ client_id: clientId, channel_id: mapping.channel_id })}
+                      disabled={syncChannels.isPending}
+                    >
+                      {syncChannels.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => removeChannel.mutate({ id: mapping.id, client_id: clientId })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-6 text-sm">
@@ -123,6 +169,39 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
       ) : (
         <div className="border border-dashed border-border rounded-lg p-4 text-center text-sm text-muted-foreground">
           No Slack channels mapped yet. Add one below.
+        </div>
+      )}
+
+      {/* Activity Log */}
+      {showActivity && activityLog.length > 0 && (
+        <div className="border border-border rounded-lg p-3 space-y-2">
+          <h5 className="text-sm font-medium flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5" />
+            Recent Activity
+          </h5>
+          <ScrollArea className="h-48">
+            <div className="space-y-2 pr-3">
+              {activityLog.map((log: any) => (
+                <div key={log.id} className="text-xs border-b border-border pb-2 last:border-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{log.user_name || 'Unknown'}</span>
+                    <span className="text-muted-foreground">
+                      {log.created_at ? formatDistanceToNow(new Date(log.created_at), { addSuffix: true }) : ''}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2">{log.message_text}</p>
+                  {log.linked_task_id && (
+                    <Badge variant="secondary" className="text-[10px] mt-1">Task linked</Badge>
+                  )}
+                  {log.ai_analysis && (log.ai_analysis as any)?.action !== 'none' && (
+                    <Badge variant="default" className="text-[10px] mt-1 ml-1">
+                      AI: {(log.ai_analysis as any)?.action}
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       )}
 
@@ -176,7 +255,7 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
           Add Channel
         </Button>
         <p className="text-xs text-muted-foreground">
-          Right-click the channel in Slack → View channel details → copy the Channel ID at the bottom
+          Right-click the channel in Slack → View channel details → copy the Channel ID at the bottom. The AI will read all messages and auto-create tasks when enabled.
         </p>
       </div>
     </div>
