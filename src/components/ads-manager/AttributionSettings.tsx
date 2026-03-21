@@ -70,14 +70,6 @@ export function AttributionSettings({ clientId }: AttributionSettingsProps) {
       }
     );
   };
-      {
-        onSuccess: () => {
-          toast.success('Attribution settings saved');
-          setDirty(false);
-        },
-      }
-    );
-  };
 
   const update = (field: keyof AttributionConfig, value: any) => {
     setConfig(prev => ({ ...prev, [field]: value }));
