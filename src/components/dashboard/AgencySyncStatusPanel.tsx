@@ -457,6 +457,24 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
     }
   };
 
+  const handleHistoricalSync = async () => {
+    setHistoricalSyncing(true);
+    try {
+      const startDateStr = format(historicalStartDate, 'yyyy-MM-dd');
+      const { error } = await supabase.functions.invoke('full-historical-sync', {
+        body: { startDate: startDateStr },
+      });
+      if (error) throw error;
+      toast.success(`Full historical sync started from ${startDateStr} (running in background — will take several minutes)`);
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['accuracy-health'] });
+    } catch (err) {
+      toast.error(`Historical sync failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setHistoricalSyncing(false);
+    }
+  };
+
     const getGhlStatus = (c: ClientSyncInfo): SyncStatus => {
     if (c.hubspotPortalId) return getSyncStatusFromDate(c.lastHubspotSyncAt, !!c.hubspotPortalId, { healthy: 8, stale: 48 });
     if (c.ghlSyncStatus === 'error') return 'error';
