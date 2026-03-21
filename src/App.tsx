@@ -101,7 +101,7 @@ const App = () => (
             <Route path="/briefs" element={<PasswordGate><CreativeBriefs /></PasswordGate>} />
 
             {/* Creative Tools - from ad-verse-ally */}
-            <Route path="/static-ads" element={<PasswordGate><StaticAdsPage /></PasswordGate>} />
+            <Route path="/static-ads" element={<PasswordGate><StaticCreativesPage /></PasswordGate>} />
             <Route path="/static-creatives" element={<PasswordGate><StaticCreativesPage /></PasswordGate>} />
             <Route path="/batch-video" element={<PasswordGate><BatchVideoPage /></PasswordGate>} />
             <Route path="/ad-scraping" element={<PasswordGate><AdScrapingPage /></PasswordGate>} />
