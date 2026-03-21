@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText } from 'lucide-react';
+import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList } from 'lucide-react';
 import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
 import { CallsDrillDownModal } from '@/components/drilldown/CallsDrillDownModal';
 import { AdSpendDrillDownModal } from '@/components/drilldown/AdSpendDrillDownModal';
@@ -252,7 +252,9 @@ export default function ClientDetail() {
               <TrendingUp className="h-4 w-4" />
               Performance
             </TabsTrigger>
-            <TabsTrigger value="ads-manager" className="gap-2">
+            <TabsTrigger value="records" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Attribution & Records
               <Megaphone className="h-4 w-4" />
               Ads Manager
             </TabsTrigger>
@@ -311,33 +313,6 @@ export default function ClientDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            <Collapsible open={recordsOpen} onOpenChange={setRecordsOpen}>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
-                <h2 className="text-lg font-bold">Attribution & Records</h2>
-                <span className="text-xs text-muted-foreground">{recordsOpen ? '▾' : '▸'}</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-6">
-                <SectionErrorBoundary sectionName="Records">
-                  <InlineRecordsView
-                    dailyMetrics={dailyMetrics}
-                    leads={leads}
-                    calls={calls}
-                    fundedInvestors={fundedInvestors}
-                    isLoading={metricsLoading || leadsLoading}
-                    onRecordSelect={handleRecordSelect}
-                    selectedRecord={selectedRecord}
-                    selectedType={selectedType}
-                    clientId={clientId}
-                    ghlLocationId={client.ghl_location_id}
-                  />
-                </SectionErrorBoundary>
-                {clientId && (
-                  <SectionErrorBoundary sectionName="Data Audit">
-                    <DataAuditSection clientId={clientId} />
-                  </SectionErrorBoundary>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
 
             {meetings.length > 0 && (
               <Collapsible open={meetingsOpen} onOpenChange={setMeetingsOpen}>
@@ -358,6 +333,30 @@ export default function ClientDetail() {
               <h2 className="text-lg font-bold mb-3">Tasks</h2>
               <TaskBoardView clientId={clientId} />
             </SectionErrorBoundary>
+          </TabsContent>
+
+          {/* ─── ATTRIBUTION & RECORDS TAB ─── */}
+          <TabsContent value="records" className="space-y-6">
+            <SectionErrorBoundary sectionName="Records">
+              <h2 className="text-lg font-bold mb-3">Detailed Records</h2>
+              <InlineRecordsView
+                dailyMetrics={dailyMetrics}
+                leads={leads}
+                calls={calls}
+                fundedInvestors={fundedInvestors}
+                isLoading={metricsLoading || leadsLoading}
+                onRecordSelect={handleRecordSelect}
+                selectedRecord={selectedRecord}
+                selectedType={selectedType}
+                clientId={clientId}
+                ghlLocationId={client.ghl_location_id}
+              />
+            </SectionErrorBoundary>
+            {clientId && (
+              <SectionErrorBoundary sectionName="Data Audit">
+                <DataAuditSection clientId={clientId} />
+              </SectionErrorBoundary>
+            )}
           </TabsContent>
 
           {/* ─── ADS MANAGER TAB ─── */}
