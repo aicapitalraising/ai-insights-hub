@@ -252,6 +252,10 @@ export default function ClientDetail() {
               <TrendingUp className="h-4 w-4" />
               Performance
             </TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-2">
+              <CheckSquare className="h-4 w-4" />
+              Tasks
+            </TabsTrigger>
             <TabsTrigger value="records" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Attribution & Records
