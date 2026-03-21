@@ -321,6 +321,13 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
       if (metaAdAccountId !== ((client as any).meta_ad_account_id || '')) {
         clientUpdates.meta_ad_account_id = metaAdAccountId || null;
       }
+      // Brand info updates
+      clientUpdates.description = brandDescription || null;
+      clientUpdates.offer_description = offerDescription || null;
+      clientUpdates.brand_colors = brandColors as any;
+      clientUpdates.brand_fonts = brandFonts as any;
+      clientUpdates.logo_url = logoUrl || null;
+      clientUpdates.website_url = websiteUrl || null;
 
       if (Object.keys(clientUpdates).length > 0) {
         await supabase
