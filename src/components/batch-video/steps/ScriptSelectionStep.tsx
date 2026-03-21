@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowRight, FileText, Wand2, Check } from 'lucide-react';
 import { useClients, useClient } from '@/hooks/useClients';
 import { useProjects, useProject } from '@/hooks/useProjects';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { IgImportSection } from '../IgImportSection';

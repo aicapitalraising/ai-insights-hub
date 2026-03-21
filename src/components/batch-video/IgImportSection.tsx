@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Instagram, Link2, ExternalLink, Video, FileText, Wand2, Play, Image as ImageIcon } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import { fetchVideoAsBlob } from '@/lib/video-proxy';
 
