@@ -509,11 +509,24 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
                         ))}
                       </div>
                     )}
-                    {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
-                    ) : (
+                    {msg.role === 'assistant' ? (() => {
+                      const { tasks, cleanContent } = extractTaskBlocks(msg.content);
+                      return (
+                        <>
+                          {tasks.length > 0 && (
+                            <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-border/50">
+                              <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
+                              <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200 bg-emerald-500/10">
+                                {tasks.length} task{tasks.length !== 1 ? 's' : ''} created
+                              </Badge>
+                            </div>
+                          )}
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                            <ReactMarkdown>{cleanContent}</ReactMarkdown>
+                          </div>
+                        </>
+                      );
+                    })() : (
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     )}
                   </div>
