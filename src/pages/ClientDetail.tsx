@@ -252,7 +252,9 @@ export default function ClientDetail() {
               <TrendingUp className="h-4 w-4" />
               Performance
             </TabsTrigger>
-            <TabsTrigger value="ads-manager" className="gap-2">
+            <TabsTrigger value="records" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Attribution & Records
               <Megaphone className="h-4 w-4" />
               Ads Manager
             </TabsTrigger>
