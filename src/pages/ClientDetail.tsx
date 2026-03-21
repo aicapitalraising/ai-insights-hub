@@ -255,6 +255,8 @@ export default function ClientDetail() {
             <TabsTrigger value="records" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Attribution & Records
+            </TabsTrigger>
+            <TabsTrigger value="ads-manager" className="gap-2">
               <Megaphone className="h-4 w-4" />
               Ads Manager
             </TabsTrigger>
