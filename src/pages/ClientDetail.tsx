@@ -239,8 +239,11 @@ export default function ClientDetail() {
         </div>
       </header>
 
-      <main className="p-6 space-y-6">
-        <DateRangeFilter showAddClient={false} onExportCSV={handleExportCSV} onRefresh={handleRefresh} />
+      <main className="flex-1 overflow-auto">
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-3">
+          <DateRangeFilter showAddClient={false} onExportCSV={handleExportCSV} onRefresh={handleRefresh} />
+        </div>
+        <div className="p-6 space-y-6">
 
         {/* 4 Grouped Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
