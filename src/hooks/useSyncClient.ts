@@ -37,22 +37,22 @@ export function useSyncClient(clientId: string | undefined) {
     if (!clientId) return { success: false, error: 'No client ID' };
 
     setProgress({ isLoading: true, type: 'leads', message: 'Syncing leads from GHL...' });
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('sync-ghl-contacts', {
         body: { client_id: clientId }
       });
 
       if (error) throw new Error(error.message);
-      if (!data?.success && !data?.results) throw new Error(data?.error || 'Sync failed');
+      if (!data?.success) throw new Error(data?.error || 'Sync failed');
 
-      const created = data?.results?.[0]?.contacts?.created || 0;
-      const updated = data?.results?.[0]?.contacts?.updated || 0;
+      // Master sync runs in background — response has message/started_at, not contact counts
+      const configWarnings = data?.config_warnings?.length || 0;
+      const warningNote = configWarnings > 0 ? ` (${configWarnings} config warning${configWarnings > 1 ? 's' : ''})` : '';
+      toast.success(`Lead sync started in background${warningNote}. Data will appear shortly.`);
 
       invalidateQueries();
-      toast.success(`Leads synced: ${created} created, ${updated} updated`);
-      
-      return { success: true, created, updated };
+      return { success: true };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       toast.error(`Lead sync failed: ${errorMessage}`);
