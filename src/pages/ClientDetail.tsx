@@ -335,6 +335,10 @@ export default function ClientDetail() {
               </Collapsible>
             )}
 
+          </TabsContent>
+
+          {/* ─── TASKS TAB ─── */}
+          <TabsContent value="tasks" className="space-y-6">
             <SectionErrorBoundary sectionName="Task Board">
               <h2 className="text-lg font-bold mb-3">Tasks</h2>
               <TaskBoardView clientId={clientId} />
