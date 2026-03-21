@@ -101,6 +101,16 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
   const [slackReviewChannelId, setSlackReviewChannelId] = useState('');
   const [slackChannelId, setSlackChannelId] = useState('');
 
+  // Brand info state
+  const [brandDescription, setBrandDescription] = useState('');
+  const [offerDescription, setOfferDescription] = useState('');
+  const [brandColors, setBrandColors] = useState<string[]>([]);
+  const [brandFonts, setBrandFonts] = useState<string[]>([]);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [newColor, setNewColor] = useState('#6366f1');
+  const [newFont, setNewFont] = useState('');
+
   // Load settings when available
   useEffect(() => {
     if (settings) {
