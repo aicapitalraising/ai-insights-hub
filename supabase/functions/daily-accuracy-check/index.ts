@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
         .eq("client_id", client.id)
         .eq("is_spam", false)
         .gte("created_at", dayStart)
-        .lte("created_at", dayEnd);
+        .lt("created_at", dayNext);
 
       const { count: nullSpamCount } = await supabase
         .from("leads")
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
         .eq("client_id", client.id)
         .is("is_spam", null)
         .gte("created_at", dayStart)
-        .lte("created_at", dayEnd);
+        .lt("created_at", dayNext);
 
       const expectedLeads = (leadsCount || 0) + (nullSpamCount || 0);
 
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
         .eq("client_id", client.id)
         .neq("is_reconnect", true)
         .gte("booked_at", dayStart)
-        .lte("booked_at", dayEnd);
+        .lt("booked_at", dayNext);
 
       const { count: expectedShowed } = await supabase
         .from("calls")
@@ -136,14 +136,14 @@ Deno.serve(async (req) => {
         .eq("showed", true)
         .neq("is_reconnect", true)
         .gte("scheduled_at", dayStart)
-        .lte("scheduled_at", dayEnd);
+        .lt("scheduled_at", dayNext);
 
       const { count: expectedFunded } = await supabase
         .from("funded_investors")
         .select("*", { count: "exact", head: true })
         .eq("client_id", client.id)
         .gte("funded_at", dayStart)
-        .lte("funded_at", dayEnd);
+        .lt("funded_at", dayNext);
 
       const actualLeads = metricsRow?.leads ?? 0;
       const actualCalls = metricsRow?.calls ?? 0;
