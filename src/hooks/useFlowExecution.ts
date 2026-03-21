@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
 import { isGoogleApiUrl, fetchVideoViaProxy } from '@/lib/video-proxy';
 import { concatenateVideos } from '@/lib/video-concat';
 import type { 
