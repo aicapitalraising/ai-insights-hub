@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { checkRateLimit, rateLimitedResponse, checkIdempotency, logApiUsage, fetchWithRetry, COST_ESTIMATES } from '../_shared/edge-utils.ts';
+import { getGeminiApiKey } from '../_shared/get-gemini-key.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -196,24 +196,11 @@ serve(async (req) => {
       idempotency_key,
     } = body;
 
-    // Rate limiting
-    if (await checkRateLimit('gemini-image')) return rateLimitedResponse();
-
-    // Idempotency check
-    if (idempotency_key) {
-      const cached = await checkIdempotency(idempotency_key);
-      if (cached) {
-        console.log('Returning cached result for idempotency key:', idempotency_key);
-        return new Response(JSON.stringify({ success: true, imageUrl: cached.public_url, assetId: cached.id, cached: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-    }
-
-    // Get API key from environment
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    // Get API key from agency settings, then env var fallback
+    const geminiApiKey = await getGeminiApiKey(undefined);
     if (!geminiApiKey) {
       return new Response(
-        JSON.stringify({ error: 'GEMINI_API_KEY not configured' }),
+        JSON.stringify({ error: 'Gemini API key not configured. Add it in Agency Settings.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -277,8 +264,8 @@ serve(async (req) => {
       await addImageToParts(imageUrl, 'ad asset image');
     }
 
-    // Call Gemini with retry
-    const geminiResponse = await fetchWithRetry(
+    // Call Gemini
+    const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
@@ -287,8 +274,7 @@ serve(async (req) => {
           contents: [{ parts }],
           generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
         })
-      },
-      { service: 'gemini-image', requestType: 'generate-static-ad', estimatedCost: COST_ESTIMATES['gemini-image'] }
+      }
     );
 
     if (!geminiResponse.ok) {
