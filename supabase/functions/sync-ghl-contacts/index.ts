@@ -2803,9 +2803,11 @@ async function recalculateHistoricalMetrics(
     while (currentDate <= today) {
       const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
       
-      // Use UTC boundaries to avoid timezone issues
+      // Use UTC boundaries — exclusive upper bound (.lt) for consistency
       const dayStart = `${dateStr}T00:00:00.000Z`;
-      const dayEnd = `${dateStr}T23:59:59.999Z`;
+      const nextDay = new Date(currentDate);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      const dayNext = `${nextDay.toISOString().split('T')[0]}T00:00:00.000Z`;
       
       try {
         // Count leads created on this date (using is_spam for non-spam count later)
