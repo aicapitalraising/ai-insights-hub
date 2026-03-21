@@ -130,6 +130,7 @@ const App = () => (
             {/* Public routes - no password required */}
             <Route path="/public/:token" element={<PublicReport />} />
             <Route path="/public/:token/creatives" element={<PublicCreatives />} />
+            <Route path="/quiz/:slug" element={<QuizPage />} />
             <Route path="/meta-overlay" element={<MetaAdsOverlay />} />
 
             <Route path="*" element={<NotFound />} />
