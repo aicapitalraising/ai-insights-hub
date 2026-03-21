@@ -34,6 +34,7 @@ const ClientCreatives = lazyRetry(() => import("./pages/ClientCreatives"));
 const PublicCreatives = lazyRetry(() => import("./pages/PublicCreatives"));
 const MetaAdsOverlay = lazyRetry(() => import("./pages/MetaAdsOverlay"));
 const CreativeBriefs = lazyRetry(() => import("./pages/CreativeBriefs"));
+const QuizPage = lazyRetry(() => import("./pages/QuizPage"));
 
 // Creative tools pages (from ad-verse-ally)
 const StaticAdsPage = lazyRetry(() => import("./pages/StaticAdsPage"));
