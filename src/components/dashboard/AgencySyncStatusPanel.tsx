@@ -109,6 +109,8 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnoseResults, setDiagnoseResults] = useState<any>(null);
   const [diagnoseOpen, setDiagnoseOpen] = useState(false);
+  const [historicalSyncing, setHistoricalSyncing] = useState(false);
+  const [historicalStartDate, setHistoricalStartDate] = useState<Date>(new Date('2026-01-01'));
   
   // Settings form state
   const [editMetaAccountId, setEditMetaAccountId] = useState('');
