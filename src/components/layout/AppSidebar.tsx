@@ -1,7 +1,7 @@
 import {
   LayoutDashboard,
   BarChart3,
-  LayoutGrid,
+  ClipboardCheck,
   Bot,
   Video,
   MessageSquare,
@@ -60,7 +60,7 @@ const navStructure = [
   {
     title: 'Tasks',
     value: 'tasks',
-    icon: LayoutGrid,
+    icon: ClipboardCheck,
   },
   {
     title: 'Reporting',
