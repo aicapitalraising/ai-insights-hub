@@ -264,8 +264,8 @@ serve(async (req) => {
       await addImageToParts(imageUrl, 'ad asset image');
     }
 
-    // Call Gemini with retry
-    const geminiResponse = await fetchWithRetry(
+    // Call Gemini
+    const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
@@ -274,8 +274,7 @@ serve(async (req) => {
           contents: [{ parts }],
           generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
         })
-      },
-      { service: 'gemini-image', requestType: 'generate-static-ad', estimatedCost: COST_ESTIMATES['gemini-image'] }
+      }
     );
 
     if (!geminiResponse.ok) {

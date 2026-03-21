@@ -194,3 +194,12 @@ verify_jwt = false
 
 [functions.test-integration-connection]
 verify_jwt = false
+
+[functions.generate-avatar]
+verify_jwt = false
+
+[functions.generate-static-ad]
+verify_jwt = false
+
+[functions.edit-static-ad]
+verify_jwt = false
