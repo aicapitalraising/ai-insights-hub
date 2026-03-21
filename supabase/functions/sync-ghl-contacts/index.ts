@@ -2906,19 +2906,22 @@ async function recalculateHistoricalMetrics(
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
     
-    // Insert in batches (since we deleted first, just insert - no conflict)
+    // UPSERT in batches — only update CRM columns, preserve ad spend columns
     if (metricsToInsert.length > 0) {
-      console.log(`Inserting ${metricsToInsert.length} daily_metrics records...`);
+      console.log(`Upserting ${metricsToInsert.length} daily_metrics records (preserving ad spend)...`);
       const batchSize = 50;
       for (let i = 0; i < metricsToInsert.length; i += batchSize) {
         const batch = metricsToInsert.slice(i, i + batchSize);
-        const { error: insertError } = await supabase
+        const { error: upsertError } = await supabase
           .from('daily_metrics')
-          .insert(batch);
+          .upsert(batch, { 
+            onConflict: 'client_id,date',
+            ignoreDuplicates: false,
+          });
         
-        if (insertError) {
-          result.errors.push(`Batch insert error: ${insertError.message}`);
-          console.error('Batch insert error:', insertError);
+        if (upsertError) {
+          result.errors.push(`Batch upsert error: ${upsertError.message}`);
+          console.error('Batch upsert error:', upsertError);
         } else {
           result.daysUpdated += batch.length;
         }
