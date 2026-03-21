@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare, MessageSquare } from 'lucide-react';
+import { SlackChatTab } from '@/components/slack/SlackChatTab';
 import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
 import { CallsDrillDownModal } from '@/components/drilldown/CallsDrillDownModal';
 import { AdSpendDrillDownModal } from '@/components/drilldown/AdSpendDrillDownModal';
@@ -277,6 +278,10 @@ export default function ClientDetail() {
               <Layers className="h-4 w-4" />
               Pipeline
             </TabsTrigger>
+            <TabsTrigger value="slack" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Slack
+            </TabsTrigger>
             <TabsTrigger value="client-settings" className="gap-2">
               <Cog className="h-4 w-4" />
               Settings
@@ -411,6 +416,14 @@ export default function ClientDetail() {
             <SectionErrorBoundary sectionName="Funnel Preview">
               <h2 className="text-lg font-bold mb-3">Funnel Pages</h2>
               <FunnelPreviewTab clientId={client.id} isPublicView={false} />
+            </SectionErrorBoundary>
+          </TabsContent>
+
+          {/* ─── SLACK TAB ─── */}
+          <TabsContent value="slack" className="space-y-6">
+            <SectionErrorBoundary sectionName="Slack Chat">
+              <h2 className="text-lg font-bold mb-3">Slack Channels</h2>
+              <SlackChatTab clientId={client.id} clientName={client.name} />
             </SectionErrorBoundary>
           </TabsContent>
 
