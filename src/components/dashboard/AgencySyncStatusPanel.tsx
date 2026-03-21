@@ -10,7 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Activity, Settings2, Calendar, Users, TrendingUp, Save, ArrowUpDown, ShieldCheck, Plug, Eye, EyeOff, Key, Stethoscope, HeartPulse } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Activity, Settings2, Calendar, Users, TrendingUp, Save, ArrowUpDown, ShieldCheck, Plug, Eye, EyeOff, Key, Stethoscope, HeartPulse, History } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
@@ -106,6 +109,8 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnoseResults, setDiagnoseResults] = useState<any>(null);
   const [diagnoseOpen, setDiagnoseOpen] = useState(false);
+  const [historicalSyncing, setHistoricalSyncing] = useState(false);
+  const [historicalStartDate, setHistoricalStartDate] = useState<Date>(new Date('2026-01-01'));
   
   // Settings form state
   const [editMetaAccountId, setEditMetaAccountId] = useState('');
@@ -452,6 +457,24 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
     }
   };
 
+  const handleHistoricalSync = async () => {
+    setHistoricalSyncing(true);
+    try {
+      const startDateStr = format(historicalStartDate, 'yyyy-MM-dd');
+      const { error } = await supabase.functions.invoke('full-historical-sync', {
+        body: { startDate: startDateStr },
+      });
+      if (error) throw error;
+      toast.success(`Full historical sync started from ${startDateStr} (running in background — will take several minutes)`);
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['accuracy-health'] });
+    } catch (err) {
+      toast.error(`Historical sync failed: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setHistoricalSyncing(false);
+    }
+  };
+
     const getGhlStatus = (c: ClientSyncInfo): SyncStatus => {
     if (c.hubspotPortalId) return getSyncStatusFromDate(c.lastHubspotSyncAt, !!c.hubspotPortalId, { healthy: 8, stale: 48 });
     if (c.ghlSyncStatus === 'error') return 'error';
@@ -561,6 +584,40 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
                 <HeartPulse className={`h-3 w-3 mr-1 ${diagnosing ? 'animate-spin' : ''}`} />
                 {diagnosing ? 'Diagnosing...' : 'Diagnose CRM'}
               </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    disabled={historicalSyncing}
+                  >
+                    <History className={`h-3 w-3 mr-1 ${historicalSyncing ? 'animate-spin' : ''}`} />
+                    {historicalSyncing ? 'Syncing...' : 'Historical Sync'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="end">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium">Full sync from date:</p>
+                    <CalendarPicker
+                      mode="single"
+                      selected={historicalStartDate}
+                      onSelect={(d) => d && setHistoricalStartDate(d)}
+                      disabled={(date) => date > new Date() || date < new Date("2024-01-01")}
+                      className={cn("p-2 pointer-events-auto")}
+                    />
+                    <Button
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={handleHistoricalSync}
+                      disabled={historicalSyncing}
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${historicalSyncing ? 'animate-spin' : ''}`} />
+                      Start Full Sync from {format(historicalStartDate, 'MMM d, yyyy')}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardHeader>

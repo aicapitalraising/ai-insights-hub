@@ -203,3 +203,6 @@ verify_jwt = false
 
 [functions.edit-static-ad]
 verify_jwt = false
+
+[functions.full-historical-sync]
+verify_jwt = false
