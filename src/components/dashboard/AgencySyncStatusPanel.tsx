@@ -584,6 +584,40 @@ export function AgencySyncStatusPanel({ clients, clientFullSettings, clientMetri
                 <HeartPulse className={`h-3 w-3 mr-1 ${diagnosing ? 'animate-spin' : ''}`} />
                 {diagnosing ? 'Diagnosing...' : 'Diagnose CRM'}
               </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    disabled={historicalSyncing}
+                  >
+                    <History className={`h-3 w-3 mr-1 ${historicalSyncing ? 'animate-spin' : ''}`} />
+                    {historicalSyncing ? 'Syncing...' : 'Historical Sync'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="end">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium">Full sync from date:</p>
+                    <CalendarPicker
+                      mode="single"
+                      selected={historicalStartDate}
+                      onSelect={(d) => d && setHistoricalStartDate(d)}
+                      disabled={(date) => date > new Date() || date < new Date("2024-01-01")}
+                      className={cn("p-2 pointer-events-auto")}
+                    />
+                    <Button
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={handleHistoricalSync}
+                      disabled={historicalSyncing}
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${historicalSyncing ? 'animate-spin' : ''}`} />
+                      Start Full Sync from {format(historicalStartDate, 'MMM d, yyyy')}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardHeader>
