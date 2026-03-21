@@ -56,11 +56,15 @@ const navStructure = [
     icon: LayoutDashboard,
   },
   {
+    title: 'Tasks',
+    value: 'tasks',
+    icon: LayoutGrid,
+  },
+  {
     title: 'Reporting',
     value: 'reporting',
     icon: BarChart3,
     children: [
-      { title: 'Tasks', value: 'tasks', icon: LayoutGrid },
       { title: 'AI Hub', value: 'ai', icon: Bot },
       { title: 'Meetings', value: 'meetings', icon: Video },
       { title: 'Deals', value: 'deals', icon: Handshake },
