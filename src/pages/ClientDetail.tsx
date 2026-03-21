@@ -121,7 +121,7 @@ export default function ClientDetail() {
       setSelectedTaskId(activityId);
       setActiveTab('performance');
     } else if (type.startsWith('creative_')) {
-      setActiveTab('ads-creatives');
+      setActiveTab('creatives');
     }
   };
 
