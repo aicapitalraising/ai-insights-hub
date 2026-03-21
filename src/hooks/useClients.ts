@@ -28,6 +28,7 @@ export interface Client {
   description?: string | null;
   offer_description?: string | null;
   product_url?: string | null;
+  website_url?: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
