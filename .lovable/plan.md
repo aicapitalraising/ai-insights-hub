@@ -1,117 +1,27 @@
 
 
-# Daily Accuracy Assurance System
+# Full Sync from Jan 1 2026 + Sync Architecture Audit & Consolidation
 
-## Summary
+## Part 1: Trigger Full Sync Since January 1, 2026
 
-Build a standalone metrics reconciliation system that runs independently of the sync pipeline, ensuring `daily_metrics` always matches source-of-truth tables (`leads`, `calls`, `funded_investors`) while preserving Meta Ads data. This addresses 6 identified accuracy gaps including a critical bug where the current recalculation deletes ad spend data on days with zero CRM activity.
+The system already supports historical syncs. We need to:
 
----
+1. **Invoke `sync-ghl-all-clients` with `sinceDateDays` calculated from Jan 1, 2026 to today** (~80 days). This triggers contacts, calendar appointments, and pipeline syncs for every GHL client.
 
-## Critical Bug Found
+2. **Invoke `sync-hubspot-all-clients`** for HubSpot clients (same date range).
 
-The existing `recalculateRecentMetrics` function (line 2751-2886 of `sync-ghl-contacts`) **deletes** all `daily_metrics` rows for the last 7 days, then only re-inserts rows where CRM activity exists. Any day with Meta ad spend but zero leads/calls/funded loses its ad_spend, impressions, and clicks data permanently. This must be fixed as part of this work.
+3. **Invoke `recalculate-daily-metrics`** with `startDate: "2026-01-01"` and `endDate: today` to rebuild all CRM metrics without destroying ad spend data.
 
----
+4. **Invoke `daily-accuracy-check`** to validate and auto-fix any discrepancies.
 
-## What Gets Built
-
-### 1. New `recalculate-daily-metrics` Edge Function (Highest Priority)
-
-A standalone function that recalculates CRM-sourced columns in `daily_metrics` for all active clients across a configurable date range, **without touching ad spend columns**.
-
-Logic per client per date:
-- Count non-spam leads from `leads` where `created_at` falls on that date
-- Count spam leads separately
-- Count booked calls (non-reconnect) from `calls` where `booked_at` falls on that date
-- Count showed calls (non-reconnect) where `showed = true`
-- Count reconnect calls and reconnect showed
-- Sum funded investors and funded dollars from `funded_investors` where `funded_at` falls on that date
-- **UPSERT** into `daily_metrics` using `ON CONFLICT (client_id, date)` -- only updating CRM columns, never overwriting `ad_spend`, `impressions`, `clicks`, or `ctr`
-
-The function accepts optional `startDate`, `endDate`, and `clientId` parameters. Defaults to yesterday + today for all active clients.
-
-### 2. New `daily-accuracy-check` Edge Function
-
-A validation function that compares `daily_metrics` against live source table counts for yesterday across all clients. For each discrepancy found:
-- Logs it to a new `sync_accuracy_log` table
-- Triggers recalculation for that specific client/date
-- Returns a summary of discrepancies found and auto-fixed
-
-### 3. New `sync_accuracy_log` Database Table
-
-```text
-Columns:
-- id (uuid, PK)
-- client_id (uuid)
-- check_date (date) -- the date being validated
-- metric_type (text) -- 'leads', 'calls', 'showed_calls', 'funded_investors', etc.
-- expected_count (integer) -- from source tables
-- actual_count (integer) -- from daily_metrics
-- discrepancy (integer) -- difference
-- auto_fixed (boolean)
-- created_at (timestamptz)
-```
-
-### 4. Fix `recalculateRecentMetrics` in Both Sync Functions
-
-Change the DELETE + INSERT pattern to an UPSERT pattern that preserves ad spend columns. Instead of deleting rows and re-inserting, it will upsert only CRM columns (leads, calls, showed, funded, etc.) while leaving ad_spend/impressions/clicks/ctr untouched.
-
-This fix applies to:
-- `supabase/functions/sync-ghl-contacts/index.ts` (lines 2751-2893)
-- `supabase/functions/sync-hubspot-contacts/index.ts` (same pattern)
-
-### 5. New Cron Jobs
-
-| Job | Schedule | What it does |
-|-----|----------|--------------|
-| `daily-metrics-recalculate` | `0 13 * * *` (5 AM PST) | Runs `recalculate-daily-metrics` for yesterday + today |
-| `daily-accuracy-check` | `0 14 * * *` (6 AM PST) | Runs `daily-accuracy-check` to validate and auto-fix |
-
-### 6. Fix Pipeline Funded Investor External ID
-
-Normalize the `external_id` in the pipeline-based funded investor creation path to always use `contactId` (not `opp.contactId + opp.id`), consistent with the tag-based path. The existing unique constraint on `(client_id, external_id)` will then properly prevent duplicates across both paths.
-
-### 7. Accuracy Health in Agency Sync Panel
-
-Add a small accuracy indicator to `AgencySyncStatusPanel.tsx`:
-- Show last accuracy check timestamp
-- Show discrepancy count from yesterday
-- Green if 0 discrepancies, yellow if auto-fixed, red if unfixed
+We'll add a **"Historical Sync" button** in the Agency Sync Panel that lets admins pick a start date and trigger all of the above as a single operation via a new `full-historical-sync` edge function.
 
 ---
 
-## Files to Create
+## Part 2: Architecture Audit — Issues Found
 
-1. `supabase/functions/recalculate-daily-metrics/index.ts`
-2. `supabase/functions/daily-accuracy-check/index.ts`
+### Critical Bug: `recalculateHistoricalMetrics` Still Deletes Ad Spend (lines 2782-2794)
+The `master_sync` mode calls `recalculateHistoricalMetrics` which **DELETEs all daily_metrics** for a client, then re-inserts rows using plain `insert` (not upsert). This destroys ad_spend/impressions/clicks/ctr data. The `recalculateRecentMetrics` function (line 2954) was already fixed to use upsert, but the historical version was not.
 
-## Files to Modify
-
-1. `supabase/functions/sync-ghl-contacts/index.ts` -- Fix `recalculateRecentMetrics` to use upsert instead of delete+insert; fix pipeline funded investor external_id
-2. `supabase/functions/sync-hubspot-contacts/index.ts` -- Same upsert fix for its copy of `recalculateRecentMetrics`
-3. `supabase/config.toml` -- Register 2 new functions with `verify_jwt = false`
-4. `src/components/dashboard/AgencySyncStatusPanel.tsx` -- Add accuracy health indicator
-
-## Database Changes
-
-1. Create `sync_accuracy_log` table (via migration)
-2. Add 2 new cron jobs (via insert tool, not migration)
-
-## Existing Cron Jobs to Keep
-
-The existing hourly sync jobs (GHL contacts, calendar, pipelines, HubSpot) and the 6-hour orchestrators remain unchanged. The new daily recalculation runs *after* all syncs complete, acting as a safety net.
-
----
-
-## Implementation Order
-
-1. Fix the critical `recalculateRecentMetrics` bug (upsert pattern) in both sync functions
-2. Create `sync_accuracy_log` table
-3. Build `recalculate-daily-metrics` edge function
-4. Build `daily-accuracy-check` edge function
-5. Register functions in config.toml
-6. Add cron jobs
-7. Fix pipeline funded investor dedup
-8. Add accuracy health to sync panel
-
+### Redundant Metric Recalculation in 3 Places
+Metrics
