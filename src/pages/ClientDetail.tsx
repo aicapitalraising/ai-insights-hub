@@ -244,14 +244,22 @@ export default function ClientDetail() {
 
         {/* 4 Grouped Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-muted/50">
+          <TabsList className="bg-muted/50 flex-wrap">
             <TabsTrigger value="performance" className="gap-2">
               <TrendingUp className="h-4 w-4" />
               Performance
             </TabsTrigger>
-            <TabsTrigger value="ads-creatives" className="gap-2">
+            <TabsTrigger value="ads-manager" className="gap-2">
+              <Megaphone className="h-4 w-4" />
+              Ads Manager
+            </TabsTrigger>
+            <TabsTrigger value="creatives" className="gap-2">
               <Palette className="h-4 w-4" />
-              Ads & Creatives
+              Creatives
+            </TabsTrigger>
+            <TabsTrigger value="offers" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Offers
             </TabsTrigger>
             <TabsTrigger value="pipeline" className="gap-2">
               <Layers className="h-4 w-4" />
@@ -265,7 +273,6 @@ export default function ClientDetail() {
 
           {/* ─── PERFORMANCE TAB ─── */}
           <TabsContent value="performance" className="space-y-6">
-            {/* KPIs - Collapsible */}
             <Collapsible open={kpiOpen} onOpenChange={setKpiOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
                 <h2 className="text-lg font-bold">Key Performance Indicators</h2>
@@ -285,12 +292,10 @@ export default function ClientDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Periodic Stats */}
             <SectionErrorBoundary sectionName="Performance Summary">
               <PeriodicStatsTable clientId={clientId} />
             </SectionErrorBoundary>
 
-            {/* Charts - Collapsible */}
             <Collapsible open={chartsOpen} onOpenChange={setChartsOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
                 <h2 className="text-lg font-bold">Metric Charts</h2>
@@ -303,7 +308,6 @@ export default function ClientDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Attribution & Records - Collapsible, default closed */}
             <Collapsible open={recordsOpen} onOpenChange={setRecordsOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
                 <h2 className="text-lg font-bold">Attribution & Records</h2>
@@ -332,7 +336,6 @@ export default function ClientDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Meetings */}
             {meetings.length > 0 && (
               <Collapsible open={meetingsOpen} onOpenChange={setMeetingsOpen}>
                 <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
@@ -348,15 +351,26 @@ export default function ClientDetail() {
               </Collapsible>
             )}
 
-            {/* Tasks inline */}
             <SectionErrorBoundary sectionName="Task Board">
               <h2 className="text-lg font-bold mb-3">Tasks</h2>
               <TaskBoardView clientId={clientId} />
             </SectionErrorBoundary>
           </TabsContent>
 
-          {/* ─── ADS & CREATIVES TAB ─── */}
-          <TabsContent value="ads-creatives" className="space-y-6">
+          {/* ─── ADS MANAGER TAB ─── */}
+          <TabsContent value="ads-manager" className="space-y-6">
+            <SectionErrorBoundary sectionName="Ads Manager">
+              <AdsManagerTab clientId={client.id} clientName={client.name} />
+            </SectionErrorBoundary>
+
+            <SectionErrorBoundary sectionName="Attribution Settings">
+              <h2 className="text-lg font-bold mb-3">Attribution Settings</h2>
+              <AttributionSettings clientId={client.id} />
+            </SectionErrorBoundary>
+          </TabsContent>
+
+          {/* ─── CREATIVES TAB ─── */}
+          <TabsContent value="creatives" className="space-y-6">
             <SectionErrorBoundary sectionName="Creatives">
               <h2 className="text-lg font-bold mb-3">Creative Assets</h2>
               <CreativesSection
@@ -365,10 +379,14 @@ export default function ClientDetail() {
                 isPublicView={false}
               />
             </SectionErrorBoundary>
+          </TabsContent>
 
-            <SectionErrorBoundary sectionName="Ads Manager">
-              <h2 className="text-lg font-bold mb-3">Ads Manager</h2>
-              <AdsManagerTab clientId={client.id} clientName={client.name} />
+          {/* ─── OFFERS TAB ─── */}
+          <TabsContent value="offers" className="space-y-6">
+            <SectionErrorBoundary sectionName="Offers">
+              <h2 className="text-lg font-bold mb-3">Offers</h2>
+              <p className="text-sm text-muted-foreground mb-4">Main feed for building statics and videos</p>
+              <ClientOffersSection clientId={client.id} clientName={client.name} />
             </SectionErrorBoundary>
           </TabsContent>
 
@@ -382,11 +400,6 @@ export default function ClientDetail() {
             <SectionErrorBoundary sectionName="Funnel Preview">
               <h2 className="text-lg font-bold mb-3">Funnel Pages</h2>
               <FunnelPreviewTab clientId={client.id} isPublicView={false} />
-            </SectionErrorBoundary>
-
-            <SectionErrorBoundary sectionName="Offers & Files">
-              <h2 className="text-lg font-bold mb-3">Offers & Files</h2>
-              <ClientOffersSection clientId={client.id} clientName={client.name} />
             </SectionErrorBoundary>
           </TabsContent>
 
