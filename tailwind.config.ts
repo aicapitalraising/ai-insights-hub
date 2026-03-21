@@ -93,31 +93,9 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out'
 			},
 			fontFamily: {
-				sans: [
-					'Inter',
-					'-apple-system',
-					'BlinkMacSystemFont',
-					'Segoe UI',
-					'Roboto',
-					'Helvetica',
-					'Arial',
-					'sans-serif'
-				],
-				serif: [
-					'Georgia',
-					'Times New Roman',
-					'Times',
-					'serif'
-				],
-				mono: [
-					'SF Mono',
-					'SFMono-Regular',
-					'ui-monospace',
-					'Menlo',
-					'Monaco',
-					'Consolas',
-					'monospace'
-				]
+				sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+				display: ['Space Grotesk', 'sans-serif'],
+				mono: ['SF Mono', 'SFMono-Regular', 'ui-monospace', 'Menlo', 'monospace'],
 			},
 			boxShadow: {
 				'2xs': 'var(--shadow-2xs)',
