@@ -196,24 +196,11 @@ serve(async (req) => {
       idempotency_key,
     } = body;
 
-    // Rate limiting
-    if (await checkRateLimit('gemini-image')) return rateLimitedResponse();
-
-    // Idempotency check
-    if (idempotency_key) {
-      const cached = await checkIdempotency(idempotency_key);
-      if (cached) {
-        console.log('Returning cached result for idempotency key:', idempotency_key);
-        return new Response(JSON.stringify({ success: true, imageUrl: cached.public_url, assetId: cached.id, cached: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-    }
-
-    // Get API key from environment
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    // Get API key from agency settings, then env var fallback
+    const geminiApiKey = await getGeminiApiKey(undefined);
     if (!geminiApiKey) {
       return new Response(
-        JSON.stringify({ error: 'GEMINI_API_KEY not configured' }),
+        JSON.stringify({ error: 'Gemini API key not configured. Add it in Agency Settings.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
