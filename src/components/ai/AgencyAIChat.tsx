@@ -13,7 +13,8 @@ import {
   FileText,
   Image as ImageIcon,
   Film,
-  Database
+  Database,
+  CheckSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,8 @@ import { AggregatedMetrics } from '@/hooks/useMetrics';
 import { useMeetings } from '@/hooks/useMeetings';
 import { TokenUsageBar, FULL_MODEL_OPTIONS, MODEL_LIMITS } from './TokenUsageBar';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 type AIModel = 'gemini-2.5-pro' | 'gemini-3-flash' | 'gemini-3-pro' | 'gpt-5';
 
