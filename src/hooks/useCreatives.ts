@@ -244,6 +244,26 @@ export function useUpdateCreativeStatus() {
           priority: 'high',
         });
       }
+
+      // Auto-complete the launch task when creative moves to launched
+      if (status === 'launched' && clientId) {
+        const searchTitle = creativeTitle
+          ? `Launch approved creative: ${creativeTitle}`
+          : `Launch approved creative`;
+        const { data: matchingTasks } = await supabase
+          .from('tasks')
+          .select('id')
+          .eq('client_id', clientId)
+          .ilike('title', `%${searchTitle}%`)
+          .in('status', ['todo', 'in_progress'])
+          .limit(1);
+        if (matchingTasks && matchingTasks.length > 0) {
+          await supabase
+            .from('tasks')
+            .update({ status: 'completed', completed_at: new Date().toISOString() })
+            .eq('id', matchingTasks[0].id);
+        }
+      }
       
       return data;
     },
