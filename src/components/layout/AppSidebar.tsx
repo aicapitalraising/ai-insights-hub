@@ -60,7 +60,7 @@ const navStructure = [
   {
     title: 'Tasks',
     value: 'tasks',
-    icon: CheckCircle2,
+    icon: ClipboardCheck,
   },
   {
     title: 'Reporting',
