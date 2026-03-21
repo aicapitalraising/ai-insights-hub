@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare } from 'lucide-react';
 import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
 import { CallsDrillDownModal } from '@/components/drilldown/CallsDrillDownModal';
 import { AdSpendDrillDownModal } from '@/components/drilldown/AdSpendDrillDownModal';
@@ -32,6 +32,7 @@ import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { PipelineTab } from '@/components/pipeline/PipelineTab';
 import { AdsManagerTab } from '@/components/ads-manager/AdsManagerTab';
 import { ClientOffersSection } from '@/components/offers/ClientOffersSection';
+import { ClientFulfillmentWorkspace } from '@/components/fulfillment/ClientFulfillmentWorkspace';
 import { AttributionSettings } from '@/components/ads-manager/AttributionSettings';
 import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
 import { useClient } from '@/hooks/useClients';
@@ -252,6 +253,10 @@ export default function ClientDetail() {
               <TrendingUp className="h-4 w-4" />
               Performance
             </TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-2">
+              <CheckSquare className="h-4 w-4" />
+              Tasks
+            </TabsTrigger>
             <TabsTrigger value="records" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Attribution & Records
@@ -331,6 +336,10 @@ export default function ClientDetail() {
               </Collapsible>
             )}
 
+          </TabsContent>
+
+          {/* ─── TASKS TAB ─── */}
+          <TabsContent value="tasks" className="space-y-6">
             <SectionErrorBoundary sectionName="Task Board">
               <h2 className="text-lg font-bold mb-3">Tasks</h2>
               <TaskBoardView clientId={clientId} />
@@ -388,9 +397,7 @@ export default function ClientDetail() {
           {/* ─── OFFERS TAB ─── */}
           <TabsContent value="offers" className="space-y-6">
             <SectionErrorBoundary sectionName="Offers">
-              <h2 className="text-lg font-bold mb-3">Offers</h2>
-              <p className="text-sm text-muted-foreground mb-4">Main feed for building statics and videos</p>
-              <ClientOffersSection clientId={client.id} clientName={client.name} />
+              <ClientFulfillmentWorkspace client={client} />
             </SectionErrorBoundary>
           </TabsContent>
 
