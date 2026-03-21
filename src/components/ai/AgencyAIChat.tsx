@@ -53,8 +53,9 @@ const modelLabels: Record<AIModel, string> = {
 const agencyQuickQuestions = [
   "Which client needs immediate attention?",
   "Compare all clients' CPL performance",
-  "What's the agency-wide conversion rate?",
+  "Create weekly check-in tasks for all active clients",
   "Identify our best performing client",
+  "Create follow-up tasks for underperforming clients",
 ];
 
 const clientQuickQuestions = [
