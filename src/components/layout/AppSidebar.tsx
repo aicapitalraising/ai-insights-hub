@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   Zap,
   BarChart2,
+  Megaphone,
+  FileText,
 } from 'lucide-react';
 import {
   Sidebar,
