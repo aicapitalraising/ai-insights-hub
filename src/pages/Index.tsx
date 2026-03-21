@@ -59,6 +59,7 @@ import SpamBlacklist from './SpamBlacklist';
 import CreativeBriefs from './CreativeBriefs';
 import { AdminAdsManagerTab } from '@/components/ads-manager/AdminAdsManagerTab';
 import { AdminOffersTab } from '@/components/offers/AdminOffersTab';
+import { QuizBuilderTab } from '@/components/quiz/QuizBuilderTab';
 
 const Index = () => {
   const navigate = useNavigate();
