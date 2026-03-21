@@ -31,20 +31,24 @@ export default function StaticCreativesPage({ embedded = false }: { embedded?: b
   };
 
   if (showStyles) {
+    const stylesContent = (
+      <div className="max-w-7xl mx-auto space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setShowStyles(false)}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Manage Styles</h1>
+            <p className="text-sm text-muted-foreground">Add reference images, customize prompts, and create new styles</p>
+          </div>
+        </div>
+        <StyleSettingsView clientId={selectedClientId || undefined} />
+      </div>
+    );
+    if (embedded) return stylesContent;
     return (
       <AppLayout breadcrumbs={[{ label: 'Static Creatives', href: '/static-ads' }, { label: 'Manage Styles' }]}>
-        <div className="max-w-7xl mx-auto space-y-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setShowStyles(false)}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">Manage Styles</h1>
-              <p className="text-sm text-muted-foreground">Add reference images, customize prompts, and create new styles</p>
-            </div>
-          </div>
-          <StyleSettingsView clientId={selectedClientId || undefined} />
-        </div>
+        {stylesContent}
       </AppLayout>
     );
   }
