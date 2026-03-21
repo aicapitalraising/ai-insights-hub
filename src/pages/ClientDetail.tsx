@@ -519,6 +519,7 @@ export default function ClientDetail() {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </main>
 
       {/* Modals */}
