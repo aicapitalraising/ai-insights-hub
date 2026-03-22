@@ -289,6 +289,50 @@ export type Database = {
           },
         ]
       }
+      client_assets: {
+        Row: {
+          asset_type: string
+          client_id: string
+          content: Json | null
+          created_at: string | null
+          id: string
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          asset_type: string
+          client_id: string
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          asset_type?: string
+          client_id?: string
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_custom_tabs: {
         Row: {
           client_id: string
@@ -320,6 +364,89 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "client_custom_tabs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_intake: {
+        Row: {
+          additional_notes: string | null
+          brand_notes: string | null
+          budget_amount: string | null
+          budget_mode: string | null
+          client_id: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          fund_type: string | null
+          id: string
+          investor_list_path: string | null
+          kickoff_date: string | null
+          kickoff_time: string | null
+          min_investment: string | null
+          pitch_deck_link: string | null
+          pitch_deck_path: string | null
+          raise_amount: string | null
+          status: string | null
+          target_investor: string | null
+          timeline: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          brand_notes?: string | null
+          budget_amount?: string | null
+          budget_mode?: string | null
+          client_id: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          fund_type?: string | null
+          id?: string
+          investor_list_path?: string | null
+          kickoff_date?: string | null
+          kickoff_time?: string | null
+          min_investment?: string | null
+          pitch_deck_link?: string | null
+          pitch_deck_path?: string | null
+          raise_amount?: string | null
+          status?: string | null
+          target_investor?: string | null
+          timeline?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          brand_notes?: string | null
+          budget_amount?: string | null
+          budget_mode?: string | null
+          client_id?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          fund_type?: string | null
+          id?: string
+          investor_list_path?: string | null
+          kickoff_date?: string | null
+          kickoff_time?: string | null
+          min_investment?: string | null
+          pitch_deck_link?: string | null
+          pitch_deck_path?: string | null
+          raise_amount?: string | null
+          status?: string | null
+          target_investor?: string | null
+          timeline?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_intake_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"

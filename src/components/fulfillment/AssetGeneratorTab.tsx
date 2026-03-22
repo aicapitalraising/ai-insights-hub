@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/db';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, CheckCircle2, Clock, Edit3, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -57,23 +56,12 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
   const loadAssets = async () => {
     setLoading(true);
     const { data } = await supabase
-      .from('client_offers' as any)
+      .from('client_assets' as any)
       .select('*')
       .eq('client_id', client.id)
-      .eq('offer_type', `asset_${assetType}`)
+      .eq('asset_type', assetType)
       .order('created_at', { ascending: false });
-    
-    // Map client_offers fields to asset structure
-    const mapped = (data || []).map((d: any) => ({
-      id: d.id,
-      asset_type: assetType,
-      title: d.title,
-      content: d.description ? JSON.parse(d.description) : null,
-      status: d.file_type || 'draft',
-      version: 1,
-      created_at: d.created_at,
-    }));
-    setAssets(mapped);
+    setAssets((data as Asset[]) || []);
     setLoading(false);
   };
 
@@ -83,37 +71,44 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
 
     if (['angles', 'emails', 'sms', 'adcopy', 'scripts', 'creatives', 'report', 'funnel'].includes(assetType)) {
       const { data: researchAssets } = await supabase
-        .from('client_offers' as any)
-        .select('description')
+        .from('client_assets' as any)
+        .select('content')
         .eq('client_id', client.id)
-        .eq('offer_type', 'asset_research')
+        .eq('asset_type', 'research')
         .order('created_at', { ascending: false })
         .limit(1);
-      if (researchAssets?.[0]?.description) {
-        try { existing_research = JSON.parse(researchAssets[0].description); } catch {}
-      }
+      if (researchAssets?.[0]?.content) existing_research = researchAssets[0].content;
     }
 
     if (['emails', 'sms', 'adcopy', 'scripts', 'creatives'].includes(assetType)) {
       const { data: angleAssets } = await supabase
-        .from('client_offers' as any)
-        .select('description')
+        .from('client_assets' as any)
+        .select('content')
         .eq('client_id', client.id)
-        .eq('offer_type', 'asset_angles')
+        .eq('asset_type', 'angles')
         .order('created_at', { ascending: false })
         .limit(1);
-      if (angleAssets?.[0]?.description) {
-        try { existing_angles = JSON.parse(angleAssets[0].description); } catch {}
-      }
+      if (angleAssets?.[0]?.content) existing_angles = angleAssets[0].content;
     }
 
     return { existing_research, existing_angles };
+  };
+
+  const getIntakeData = async () => {
+    const { data } = await supabase
+      .from('client_intake' as any)
+      .select('*')
+      .eq('client_id', client.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    return data?.[0] || null;
   };
 
   const generate = async () => {
     setGenerating(true);
     try {
       const { existing_research, existing_angles } = await getExistingContext();
+      const intake = await getIntakeData();
 
       const { data, error } = await supabase.functions.invoke('generate-asset', {
         body: {
@@ -121,14 +116,19 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
           asset_type: assetType,
           client_data: {
             company_name: client.name,
-            fund_name: client.name,
-            fund_type: client.client_type || 'Capital Raising',
+            name: client.name,
+            fund_type: intake?.fund_type || client.client_type || 'Business',
+            raise_amount: intake?.raise_amount,
+            min_investment: intake?.min_investment,
+            timeline: intake?.timeline,
+            target_investor: intake?.target_investor,
             website: client.website_url,
-            brand_notes: client.description,
-            additional_notes: client.offer_description,
+            industry: client.industry,
+            offer_description: client.offer_description,
+            brand_notes: intake?.brand_notes || client.description,
+            additional_notes: intake?.additional_notes || client.offer_description,
             brand_colors: client.brand_colors,
             brand_fonts: client.brand_fonts,
-            industry: client.industry,
           },
           existing_research,
           existing_angles,
@@ -146,7 +146,7 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
   };
 
   const updateStatus = async (assetId: string, status: string) => {
-    await supabase.from('client_offers' as any).update({ file_type: status }).eq('id', assetId);
+    await supabase.from('client_assets' as any).update({ status }).eq('id', assetId);
     await loadAssets();
     toast.success(`Status updated to ${status.replace('_', ' ')}`);
   };
@@ -165,7 +165,7 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
         <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
           <Icon className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="font-display text-lg font-bold text-foreground mb-1">{title}</h3>
+        <h3 className="text-lg font-bold text-foreground mb-1">{title}</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-1">{description}</p>
         {assetType !== 'research' && (
           <p className="text-xs text-muted-foreground/70 mb-4">
@@ -186,7 +186,7 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-display text-lg font-bold text-foreground">{title}</h3>
+          <h3 className="text-lg font-bold text-foreground">{title}</h3>
           <p className="text-xs text-muted-foreground">
             Generated {new Date(latest.created_at).toLocaleString()} · v{latest.version}
           </p>
