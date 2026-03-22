@@ -54,6 +54,20 @@ export default function ClientsPage() {
   const deleteClient = useDeleteClient();
   const seedOnboardingTasks = useSeedOnboardingTasks();
 
+  // Auto-backfill slugs for existing clients missing them
+  useEffect(() => {
+    if (!clients) return;
+    const missing = clients.filter(c => !c.slug);
+    if (missing.length === 0) return;
+    (async () => {
+      for (const c of missing) {
+        const slug = slugify(c.name);
+        await supabase.from('clients').update({ slug }).eq('id', c.id);
+      }
+      console.log(`[Slugify] Backfilled slugs for ${missing.length} clients`);
+    })();
+  }, [clients]);
+
   // Fetch project counts per client
   const { data: projectCounts = {} } = useQuery({
     queryKey: ['client-project-counts'],
