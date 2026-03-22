@@ -1,11 +1,15 @@
 import { useMemo } from 'react';
-import { CheckCircle2, Circle, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, ListChecks } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { useOnboardingTasks, useToggleOnboardingTask } from '@/hooks/useOnboardingTasks';
+import { Button } from '@/components/ui/button';
+import { useOnboardingTasks, useToggleOnboardingTask, useSeedOnboardingTasks } from '@/hooks/useOnboardingTasks';
+import { getTemplatesForClientType } from '@/lib/onboardingTaskTemplates';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface OnboardingChecklistProps {
   clientId: string;
+  clientType?: string | null;
 }
 
 export function OnboardingChecklist({ clientId }: OnboardingChecklistProps) {
