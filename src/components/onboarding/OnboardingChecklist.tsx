@@ -30,7 +30,31 @@ export function OnboardingChecklist({ clientId, clientType }: OnboardingChecklis
   const totalCount = tasks.length;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  if (isLoading || totalCount === 0) return null;
+  if (isLoading) return null;
+
+  // Offer to seed tasks for existing clients without onboarding tasks
+  if (totalCount === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <ListChecks className="h-5 w-5 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No onboarding checklist yet.</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            const templates = getTemplatesForClientType(clientType);
+            await seedTasks.mutateAsync({ clientId, tasks: templates });
+            toast.success('Onboarding tasks created');
+          }}
+          disabled={seedTasks.isPending}
+        >
+          Initialize Checklist
+        </Button>
+      </div>
+    );
+  }
 
   // Hide if all tasks are done
   if (completedCount === totalCount) {
