@@ -291,6 +291,7 @@ export default function ClientDetail() {
 
           {/* ─── PERFORMANCE TAB ─── */}
           <TabsContent value="performance" className="space-y-6">
+            {clientId && <OnboardingChecklist clientId={clientId} />}
             <Collapsible open={kpiOpen} onOpenChange={setKpiOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
                 <h2 className="text-lg font-bold">Key Performance Indicators</h2>
