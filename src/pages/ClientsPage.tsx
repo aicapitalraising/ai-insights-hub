@@ -8,6 +8,7 @@ import { ClientCardSkeletonGrid } from '@/components/ui/LoadingSkeletons';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
 import { useSeedOnboardingTasks } from '@/hooks/useOnboardingTasks';
 import { getTemplatesForClientType } from '@/lib/onboardingTaskTemplates';
+import { slugify } from '@/lib/slugify';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
