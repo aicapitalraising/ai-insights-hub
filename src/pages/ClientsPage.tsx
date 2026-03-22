@@ -107,6 +107,13 @@ export default function ClientsPage() {
   const handleWizardSubmit = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const newClient = await createClient.mutateAsync(data);
+      // Auto-seed onboarding tasks
+      try {
+        const templates = getTemplatesForClientType((data as any).client_type);
+        await seedOnboardingTasks.mutateAsync({ clientId: newClient.id, tasks: templates });
+      } catch (e) {
+        console.error('Failed to seed onboarding tasks:', e);
+      }
       toast.success('Client created');
       setWizardOpen(false);
       navigate(`/clients/${newClient.id}`);
