@@ -144,6 +144,7 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
       brand_fonts: brandFonts,
       product_url: productUrl || undefined,
       product_images: [],
+      client_type: clientType,
     }, selectedStyleIds.length > 0 ? selectedStyleIds : undefined);
   };
 
