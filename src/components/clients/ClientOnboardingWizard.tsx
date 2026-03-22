@@ -33,6 +33,7 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
 
   // Step 1 + 2 data
   const [name, setName] = useState('');
+  const [clientType, setClientType] = useState<'Capital Raising' | 'ECOM'>('Capital Raising');
   const [description, setDescription] = useState('');
   const [offerDescription, setOfferDescription] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
