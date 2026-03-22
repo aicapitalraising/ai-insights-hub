@@ -6,6 +6,8 @@ import { ClientOnboardingWizard } from '@/components/clients/ClientOnboardingWiz
 import { QuickGenerateDialog } from '@/components/clients/QuickGenerateDialog';
 import { ClientCardSkeletonGrid } from '@/components/ui/LoadingSkeletons';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
+import { useSeedOnboardingTasks } from '@/hooks/useOnboardingTasks';
+import { getTemplatesForClientType } from '@/lib/onboardingTaskTemplates';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
