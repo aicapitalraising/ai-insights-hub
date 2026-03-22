@@ -218,6 +218,22 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." className="mt-1" />
               </div>
               <div>
+                <Label>Client Type</Label>
+                <div className="flex gap-2 mt-1">
+                  {(['Capital Raising', 'ECOM'] as const).map(t => (
+                    <Button
+                      key={t}
+                      type="button"
+                      variant={clientType === t ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setClientType(t)}
+                    >
+                      {t}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
                 <Label>Description</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." className="mt-1" rows={2} />
               </div>
