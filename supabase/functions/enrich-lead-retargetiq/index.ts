@@ -829,6 +829,39 @@ Deno.serve(async (req) => {
 
     console.log(`[RetargetIQ] ✓ Enriched ${external_id} via ${merged.methods.join('+')} — ${merged.allIdentities.length} identities, ${merged.companies.length} companies`);
 
+    // Auto sync enriched contact back to GHL after 5 second delay
+    const ghlContactId = external_id;
+    if (ghlContactId && client_id) {
+      const syncBack = async () => {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        try {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          const res = await fetch(`${supabaseUrl}/functions/v1/sync-ghl-contacts`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({
+              client_id,
+              contactId: ghlContactId,
+              mode: 'single',
+            }),
+          });
+          const data = await res.json();
+          console.log(`[RetargetIQ] ✓ Auto-synced ${ghlContactId} back to GHL after enrichment:`, data.success);
+        } catch (e) {
+          console.error(`[RetargetIQ] Auto-sync back to GHL failed (non-fatal):`, e);
+        }
+      };
+      if (typeof (globalThis as any).EdgeRuntime !== 'undefined') {
+        (globalThis as any).EdgeRuntime.waitUntil(syncBack());
+      } else {
+        syncBack().catch(e => console.error('[RetargetIQ] Background sync error:', e));
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, enrichment: upserted }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
