@@ -51,6 +51,7 @@ export default function ClientsPage() {
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
+  const seedOnboardingTasks = useSeedOnboardingTasks();
 
   // Fetch project counts per client
   const { data: projectCounts = {} } = useQuery({
