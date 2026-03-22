@@ -12,9 +12,10 @@ interface OnboardingChecklistProps {
   clientType?: string | null;
 }
 
-export function OnboardingChecklist({ clientId }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ clientId, clientType }: OnboardingChecklistProps) {
   const { data: tasks = [], isLoading } = useOnboardingTasks(clientId);
   const toggleTask = useToggleOnboardingTask();
+  const seedTasks = useSeedOnboardingTasks();
 
   const grouped = useMemo(() => {
     const map: Record<string, typeof tasks> = {};
