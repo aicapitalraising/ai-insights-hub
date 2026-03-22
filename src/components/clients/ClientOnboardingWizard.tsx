@@ -56,6 +56,7 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
       setIsAnalyzing(false);
       setHasAnalyzed(false);
       setName('');
+      setClientType('Capital Raising');
       setDescription('');
       setOfferDescription('');
       setLogoUrl('');
