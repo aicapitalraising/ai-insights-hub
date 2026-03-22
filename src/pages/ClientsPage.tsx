@@ -107,7 +107,9 @@ export default function ClientsPage() {
 
   const handleWizardSubmit = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const newClient = await createClient.mutateAsync(data);
+      // Auto-generate slug from client name if not set
+      const slug = (data as any).slug || slugify(data.name);
+      const newClient = await createClient.mutateAsync({ ...data, slug } as any);
       // Auto-seed onboarding tasks
       try {
         const templates = getTemplatesForClientType((data as any).client_type);
