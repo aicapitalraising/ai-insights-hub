@@ -8,6 +8,7 @@ import { ClientCardSkeletonGrid } from '@/components/ui/LoadingSkeletons';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
 import { useSeedOnboardingTasks } from '@/hooks/useOnboardingTasks';
 import { getTemplatesForClientType } from '@/lib/onboardingTaskTemplates';
+import { slugify } from '@/lib/slugify';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,20 @@ export default function ClientsPage() {
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   const seedOnboardingTasks = useSeedOnboardingTasks();
+
+  // Auto-backfill slugs for existing clients missing them
+  useEffect(() => {
+    if (!clients) return;
+    const missing = clients.filter(c => !c.slug);
+    if (missing.length === 0) return;
+    (async () => {
+      for (const c of missing) {
+        const slug = slugify(c.name);
+        await supabase.from('clients').update({ slug }).eq('id', c.id);
+      }
+      console.log(`[Slugify] Backfilled slugs for ${missing.length} clients`);
+    })();
+  }, [clients]);
 
   // Fetch project counts per client
   const { data: projectCounts = {} } = useQuery({
@@ -106,7 +121,9 @@ export default function ClientsPage() {
 
   const handleWizardSubmit = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const newClient = await createClient.mutateAsync(data);
+      // Auto-generate slug from client name if not set
+      const slug = (data as any).slug || slugify(data.name);
+      const newClient = await createClient.mutateAsync({ ...data, slug } as any);
       // Auto-seed onboarding tasks
       try {
         const templates = getTemplatesForClientType((data as any).client_type);
