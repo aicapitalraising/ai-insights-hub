@@ -6,6 +6,8 @@ import { ClientOnboardingWizard } from '@/components/clients/ClientOnboardingWiz
 import { QuickGenerateDialog } from '@/components/clients/QuickGenerateDialog';
 import { ClientCardSkeletonGrid } from '@/components/ui/LoadingSkeletons';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
+import { useSeedOnboardingTasks } from '@/hooks/useOnboardingTasks';
+import { getTemplatesForClientType } from '@/lib/onboardingTaskTemplates';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +51,7 @@ export default function ClientsPage() {
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
+  const seedOnboardingTasks = useSeedOnboardingTasks();
 
   // Fetch project counts per client
   const { data: projectCounts = {} } = useQuery({
@@ -104,6 +107,13 @@ export default function ClientsPage() {
   const handleWizardSubmit = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const newClient = await createClient.mutateAsync(data);
+      // Auto-seed onboarding tasks
+      try {
+        const templates = getTemplatesForClientType((data as any).client_type);
+        await seedOnboardingTasks.mutateAsync({ clientId: newClient.id, tasks: templates });
+      } catch (e) {
+        console.error('Failed to seed onboarding tasks:', e);
+      }
       toast.success('Client created');
       setWizardOpen(false);
       navigate(`/clients/${newClient.id}`);

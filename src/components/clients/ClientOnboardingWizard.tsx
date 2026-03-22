@@ -33,6 +33,7 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
 
   // Step 1 + 2 data
   const [name, setName] = useState('');
+  const [clientType, setClientType] = useState<'Capital Raising' | 'ECOM'>('Capital Raising');
   const [description, setDescription] = useState('');
   const [offerDescription, setOfferDescription] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -55,6 +56,7 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
       setIsAnalyzing(false);
       setHasAnalyzed(false);
       setName('');
+      setClientType('Capital Raising');
       setDescription('');
       setOfferDescription('');
       setLogoUrl('');
@@ -142,6 +144,7 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
       brand_fonts: brandFonts,
       product_url: productUrl || undefined,
       product_images: [],
+      client_type: clientType,
     }, selectedStyleIds.length > 0 ? selectedStyleIds : undefined);
   };
 
@@ -213,6 +216,22 @@ export function ClientOnboardingWizard({ open, onOpenChange, onSubmit, isLoading
               <div>
                 <Label>Company Name *</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." className="mt-1" />
+              </div>
+              <div>
+                <Label>Client Type</Label>
+                <div className="flex gap-2 mt-1">
+                  {(['Capital Raising', 'ECOM'] as const).map(t => (
+                    <Button
+                      key={t}
+                      type="button"
+                      variant={clientType === t ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setClientType(t)}
+                    >
+                      {t}
+                    </Button>
+                  ))}
+                </div>
               </div>
               <div>
                 <Label>Description</Label>
