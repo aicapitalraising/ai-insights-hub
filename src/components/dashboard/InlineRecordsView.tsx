@@ -102,6 +102,27 @@ interface EnrichmentData {
   state?: string | null;
   net_worth?: string | null;
   household_income?: string | null;
+  linkedin_url?: string | null;
+}
+
+// GHL custom field IDs for call/lead data
+const GHL_FIELDS = {
+  LINKEDIN: 'KuGBAp7FfYwkyKDxqhI6',
+  CONVERSATION_SUMMARY: 'aCCb99z3kv7KENtzlGqI',
+  DISPOSITION: 'nwXgYLXyibMPgTlUFzbp',
+  SENTIMENT: 'ZHjm3krQalEyLCltxthZ',
+  RECOMMENDED_FOLLOWUP: 'PsZ0FxJYrBk7FJftONUS',
+};
+
+// Helper to get a GHL custom field value from lead questions
+function getGHLFieldValue(lead: Lead, fieldId: string): string | null {
+  if (!lead.questions || !Array.isArray(lead.questions)) return null;
+  const q = (lead.questions as any[]).find((q: any) => String(q.question || '') === fieldId);
+  if (!q) return null;
+  const answer = q.answer;
+  if (answer === null || answer === undefined || answer === '') return null;
+  if (Array.isArray(answer)) return answer.join(', ');
+  return String(answer);
 }
 
 interface FundedInvestor {
@@ -175,7 +196,7 @@ export function InlineRecordsView({
       if (!clientId) return {};
       const data = await fetchAllRows<any>((sb) =>
         sb.from('lead_enrichment')
-          .select('external_id, lead_id, state, net_worth, household_income')
+          .select('external_id, lead_id, state, net_worth, household_income, linkedin_url')
           .eq('client_id', clientId)
       );
       const map: Record<string, EnrichmentData> = {};
@@ -1490,6 +1511,13 @@ export function InlineRecordsView({
                         <TableHead className={HEAD_CLASS}>Net Worth</TableHead>
                         <TableHead className={HEAD_CLASS}>Income</TableHead>
                         <TableHead className={HEAD_CLASS}>Q&A</TableHead>
+                        <TableHead className={HEAD_CLASS}>LinkedIn Profil…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Conversation Su…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Disposition</TableHead>
+                        <TableHead className={HEAD_CLASS}>Sentiment</TableHead>
+                        <TableHead className={HEAD_CLASS}>Recommended fol…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Reasoning</TableHead>
+                        <TableHead className={HEAD_CLASS}>Last Ti…</TableHead>
                         {uniqueQuestionNames.map((qName) => (
                           <TableHead key={qName} className={`${HEAD_CLASS} max-w-[120px] truncate`} title={qName}>
                             {qName.length > 15 ? qName.slice(0, 15) + '...' : qName}
@@ -1578,6 +1606,41 @@ export function InlineRecordsView({
                                 {lead.questions && Array.isArray(lead.questions) && lead.questions.length > 0 ? (
                                   <span className="text-muted-foreground">{lead.questions.length}</span>
                                 ) : '-'}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[120px] truncate`}>
+                                {(() => {
+                                  const linkedIn = enrichment?.linkedin_url || getGHLFieldValue(lead, GHL_FIELDS.LINKEDIN);
+                                  return linkedIn ? (
+                                    <a href={linkedIn.startsWith('http') ? linkedIn : `https://${linkedIn}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block max-w-[120px]">
+                                      {linkedIn.replace('https://www.linkedin.com/in/', '').replace(/\/$/, '').substring(0, 20)}
+                                    </a>
+                                  ) : '-';
+                                })()}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[140px] truncate`} title={getGHLFieldValue(lead, GHL_FIELDS.CONVERSATION_SUMMARY) || ''}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.CONVERSATION_SUMMARY) || '-'}
+                              </TableCell>
+                              <TableCell className={CELL_CLASS}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.DISPOSITION) || '-'}
+                              </TableCell>
+                              <TableCell className={CELL_CLASS}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.SENTIMENT) || '-'}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[120px] truncate`} title={getGHLFieldValue(lead, GHL_FIELDS.RECOMMENDED_FOLLOWUP) || ''}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.RECOMMENDED_FOLLOWUP) || '-'}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[140px] truncate`}>
+                                {(() => {
+                                  // Reasoning from call summary
+                                  const callForLead = calls.find(c => c.lead_id === lead.id || c.external_id === lead.external_id);
+                                  return callForLead?.summary ? callForLead.summary.substring(0, 60) : '-';
+                                })()}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} font-mono text-muted-foreground whitespace-nowrap`}>
+                                {(() => {
+                                  const callForLead = calls.find(c => c.lead_id === lead.id || c.external_id === lead.external_id);
+                                  return callForLead?.scheduled_at ? new Date(callForLead.scheduled_at).toLocaleDateString() : '-';
+                                })()}
                               </TableCell>
                               {uniqueQuestionNames.map((qName) => {
                                 const answer = getQuestionAnswer(lead, qName);
