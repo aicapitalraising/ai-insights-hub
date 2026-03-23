@@ -238,7 +238,6 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
                       No channels available
                     </div>
                   )}
-                </ScrollArea>
               </SelectContent>
             </Select>
           </div>
