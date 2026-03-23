@@ -693,14 +693,27 @@ export default function DatabaseView({ embedded = false }: { embedded?: boolean 
                             <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Name</TableHead>
                             <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Email</TableHead>
                             <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Phone</TableHead>
-                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">State</TableHead>
                             <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Source</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Accredited</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Investment</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">State</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Income</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Net Worth</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Discretionary</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">LinkedIn</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Campaign</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Ad Set</TableHead>
+                            <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Ad Name</TableHead>
                             <TableHead className="text-[11px] py-1.5 px-2 whitespace-nowrap">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {paginatedData.map((lead: any) => {
                             const enrich = enrichmentByLeadId.get(lead.id);
+                            // Try to get accredited/investment from custom_fields or lead questions
+                            const customFields = lead.custom_fields || {};
+                            const accredited = lead.accredited != null ? (lead.accredited ? 'Yes' : 'No') : '-';
+                            const investmentAmount = lead.investment_amount ? `$${Number(lead.investment_amount).toLocaleString()}` : '-';
                             return (
                               <TableRow key={lead.id} className="hover:bg-muted/50 border-b h-7">
                                 <TableCell className="text-[11px] py-0.5 px-2"><Badge variant="outline" className="text-[10px] px-1 py-0">{getClientName(lead.client_id)}</Badge></TableCell>
@@ -708,10 +721,31 @@ export default function DatabaseView({ embedded = false }: { embedded?: boolean 
                                   {new Date(lead.created_at).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell className="text-[11px] py-0.5 px-2 font-medium whitespace-nowrap">{lead.name || 'Unknown'}</TableCell>
-                                <TableCell className="text-[11px] py-0.5 px-2">{lead.email || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 max-w-[160px] truncate">{lead.email || '-'}</TableCell>
                                 <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{lead.phone || '-'}</TableCell>
-                                <TableCell className="text-[11px] py-0.5 px-2">{enrich?.state || '-'}</TableCell>
                                 <TableCell className="text-[11px] py-0.5 px-2">{lead.source}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">
+                                  {accredited === 'Yes' ? (
+                                    <Badge className="bg-green-500/20 text-green-600 border-green-500/30 text-[10px] px-1 py-0">Yes</Badge>
+                                  ) : accredited === 'No' ? (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0">No</Badge>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{investmentAmount}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">{enrich?.state || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{enrich?.household_income || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{enrich?.net_worth || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 whitespace-nowrap">{enrich?.discretionary_income || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2">
+                                  {enrich?.linkedin_url ? (
+                                    <a href={enrich.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate block max-w-[120px]">
+                                      {enrich.linkedin_url.replace('https://www.linkedin.com/in/', '').replace(/\/$/, '')}
+                                    </a>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 max-w-[120px] truncate">{lead.utm_campaign || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 max-w-[120px] truncate">{lead.utm_content || '-'}</TableCell>
+                                <TableCell className="text-[11px] py-0.5 px-2 max-w-[120px] truncate">{lead.utm_term || '-'}</TableCell>
                                 <TableCell className="text-[11px] py-0.5 px-2">
                                   {lead.is_spam ? (
                                     <Badge variant="destructive" className="text-[10px] px-1 py-0">Spam</Badge>
