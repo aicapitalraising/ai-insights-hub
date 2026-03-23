@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare, MessageSquare, Globe } from 'lucide-react';
+import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare, MessageSquare, Globe, Building2 } from 'lucide-react';
 import { SlackChatTab } from '@/components/slack/SlackChatTab';
 import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
 import { CallsDrillDownModal } from '@/components/drilldown/CallsDrillDownModal';
@@ -36,6 +36,7 @@ import { AdsManagerTab } from '@/components/ads-manager/AdsManagerTab';
 import { ClientOffersSection } from '@/components/offers/ClientOffersSection';
 import { ClientFunnelsTab } from '@/components/quiz/ClientFunnelsTab';
 import { ClientFulfillmentWorkspace } from '@/components/fulfillment/ClientFulfillmentWorkspace';
+import { PropertyManagerTab } from '@/components/properties/PropertyManagerTab';
 import { AttributionSettings } from '@/components/ads-manager/AttributionSettings';
 import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
 import { useClient } from '@/hooks/useClients';
@@ -85,7 +86,7 @@ export default function ClientDetail() {
   const [csvImportType, setCsvImportType] = useState<ImportType>('ad_spend');
   const [importHistoryOpen, setImportHistoryOpen] = useState(false);
   const [addTabOpen, setAddTabOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('performance');
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [selectedType, setSelectedType] = useState<string>('');
   const [drillDownModal, setDrillDownModal] = useState<string | null>(null);
@@ -146,6 +147,9 @@ export default function ClientDetail() {
 
   const thresholds = useMemo(() => getThresholdsFromSettings(settings), [settings]);
   const fundedInvestorLabel = settings?.funded_investor_label || 'Funded Investors';
+  const isLeasing = (client as any)?.client_type === 'LEASING' || (client?.name || '').toLowerCase().includes('lscre') && (client?.name || '').toLowerCase().includes('leasing');
+  const defaultTab = isLeasing ? 'properties' : 'performance';
+  const resolvedTab = activeTab || defaultTab;
   const isLoading = clientLoading || metricsLoading;
 
   if (isLoading) {
@@ -250,12 +254,19 @@ export default function ClientDetail() {
         <div className="p-6 space-y-6">
 
         {/* 4 Grouped Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={resolvedTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-muted/50 flex-wrap">
-            <TabsTrigger value="performance" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Performance
-            </TabsTrigger>
+            {isLeasing ? (
+              <TabsTrigger value="properties" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                Properties
+              </TabsTrigger>
+            ) : (
+              <TabsTrigger value="performance" className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Performance
+              </TabsTrigger>
+            )}
             <TabsTrigger value="tasks" className="gap-2">
               <CheckSquare className="h-4 w-4" />
               Tasks
@@ -293,6 +304,16 @@ export default function ClientDetail() {
               Settings
             </TabsTrigger>
           </TabsList>
+
+          {/* ─── PERFORMANCE TAB ─── */}
+          {/* ─── PROPERTIES TAB (LEASING) ─── */}
+          {isLeasing && (
+            <TabsContent value="properties" className="space-y-6">
+              <SectionErrorBoundary sectionName="Properties">
+                <PropertyManagerTab clientId={clientId!} clientName={client.name} />
+              </SectionErrorBoundary>
+            </TabsContent>
+          )}
 
           {/* ─── PERFORMANCE TAB ─── */}
           <TabsContent value="performance" className="space-y-6">
