@@ -37,8 +37,12 @@ const API_SECTIONS: ApiSection[] = [
     calls: [
       {
         title: 'Select All Clients',
-        description: 'Fetch all clients with basic info.',
-        body: { password: PASSWORD, action: 'select', table: 'clients', limit: 100 },
+        description: 'Fetch all clients with basic info, API keys, GHL locations, Meta tokens.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'clients',
+          select_columns: 'id,name,slug,status,client_type,ghl_location_id,ghl_api_key,meta_ad_account_id,meta_access_token,business_manager_url,website_url,logo_url,brand_colors,brand_fonts,description,offer_description,product_url,hubspot_portal_id,hubspot_access_token',
+          limit: 100,
+        },
       },
       {
         title: 'Select Leads (Filtered)',
@@ -69,11 +73,19 @@ const API_SECTIONS: ApiSection[] = [
       },
       {
         title: 'Select Daily Metrics',
-        description: 'Get daily performance metrics for a client.',
+        description: 'Get daily performance metrics (ad spend, leads, calls, funded, etc.).',
         body: {
           password: PASSWORD, action: 'select', table: 'daily_metrics',
           filters: { client_id: '<CLIENT_UUID>', date: { op: 'gte', value: '2026-01-01' } },
           order_by: 'date', order_dir: 'desc',
+        },
+      },
+      {
+        title: 'Select Client Settings',
+        description: 'Get thresholds, pipeline IDs, calendar IDs, webhook mappings.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'client_settings',
+          filters: { client_id: '<CLIENT_UUID>' },
         },
       },
       {
@@ -90,6 +102,93 @@ const API_SECTIONS: ApiSection[] = [
         body: {
           password: PASSWORD, action: 'count', table: 'leads',
           filters: { client_id: '<CLIENT_UUID>' },
+        },
+      },
+    ],
+  },
+  {
+    title: '📊 Meta Ads (Internal DB)',
+    badge: 'Composite',
+    calls: [
+      {
+        title: 'Get Ads Overview (Campaigns → Ad Sets → Ads)',
+        description: 'Full Meta ads hierarchy with aggregated spend & attribution metrics.',
+        body: {
+          password: PASSWORD, action: 'get_ads_overview',
+          client_id: '<CLIENT_UUID>',
+          status: 'ACTIVE',
+          date_start: '2026-01-01',
+          date_end: '2026-03-23',
+        },
+      },
+      {
+        title: 'Select Campaigns',
+        description: 'List campaigns with nested ad sets.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'meta_campaigns',
+          filters: { client_id: '<CLIENT_UUID>' },
+          include: ['ad_sets', 'client'],
+          order_by: 'spend', order_dir: 'desc',
+        },
+      },
+      {
+        title: 'Select Ad Sets',
+        description: 'List ad sets with nested ads.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'meta_ad_sets',
+          filters: { client_id: '<CLIENT_UUID>' },
+          include: ['ads', 'campaign'],
+        },
+      },
+      {
+        title: 'Select Individual Ads',
+        description: 'List ads with ad set and client info.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'meta_ads',
+          filters: { client_id: '<CLIENT_UUID>' },
+          include: ['ad_set', 'client'],
+        },
+      },
+    ],
+  },
+  {
+    title: '📡 Meta Graph API (Live)',
+    badge: 'External',
+    calls: [
+      {
+        title: 'Get Campaign Insights (Graph API)',
+        description: 'Direct call to Meta Graph API for live insights. Requires client meta_access_token from clients table.',
+        body: {
+          _note: 'This is a direct GET request to Meta, NOT through the Jarvis API.',
+          method: 'GET',
+          url: 'https://graph.facebook.com/v21.0/act_<AD_ACCOUNT_ID>/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget,insights.date_preset(last_30d){spend,impressions,clicks,ctr,cpc,cpm,actions,cost_per_action_type}&access_token=<META_ACCESS_TOKEN>',
+        },
+      },
+      {
+        title: 'Get Ad Set Insights (Graph API)',
+        description: 'Live ad set data from Meta. Replace placeholders with values from clients table.',
+        body: {
+          _note: 'Direct GET to Meta Graph API.',
+          method: 'GET',
+          url: 'https://graph.facebook.com/v21.0/act_<AD_ACCOUNT_ID>/adsets?fields=id,name,status,targeting,bid_strategy,daily_budget,insights.date_preset(last_30d){spend,impressions,clicks,ctr,actions}&access_token=<META_ACCESS_TOKEN>',
+        },
+      },
+      {
+        title: 'Get Ad Creative Previews (Graph API)',
+        description: 'Fetch ad previews and creative data from Meta.',
+        body: {
+          _note: 'Direct GET to Meta Graph API.',
+          method: 'GET',
+          url: 'https://graph.facebook.com/v21.0/act_<AD_ACCOUNT_ID>/ads?fields=id,name,status,creative{title,body,image_url,thumbnail_url,video_id,call_to_action_type,object_story_spec},insights.date_preset(last_7d){spend,impressions,clicks}&access_token=<META_ACCESS_TOKEN>',
+        },
+      },
+      {
+        title: 'Token Validation',
+        description: 'Check if a Meta access token is still valid before making API calls.',
+        body: {
+          _note: 'Direct GET to Meta Graph API. If status 200, token is valid. Error code 190 = expired.',
+          method: 'GET',
+          url: 'https://graph.facebook.com/v21.0/me?access_token=<META_ACCESS_TOKEN>',
         },
       },
     ],
@@ -174,46 +273,89 @@ const API_SECTIONS: ApiSection[] = [
     ],
   },
   {
-    title: '📊 Meta Ads',
-    badge: 'Composite',
+    title: '📝 Client Onboarding & Intake',
     calls: [
       {
-        title: 'Get Ads Overview (Campaigns → Ad Sets → Ads)',
-        description: 'Full Meta ads hierarchy with aggregated spend & attribution metrics.',
+        title: 'Select Client Intake',
+        description: 'Get onboarding intake form data for a client.',
         body: {
-          password: PASSWORD, action: 'get_ads_overview',
-          client_id: '<CLIENT_UUID>',
-          status: 'ACTIVE',
-          date_start: '2026-01-01',
-          date_end: '2026-02-20',
+          password: PASSWORD, action: 'select', table: 'client_intake',
+          filters: { client_id: '<CLIENT_UUID>' },
         },
       },
       {
-        title: 'Select Campaigns',
-        description: 'List campaigns with nested ad sets.',
+        title: 'Upsert Client Intake',
+        description: 'Submit or update intake data (fund_type, raise_amount, timeline, budget, etc.).',
         body: {
-          password: PASSWORD, action: 'select', table: 'meta_campaigns',
-          filters: { client_id: '<CLIENT_UUID>' },
-          include: ['ad_sets', 'client'],
-          order_by: 'spend', order_dir: 'desc',
+          password: PASSWORD, action: 'upsert', table: 'client_intake',
+          data: {
+            client_id: '<CLIENT_UUID>',
+            contact_name: 'John Doe',
+            contact_email: 'john@fund.com',
+            fund_type: 'Real Estate',
+            raise_amount: '$10M',
+            timeline: '6 months',
+            min_investment: '$50,000',
+            target_investor: 'Accredited individuals',
+            budget_mode: 'monthly',
+            budget_amount: '$15,000',
+            brand_notes: 'Conservative branding',
+            status: 'submitted',
+          },
         },
       },
       {
-        title: 'Select Ad Sets',
-        description: 'List ad sets with nested ads.',
+        title: 'Select Onboarding Tasks',
+        description: 'Get onboarding checklist items for a client.',
         body: {
-          password: PASSWORD, action: 'select', table: 'meta_ad_sets',
+          password: PASSWORD, action: 'select', table: 'client_onboarding_tasks',
           filters: { client_id: '<CLIENT_UUID>' },
-          include: ['ads', 'campaign'],
+          order_by: 'sort_order', order_dir: 'asc',
         },
       },
       {
-        title: 'Select Individual Ads',
-        description: 'List ads with ad set and client info.',
+        title: 'Select Generated Assets',
+        description: 'Get AI-generated content (research, angles, emails, ad copy, scripts, etc.).',
         body: {
-          password: PASSWORD, action: 'select', table: 'meta_ads',
+          password: PASSWORD, action: 'select', table: 'client_assets',
           filters: { client_id: '<CLIENT_UUID>' },
-          include: ['ad_set', 'client'],
+          order_by: 'created_at', order_dir: 'desc',
+        },
+      },
+    ],
+  },
+  {
+    title: '📊 Quiz Funnels & Submissions',
+    calls: [
+      {
+        title: 'Select Quiz Funnels',
+        description: 'Get quiz funnel configs for a client (questions, branding, calendar URL).',
+        body: {
+          password: PASSWORD, action: 'select', table: 'quiz_funnels',
+          filters: { client_id: '<CLIENT_UUID>' },
+        },
+      },
+      {
+        title: 'Select Quiz Submissions',
+        description: 'Get quiz submissions / leads from funnels.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'quiz_submissions',
+          filters: { client_id: '<CLIENT_UUID>' },
+          order_by: 'created_at', order_dir: 'desc', limit: 100,
+        },
+      },
+    ],
+  },
+  {
+    title: '🎯 Client Offers',
+    calls: [
+      {
+        title: 'Select Client Offers',
+        description: 'Get offer pages/configurations for a client.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'client_offers',
+          filters: { client_id: '<CLIENT_UUID>' },
+          include: ['client'],
         },
       },
     ],
@@ -226,7 +368,7 @@ const API_SECTIONS: ApiSection[] = [
         description: 'Insert a lead into the database.',
         body: {
           password: PASSWORD, action: 'insert', table: 'leads',
-          data: { client_id: '<CLIENT_UUID>', name: 'John Doe', email: 'john@example.com', source: 'facebook' },
+          data: { client_id: '<CLIENT_UUID>', name: 'John Doe', email: 'john@example.com', source: 'facebook', external_id: 'ghl_123' },
         },
       },
       {
@@ -299,7 +441,7 @@ const API_SECTIONS: ApiSection[] = [
     calls: [
       {
         title: 'List Files in Bucket',
-        description: 'List files in a storage bucket (creatives, task-files, gpt-files, live-ads).',
+        description: 'List files in a storage bucket (creatives, task-files, gpt-files, live-ads, client-offers).',
         body: {
           password: PASSWORD, action: 'list_storage',
           bucket: 'creatives', file_path: '', limit: 100,
@@ -320,6 +462,17 @@ const API_SECTIONS: ApiSection[] = [
           password: PASSWORD, action: 'upload_file_base64',
           bucket: 'creatives', file_path: 'client/image.png',
           data: '<BASE64_STRING>', content_type: 'image/png',
+        },
+      },
+      {
+        title: 'Upload File (Multipart)',
+        description: 'Upload via multipart/form-data. Fields: password, bucket, file_path, file.',
+        body: {
+          _note: 'Use multipart/form-data content-type. File goes as "file" field.',
+          password: PASSWORD,
+          bucket: 'creatives',
+          file_path: 'client-slug/image.png',
+          file: '<FILE_BINARY>',
         },
       },
       {
@@ -358,7 +511,118 @@ const API_SECTIONS: ApiSection[] = [
       },
     ],
   },
+  {
+    title: '🔄 Sync & Logs',
+    calls: [
+      {
+        title: 'Select Sync Logs',
+        description: 'Get sync history for a client.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'sync_logs',
+          filters: { client_id: '<CLIENT_UUID>' },
+          order_by: 'started_at', order_dir: 'desc', limit: 20,
+        },
+      },
+      {
+        title: 'Select Webhook Logs',
+        description: 'Get webhook processing logs.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'webhook_logs',
+          filters: { client_id: '<CLIENT_UUID>' },
+          order_by: 'processed_at', order_dir: 'desc', limit: 50,
+        },
+      },
+      {
+        title: 'Select CSV Import Logs',
+        description: 'Get CSV import history for a client.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'csv_import_logs',
+          filters: { client_id: '<CLIENT_UUID>' },
+          order_by: 'created_at', order_dir: 'desc',
+        },
+      },
+    ],
+  },
+  {
+    title: '🤖 AI Hub & GPTs',
+    calls: [
+      {
+        title: 'Select AI Conversations',
+        description: 'Get AI hub conversations.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'ai_hub_conversations',
+          order_by: 'created_at', order_dir: 'desc', limit: 20,
+        },
+      },
+      {
+        title: 'Select Custom GPTs',
+        description: 'Get custom GPT configurations.',
+        body: { password: PASSWORD, action: 'select', table: 'custom_gpts' },
+      },
+      {
+        title: 'Select Creative Briefs',
+        description: 'Get creative briefs.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'creative_briefs',
+          order_by: 'created_at', order_dir: 'desc',
+        },
+      },
+      {
+        title: 'Select Ad Scripts',
+        description: 'Get generated ad scripts.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'ad_scripts',
+          order_by: 'created_at', order_dir: 'desc',
+        },
+      },
+    ],
+  },
+  {
+    title: '⚙️ Configuration',
+    calls: [
+      {
+        title: 'Select Agency Settings',
+        description: 'Get agency-wide settings.',
+        body: { password: PASSWORD, action: 'select', table: 'agency_settings' },
+      },
+      {
+        title: 'Select Alert Configs',
+        description: 'Get alert threshold configurations.',
+        body: {
+          password: PASSWORD, action: 'select', table: 'alert_configs',
+          filters: { client_id: '<CLIENT_UUID>' },
+        },
+      },
+      {
+        title: 'Select Dashboard Preferences',
+        description: 'Get saved dashboard preferences.',
+        body: { password: PASSWORD, action: 'select', table: 'dashboard_preferences' },
+      },
+    ],
+  },
 ];
+
+const ALL_TABLES = [
+  'clients', 'leads', 'calls', 'funded_investors', 'daily_metrics',
+  'agency_members', 'agency_pods', 'agency_settings', 'agency_meetings',
+  'tasks', 'task_comments', 'task_files', 'task_history', 'task_assignees', 'task_notifications',
+  'creatives', 'client_settings', 'client_pipelines', 'client_custom_tabs',
+  'client_funnel_steps', 'client_live_ads', 'client_pod_assignments', 'client_voice_notes',
+  'client_offers', 'client_intake', 'client_assets', 'client_onboarding_tasks',
+  'pipeline_stages', 'pipeline_opportunities', 'funnel_campaigns', 'funnel_step_variants',
+  'ad_spend_reports', 'alert_configs', 'chat_conversations', 'chat_messages',
+  'creative_briefs', 'ad_scripts',
+  'ai_hub_conversations', 'ai_hub_messages', 'custom_gpts', 'gpt_files',
+  'gpt_knowledge_base', 'knowledge_base_documents', 'csv_import_logs',
+  'contact_timeline_events', 'data_discrepancies', 'sync_logs', 'sync_queue',
+  'sync_outbound_events', 'pixel_verifications', 'pixel_expected_events',
+  'email_parsed_investors', 'pending_meeting_tasks', 'member_activity_log',
+  'dashboard_preferences', 'spam_blacklist', 'webhook_logs',
+  'meta_campaigns', 'meta_ad_sets', 'meta_ads',
+  'quiz_funnels', 'quiz_submissions',
+];
+
+const ALL_BUCKETS = ['creatives', 'task-files', 'gpt-files', 'live-ads', 'client-offers'];
 
 function CopyBlock({ json }: { json: Record<string, unknown> }) {
   const [copied, setCopied] = useState(false);
@@ -419,14 +683,13 @@ export function ApiReferenceTab() {
   };
 
   const handleCopyAll = async () => {
-    // Fetch live client data from the database
     let clientDirectory = '';
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      
+      const { supabase } = await import('@/integrations/supabase/db');
+
       const [clientsRes, settingsRes, funnelsRes] = await Promise.all([
-        supabase.from('clients').select('id, name, ghl_api_key, ghl_location_id, website_url, business_manager_url, meta_ad_account_id, status, slug').order('name'),
-        supabase.from('client_settings').select('client_id, funded_pipeline_id, ads_library_url, tracked_calendar_ids, reconnect_calendar_ids'),
+        supabase.from('clients').select('id, name, slug, status, client_type, ghl_api_key, ghl_location_id, website_url, business_manager_url, meta_ad_account_id, meta_access_token, logo_url, brand_colors, brand_fonts, description, offer_description, product_url, hubspot_portal_id, hubspot_access_token').order('name'),
+        supabase.from('client_settings').select('client_id, funded_pipeline_id, hubspot_funded_pipeline_id, ads_library_url, tracked_calendar_ids, reconnect_calendar_ids, funded_stage_ids, hubspot_funded_stage_ids, hubspot_committed_stage_ids, slack_channel_id, slack_webhook_url, meetgeek_enabled, meetgeek_api_key'),
         supabase.from('client_funnel_steps').select('client_id, name, url, sort_order').order('client_id').order('sort_order'),
       ]);
 
@@ -442,27 +705,63 @@ export function ApiReferenceTab() {
       }
 
       const dirLines: string[] = [];
-      dirLines.push('## Client Directory (Master Admin)');
+      dirLines.push('## Client Directory (Master Admin — CONFIDENTIAL)');
+      dirLines.push('');
+      dirLines.push('> Each client entry includes all API keys, GHL locations, Meta tokens, and pipeline IDs needed for integration.');
       dirLines.push('');
 
       for (const c of clients) {
         const s = settingsMap[c.id];
-        dirLines.push(`### ${c.name} [${c.status}]`);
-        dirLines.push(`- Client ID: ${c.id}`);
-        if (c.slug) dirLines.push(`- Slug: ${c.slug}`);
-        if (c.ghl_location_id) dirLines.push(`- GHL Location ID: ${c.ghl_location_id}`);
-        if (c.ghl_api_key && c.ghl_api_key.startsWith('pit-')) dirLines.push(`- GHL API Key: ${c.ghl_api_key}`);
-        if (c.meta_ad_account_id) dirLines.push(`- Meta Ad Account ID: ${c.meta_ad_account_id}`);
-        if (c.business_manager_url) dirLines.push(`- Ads Manager: ${c.business_manager_url}`);
-        if (c.website_url) dirLines.push(`- Website: ${c.website_url}`);
-        if (s?.ads_library_url) dirLines.push(`- Ads Library: ${s.ads_library_url}`);
-        if (s?.funded_pipeline_id) dirLines.push(`- Funded Pipeline ID: ${s.funded_pipeline_id}`);
-        if (s?.tracked_calendar_ids?.length) dirLines.push(`- Tracked Calendar IDs: ${s.tracked_calendar_ids.join(', ')}`);
-        if (s?.reconnect_calendar_ids?.length) dirLines.push(`- Reconnect Calendar IDs: ${s.reconnect_calendar_ids.join(', ')}`);
+        dirLines.push(`### ${c.name} [${c.status}] ${c.client_type ? `(${c.client_type})` : ''}`);
+        dirLines.push(`- **Client ID**: \`${c.id}\``);
+        if (c.slug) dirLines.push(`- **Slug**: ${c.slug}`);
+        
+        // GHL
+        if (c.ghl_location_id) dirLines.push(`- **GHL Location ID**: \`${c.ghl_location_id}\``);
+        if (c.ghl_api_key) dirLines.push(`- **GHL API Key**: \`${c.ghl_api_key}\``);
+        
+        // Meta
+        if (c.meta_ad_account_id) dirLines.push(`- **Meta Ad Account ID**: \`${c.meta_ad_account_id}\``);
+        if (c.meta_access_token) {
+          const token = c.meta_access_token.substring(0, 20) + '...' + c.meta_access_token.slice(-10);
+          dirLines.push(`- **Meta Access Token**: \`${token}\` (${c.meta_access_token.length} chars)`);
+        }
+        if (c.business_manager_url) dirLines.push(`- **Ads Manager URL**: ${c.business_manager_url}`);
+        
+        // HubSpot
+        if (c.hubspot_portal_id) dirLines.push(`- **HubSpot Portal ID**: \`${c.hubspot_portal_id}\``);
+        if (c.hubspot_access_token) {
+          const ht = c.hubspot_access_token.substring(0, 15) + '...';
+          dirLines.push(`- **HubSpot Token**: \`${ht}\``);
+        }
+        
+        // Brand
+        if (c.website_url) dirLines.push(`- **Website**: ${c.website_url}`);
+        if (c.logo_url) dirLines.push(`- **Logo**: ${c.logo_url}`);
+        if (c.description) dirLines.push(`- **Description**: ${c.description}`);
+        if (c.offer_description) dirLines.push(`- **Offer**: ${c.offer_description}`);
+        if (c.product_url) dirLines.push(`- **Product URL**: ${c.product_url}`);
+        if (c.brand_colors?.length) dirLines.push(`- **Brand Colors**: ${c.brand_colors.join(', ')}`);
+        if (c.brand_fonts?.length) dirLines.push(`- **Brand Fonts**: ${c.brand_fonts.join(', ')}`);
+        
+        // Settings
+        if (s) {
+          if (s.funded_pipeline_id) dirLines.push(`- **GHL Funded Pipeline ID**: \`${s.funded_pipeline_id}\``);
+          if (s.funded_stage_ids?.length) dirLines.push(`- **Funded Stage IDs**: ${JSON.stringify(s.funded_stage_ids)}`);
+          if (s.hubspot_funded_pipeline_id) dirLines.push(`- **HubSpot Funded Pipeline**: \`${s.hubspot_funded_pipeline_id}\``);
+          if (s.hubspot_funded_stage_ids?.length) dirLines.push(`- **HubSpot Funded Stages**: ${JSON.stringify(s.hubspot_funded_stage_ids)}`);
+          if (s.hubspot_committed_stage_ids?.length) dirLines.push(`- **HubSpot Committed Stages**: ${JSON.stringify(s.hubspot_committed_stage_ids)}`);
+          if (s.tracked_calendar_ids?.length) dirLines.push(`- **Tracked Calendar IDs**: ${JSON.stringify(s.tracked_calendar_ids)}`);
+          if (s.reconnect_calendar_ids?.length) dirLines.push(`- **Reconnect Calendar IDs**: ${JSON.stringify(s.reconnect_calendar_ids)}`);
+          if (s.ads_library_url) dirLines.push(`- **Ads Library**: ${s.ads_library_url}`);
+          if (s.slack_channel_id) dirLines.push(`- **Slack Channel**: \`${s.slack_channel_id}\``);
+          if (s.slack_webhook_url) dirLines.push(`- **Slack Webhook**: ${s.slack_webhook_url}`);
+          if (s.meetgeek_enabled) dirLines.push(`- **MeetGeek**: Enabled`);
+        }
         
         const clientFunnels = funnelMap[c.id];
         if (clientFunnels?.length) {
-          dirLines.push(`- Funnel Pages:`);
+          dirLines.push(`- **Funnel Pages**:`);
           for (const f of clientFunnels) {
             dirLines.push(`  - ${f.name}: ${f.url}`);
           }
@@ -489,9 +788,46 @@ export function ApiReferenceTab() {
     lines.push('## Filter Operators');
     lines.push('eq (default), gt, gte, lt, lte, neq, like, ilike, in, is');
     lines.push('Usage: {"field": {"op": "gte", "value": "2026-01-01"}}');
+    lines.push('Array shorthand: {"field": ["value1", "value2"]} => IN filter');
+    lines.push('Null check: {"field": null} => IS NULL');
+    lines.push('');
+    lines.push('## Select Options');
+    lines.push('- `select_columns`: Comma-separated columns to return (default: "*")');
+    lines.push('- `include`: Array of relation names to join (see list_tables for available relations per table)');
+    lines.push('- `order_by`: Column name to sort by');
+    lines.push('- `order_dir`: "asc" or "desc"');
+    lines.push('- `limit`: Max rows (default 1000)');
+    lines.push('- `offset`: Skip rows for pagination');
     lines.push('');
 
-    // Client directory first so OpenClaw knows all clients
+    // Meta Graph API section
+    lines.push('## Meta Graph API (Direct — Live Data)');
+    lines.push('');
+    lines.push('For live Meta Ads data, make direct GET requests to the Graph API using each client\'s `meta_access_token` and `meta_ad_account_id` from the clients table.');
+    lines.push('');
+    lines.push('### Campaign Insights');
+    lines.push('```');
+    lines.push('GET https://graph.facebook.com/v21.0/act_{AD_ACCOUNT_ID}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget,insights.date_preset(last_30d){spend,impressions,clicks,ctr,cpc,cpm,actions,cost_per_action_type}&access_token={TOKEN}');
+    lines.push('```');
+    lines.push('');
+    lines.push('### Ad Set Insights');
+    lines.push('```');
+    lines.push('GET https://graph.facebook.com/v21.0/act_{AD_ACCOUNT_ID}/adsets?fields=id,name,status,targeting,bid_strategy,daily_budget,insights.date_preset(last_30d){spend,impressions,clicks,ctr,actions}&access_token={TOKEN}');
+    lines.push('```');
+    lines.push('');
+    lines.push('### Ad Creative Previews');
+    lines.push('```');
+    lines.push('GET https://graph.facebook.com/v21.0/act_{AD_ACCOUNT_ID}/ads?fields=id,name,status,creative{title,body,image_url,thumbnail_url,video_id,call_to_action_type},insights.date_preset(last_7d){spend,impressions,clicks}&access_token={TOKEN}');
+    lines.push('```');
+    lines.push('');
+    lines.push('### Token Validation');
+    lines.push('```');
+    lines.push('GET https://graph.facebook.com/v21.0/me?access_token={TOKEN}');
+    lines.push('```');
+    lines.push('Error code 190 = expired token. Regenerate in Meta Business Manager.');
+    lines.push('');
+
+    // Client directory with all keys
     lines.push(clientDirectory);
 
     for (const section of API_SECTIONS) {
@@ -508,28 +844,25 @@ export function ApiReferenceTab() {
     }
 
     lines.push('## All Available Tables');
-    lines.push([
-      'clients', 'leads', 'calls', 'funded_investors', 'daily_metrics',
-      'agency_members', 'agency_pods', 'agency_settings', 'agency_meetings',
-      'tasks', 'task_comments', 'task_files', 'task_history', 'task_assignees', 'task_notifications',
-      'creatives', 'client_settings', 'client_pipelines', 'client_custom_tabs',
-      'client_funnel_steps', 'client_live_ads', 'client_pod_assignments', 'client_voice_notes',
-      'pipeline_stages', 'pipeline_opportunities', 'funnel_campaigns', 'funnel_step_variants',
-      'ad_spend_reports', 'alert_configs', 'chat_conversations', 'chat_messages',
-      'ai_hub_conversations', 'ai_hub_messages', 'custom_gpts', 'gpt_files',
-      'gpt_knowledge_base', 'knowledge_base_documents', 'csv_import_logs',
-      'contact_timeline_events', 'data_discrepancies', 'sync_logs', 'sync_queue',
-      'sync_outbound_events', 'pixel_verifications', 'pixel_expected_events',
-      'email_parsed_investors', 'pending_meeting_tasks', 'member_activity_log',
-      'dashboard_preferences', 'spam_blacklist', 'webhook_logs',
-      'meta_campaigns', 'meta_ad_sets', 'meta_ads',
-    ].join(', '));
+    lines.push(ALL_TABLES.join(', '));
     lines.push('');
     lines.push('## Storage Buckets');
-    lines.push('creatives, task-files, gpt-files, live-ads');
+    lines.push(ALL_BUCKETS.join(', '));
     lines.push('');
     lines.push('## Available Actions');
     lines.push('list_tables, select, count, insert, upsert, update, delete, create_task, get_ads_overview, list_storage, get_file_url, delete_file, upload_file_base64');
+    lines.push('');
+    lines.push('## Available Relations (include parameter)');
+    lines.push('- tasks: subtasks, assignees, comments, files, history, notifications');
+    lines.push('- creatives: client');
+    lines.push('- pipeline_opportunities: stage');
+    lines.push('- client_pipelines: stages');
+    lines.push('- agency_members: pod');
+    lines.push('- task_assignees: member, pod');
+    lines.push('- meta_campaigns: ad_sets, client');
+    lines.push('- meta_ad_sets: ads, campaign, client');
+    lines.push('- meta_ads: ad_set, client');
+    lines.push('- client_offers: client');
 
     navigator.clipboard.writeText(lines.join('\n'));
     setCopiedAll(true);
@@ -576,6 +909,9 @@ export function ApiReferenceTab() {
         <p className="text-[10px] text-muted-foreground mt-1">
           Usage: <code className="bg-muted px-1 rounded">{'{"field": {"op": "gte", "value": "2026-01-01"}}'}</code>
         </p>
+        <p className="text-[10px] text-muted-foreground">
+          Array: <code className="bg-muted px-1 rounded">{'{"field": ["val1", "val2"]}'}</code> → IN filter
+        </p>
       </div>
 
       {/* Sections */}
@@ -595,24 +931,9 @@ export function ApiReferenceTab() {
 
       {/* Available Tables */}
       <div className="border border-border p-3 rounded-md bg-muted/30">
-        <h4 className="font-medium text-xs mb-2">All Available Tables</h4>
+        <h4 className="font-medium text-xs mb-2">All Available Tables ({ALL_TABLES.length})</h4>
         <div className="flex flex-wrap gap-1">
-          {[
-            'clients', 'leads', 'calls', 'funded_investors', 'daily_metrics',
-            'agency_members', 'agency_pods', 'agency_settings', 'agency_meetings',
-            'tasks', 'task_comments', 'task_files', 'task_history', 'task_assignees', 'task_notifications',
-            'creatives', 'client_settings', 'client_pipelines', 'client_custom_tabs',
-            'client_funnel_steps', 'client_live_ads', 'client_pod_assignments', 'client_voice_notes',
-            'pipeline_stages', 'pipeline_opportunities', 'funnel_campaigns', 'funnel_step_variants',
-            'ad_spend_reports', 'alert_configs', 'chat_conversations', 'chat_messages',
-            'ai_hub_conversations', 'ai_hub_messages', 'custom_gpts', 'gpt_files',
-            'gpt_knowledge_base', 'knowledge_base_documents', 'csv_import_logs',
-            'contact_timeline_events', 'data_discrepancies', 'sync_logs', 'sync_queue',
-            'sync_outbound_events', 'pixel_verifications', 'pixel_expected_events',
-            'email_parsed_investors', 'pending_meeting_tasks', 'member_activity_log',
-            'dashboard_preferences', 'spam_blacklist', 'webhook_logs',
-            'meta_campaigns', 'meta_ad_sets', 'meta_ads',
-          ].map(t => (
+          {ALL_TABLES.map(t => (
             <Badge key={t} variant="outline" className="text-[10px] font-mono">{t}</Badge>
           ))}
         </div>
@@ -622,9 +943,26 @@ export function ApiReferenceTab() {
       <div className="border border-border p-3 rounded-md bg-muted/30">
         <h4 className="font-medium text-xs mb-2">Storage Buckets</h4>
         <div className="flex flex-wrap gap-1">
-          {['creatives', 'task-files', 'gpt-files', 'live-ads'].map(b => (
+          {ALL_BUCKETS.map(b => (
             <Badge key={b} variant="secondary" className="text-[10px] font-mono">{b}</Badge>
           ))}
+        </div>
+      </div>
+
+      {/* Relations */}
+      <div className="border border-border p-3 rounded-md bg-muted/30">
+        <h4 className="font-medium text-xs mb-2">Available Relations (include parameter)</h4>
+        <div className="text-xs font-mono space-y-0.5">
+          <p><span className="text-primary">tasks</span>: subtasks, assignees, comments, files, history, notifications</p>
+          <p><span className="text-primary">creatives</span>: client</p>
+          <p><span className="text-primary">meta_campaigns</span>: ad_sets, client</p>
+          <p><span className="text-primary">meta_ad_sets</span>: ads, campaign, client</p>
+          <p><span className="text-primary">meta_ads</span>: ad_set, client</p>
+          <p><span className="text-primary">client_pipelines</span>: stages</p>
+          <p><span className="text-primary">pipeline_opportunities</span>: stage</p>
+          <p><span className="text-primary">agency_members</span>: pod</p>
+          <p><span className="text-primary">task_assignees</span>: member, pod</p>
+          <p><span className="text-primary">client_offers</span>: client</p>
         </div>
       </div>
     </div>
