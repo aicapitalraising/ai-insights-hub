@@ -284,6 +284,10 @@ export default function ClientDetail() {
               <MessageSquare className="h-4 w-4" />
               Slack
             </TabsTrigger>
+            <TabsTrigger value="funnels" className="gap-2">
+              <Globe className="h-4 w-4" />
+              Funnels
+            </TabsTrigger>
             <TabsTrigger value="client-settings" className="gap-2">
               <Cog className="h-4 w-4" />
               Settings
