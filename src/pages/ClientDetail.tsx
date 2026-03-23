@@ -434,6 +434,19 @@ export default function ClientDetail() {
             </SectionErrorBoundary>
           </TabsContent>
 
+          {/* ─── FUNNELS TAB ─── */}
+          <TabsContent value="funnels" className="space-y-6">
+            <SectionErrorBoundary sectionName="Funnels">
+              <ClientFunnelsTab
+                clientId={clientId!}
+                clientName={client?.name || ''}
+                clientSlug={(client as any)?.slug}
+                offerDescription={(client as any)?.offer_description}
+                logoUrl={(client as any)?.logo_url}
+              />
+            </SectionErrorBoundary>
+          </TabsContent>
+
           {/* ─── SETTINGS TAB ─── */}
           <TabsContent value="client-settings" className="space-y-6">
             {/* Billing */}
