@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare, MessageSquare, Globe } from 'lucide-react';
 import { SlackChatTab } from '@/components/slack/SlackChatTab';
 import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
 import { CallsDrillDownModal } from '@/components/drilldown/CallsDrillDownModal';
@@ -34,6 +34,7 @@ import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { PipelineTab } from '@/components/pipeline/PipelineTab';
 import { AdsManagerTab } from '@/components/ads-manager/AdsManagerTab';
 import { ClientOffersSection } from '@/components/offers/ClientOffersSection';
+import { ClientFunnelsTab } from '@/components/quiz/ClientFunnelsTab';
 import { ClientFulfillmentWorkspace } from '@/components/fulfillment/ClientFulfillmentWorkspace';
 import { AttributionSettings } from '@/components/ads-manager/AttributionSettings';
 import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
@@ -283,6 +284,10 @@ export default function ClientDetail() {
               <MessageSquare className="h-4 w-4" />
               Slack
             </TabsTrigger>
+            <TabsTrigger value="funnels" className="gap-2">
+              <Globe className="h-4 w-4" />
+              Funnels
+            </TabsTrigger>
             <TabsTrigger value="client-settings" className="gap-2">
               <Cog className="h-4 w-4" />
               Settings
@@ -426,6 +431,19 @@ export default function ClientDetail() {
             <SectionErrorBoundary sectionName="Slack Chat">
               <h2 className="text-lg font-bold mb-3">Slack Channels</h2>
               <SlackChatTab clientId={client.id} clientName={client.name} />
+            </SectionErrorBoundary>
+          </TabsContent>
+
+          {/* ─── FUNNELS TAB ─── */}
+          <TabsContent value="funnels" className="space-y-6">
+            <SectionErrorBoundary sectionName="Funnels">
+              <ClientFunnelsTab
+                clientId={clientId!}
+                clientName={client?.name || ''}
+                clientSlug={(client as any)?.slug}
+                offerDescription={(client as any)?.offer_description}
+                logoUrl={(client as any)?.logo_url}
+              />
             </SectionErrorBoundary>
           </TabsContent>
 
