@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Building2, DollarSign, Eye, Pencil, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Building2, Pencil, ExternalLink, Globe, Settings, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CreativesSection } from '@/components/creative/CreativesSection';
 
@@ -28,6 +29,9 @@ interface Property {
   notes: string | null;
   sort_order: number;
   created_at: string;
+  website_url: string | null;
+  elise_connected: boolean;
+  units_count: number | null;
 }
 
 interface PropertyManagerTabProps {
@@ -45,11 +49,16 @@ const emptyForm = {
   promo_url: '',
   campaign_name: '',
   notes: '',
+  website_url: '',
+  elise_connected: false,
+  units_count: '',
 };
 
 export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabProps) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [settingsProperty, setSettingsProperty] = useState<Property | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
@@ -86,6 +95,9 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
         promo_url: values.promo_url || null,
         campaign_name: values.campaign_name || null,
         notes: values.notes || null,
+        website_url: values.website_url || null,
+        elise_connected: values.elise_connected,
+        units_count: values.units_count ? Number(values.units_count) : null,
       };
       if (values.id) {
         const { error } = await (supabase as any).from('client_properties').update(payload).eq('id', values.id);
@@ -101,6 +113,20 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
       setDialogOpen(false);
       setEditingId(null);
       setForm(emptyForm);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateSettings = useMutation({
+    mutationFn: async ({ id, meta_ad_account_id, meta_access_token }: { id: string; meta_ad_account_id: string; meta_access_token: string }) => {
+      const { error } = await (supabase as any).from('client_properties').update({ meta_ad_account_id: meta_ad_account_id || null, meta_access_token: meta_access_token || null }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-properties', clientId] });
+      toast.success('Meta settings updated');
+      setSettingsDialogOpen(false);
+      setSettingsProperty(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -132,6 +158,9 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
       promo_url: prop.promo_url || '',
       campaign_name: prop.campaign_name || '',
       notes: prop.notes || '',
+      website_url: prop.website_url || '',
+      elise_connected: prop.elise_connected || false,
+      units_count: prop.units_count ? String(prop.units_count) : '',
     });
     setDialogOpen(true);
   };
@@ -145,6 +174,12 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
   const openDetail = (prop: Property) => {
     setSelectedPropertyId(prop.id);
     setView('detail');
+  };
+
+  const openSettings = (prop: Property, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSettingsProperty(prop);
+    setSettingsDialogOpen(true);
   };
 
   if (view === 'detail' && selectedProperty) {
@@ -164,8 +199,16 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
             <Badge variant={selectedProperty.status === 'active' ? 'default' : 'secondary'}>
               {selectedProperty.status}
             </Badge>
+            {selectedProperty.elise_connected && (
+              <Badge variant="outline" className="text-green-600 border-green-300">Elise AI</Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {selectedProperty.website_url && (
+              <Button variant="outline" size="sm" onClick={() => window.open(selectedProperty.website_url!, '_blank')}>
+                <Globe className="h-3.5 w-3.5 mr-1" /> Website
+              </Button>
+            )}
             {selectedProperty.promo_url && (
               <Button variant="outline" size="sm" onClick={() => window.open(selectedProperty.promo_url!, '_blank')}>
                 <ExternalLink className="h-3.5 w-3.5 mr-1" /> Promo
@@ -177,19 +220,22 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
           </div>
         </div>
 
-        {/* Property KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="p-4 text-center">
             <p className="text-2xl font-bold">${Number(selectedProperty.daily_budget || 0).toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">Daily Budget</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <p className="text-2xl font-bold">{selectedProperty.units_count || '—'}</p>
+            <p className="text-xs text-muted-foreground">Units</p>
           </Card>
           <Card className="p-4 text-center">
             <p className="text-2xl font-bold">{selectedProperty.meta_ad_account_id ? '✓' : '—'}</p>
             <p className="text-xs text-muted-foreground">Ad Account</p>
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-2xl font-bold">{selectedProperty.campaign_name || '—'}</p>
-            <p className="text-xs text-muted-foreground">Campaign</p>
+            <p className="text-2xl font-bold">{selectedProperty.elise_connected ? '✓' : '✗'}</p>
+            <p className="text-xs text-muted-foreground">Elise AI</p>
           </Card>
           <Card className="p-4 text-center">
             <p className="text-2xl font-bold">{selectedProperty.promo_url ? '✓' : '—'}</p>
@@ -197,7 +243,6 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
           </Card>
         </div>
 
-        {/* Property details card */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Property Details</CardTitle>
@@ -215,6 +260,12 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
                 <span>{selectedProperty.campaign_name}</span>
               </div>
             )}
+            {selectedProperty.website_url && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Website</span>
+                <a href={selectedProperty.website_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs">{selectedProperty.website_url}</a>
+              </div>
+            )}
             {selectedProperty.notes && (
               <div className="pt-2 border-t">
                 <p className="text-muted-foreground mb-1">Notes</p>
@@ -224,7 +275,6 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
           </CardContent>
         </Card>
 
-        {/* Creatives for this property */}
         <div>
           <h3 className="text-base font-bold mb-3">Creatives for {selectedProperty.name}</h3>
           <CreativesSection
@@ -234,7 +284,6 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
           />
         </div>
 
-        {/* Add/Edit Dialog */}
         <PropertyDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
@@ -257,7 +306,7 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
             <Building2 className="h-5 w-5" /> Properties
           </h2>
           <p className="text-sm text-muted-foreground">
-            {properties.length} properties • Select one to view ad spend, leads & creatives
+            {properties.length} properties • Click to view details & creatives
           </p>
         </div>
         <Button onClick={openCreate} size="sm">
@@ -281,11 +330,14 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
             <TableHeader>
               <TableRow>
                 <TableHead>Property</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Campaign</TableHead>
-                <TableHead className="text-right">Daily Budget</TableHead>
-                <TableHead>Ad Account</TableHead>
-                <TableHead>Promo</TableHead>
+                <TableHead className="text-right">Daily Spend</TableHead>
+                <TableHead className="text-right">Leads</TableHead>
+                <TableHead className="text-right">CPL</TableHead>
+                <TableHead className="text-center">Elise AI</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Website</TableHead>
+                <TableHead>Promo / Special</TableHead>
+                <TableHead className="text-center">Meta</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -295,25 +347,46 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
                   <TableCell>
                     <div>
                       <p className="font-medium">{prop.name}</p>
-                      {prop.address && <p className="text-xs text-muted-foreground">{prop.address}</p>}
+                      <Badge variant={prop.status === 'active' ? 'default' : 'secondary'} className="text-[10px] mt-0.5">
+                        {prop.status}
+                      </Badge>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={prop.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                      {prop.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">{prop.campaign_name || '—'}</TableCell>
                   <TableCell className="text-right text-sm font-medium">
                     ${Number(prop.daily_budget || 0).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-xs font-mono">{prop.meta_ad_account_id || '—'}</TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
+                  <TableCell className="text-center">
+                    {prop.elise_connected ? (
+                      <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate">
+                    {prop.address || '—'}
+                  </TableCell>
                   <TableCell>
-                    {prop.promo_url ? (
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); window.open(prop.promo_url!, '_blank'); }}>
-                        <ExternalLink className="h-3.5 w-3.5" />
+                    {prop.website_url ? (
+                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={(e) => { e.stopPropagation(); window.open(prop.website_url!, '_blank'); }}>
+                        <Globe className="h-3 w-3 mr-1" /> Visit
                       </Button>
                     ) : '—'}
+                  </TableCell>
+                  <TableCell className="text-xs max-w-[120px] truncate">
+                    {prop.promo_url ? (
+                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={(e) => { e.stopPropagation(); window.open(prop.promo_url!, '_blank'); }}>
+                        <ExternalLink className="h-3 w-3 mr-1" /> View
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => openSettings(prop, e)}>
+                      <Settings className="h-3.5 w-3.5" />
+                    </Button>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -341,11 +414,74 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
         isEditing={!!editingId}
         isPending={upsert.isPending}
       />
+
+      {/* Meta Settings Dialog */}
+      <MetaSettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+        property={settingsProperty}
+        onSave={(id, adAccountId, accessToken) => updateSettings.mutate({ id, meta_ad_account_id: adAccountId, meta_access_token: accessToken })}
+        isPending={updateSettings.isPending}
+      />
     </div>
   );
 }
 
-// ─── Reusable dialog ───
+// ─── Meta Settings Dialog ───
+function MetaSettingsDialog({
+  open, onOpenChange, property, onSave, isPending,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  property: Property | null;
+  onSave: (id: string, adAccountId: string, accessToken: string) => void;
+  isPending: boolean;
+}) {
+  const [adAccountId, setAdAccountId] = useState('');
+  const [accessToken, setAccessToken] = useState('');
+
+  // Reset form when property changes
+  useState(() => {
+    if (property) {
+      setAdAccountId(property.meta_ad_account_id || '');
+      setAccessToken(property.meta_access_token || '');
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => {
+      if (v && property) {
+        setAdAccountId(property.meta_ad_account_id || '');
+        setAccessToken(property.meta_access_token || '');
+      }
+      onOpenChange(v);
+    }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Meta Settings — {property?.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Meta Ad Account ID</Label>
+            <Input value={adAccountId} onChange={(e) => setAdAccountId(e.target.value)} placeholder="act_123456789" />
+          </div>
+          <div>
+            <Label>Meta Access Token</Label>
+            <Input value={accessToken} onChange={(e) => setAccessToken(e.target.value)} placeholder="EAA..." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => property && onSave(property.id, adAccountId, accessToken)} disabled={isPending}>
+            {isPending ? 'Saving...' : 'Save Settings'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Property Add/Edit Dialog ───
 function PropertyDialog({
   open, onOpenChange, form, setForm, onSubmit, isEditing, isPending,
 }: {
@@ -359,7 +495,7 @@ function PropertyDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Property' : 'Add Property'}</DialogTitle>
         </DialogHeader>
@@ -370,13 +506,23 @@ function PropertyDialog({
           </div>
           <div>
             <Label>Address</Label>
-            <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="123 Main St, City, ST" />
+            <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="123 Main St, City, ST ZIP" />
+          </div>
+          <div>
+            <Label>Website URL</Label>
+            <Input value={form.website_url} onChange={(e) => setForm({ ...form, website_url: e.target.value })} placeholder="https://www.example.com" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Daily Budget ($)</Label>
               <Input type="number" value={form.daily_budget} onChange={(e) => setForm({ ...form, daily_budget: e.target.value })} placeholder="100" />
             </div>
+            <div>
+              <Label>Units Count</Label>
+              <Input type="number" value={form.units_count} onChange={(e) => setForm({ ...form, units_count: e.target.value })} placeholder="228" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -388,21 +534,20 @@ function PropertyDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div>
-            <Label>Meta Ad Account ID</Label>
-            <Input value={form.meta_ad_account_id} onChange={(e) => setForm({ ...form, meta_ad_account_id: e.target.value })} placeholder="act_123456789" />
-          </div>
-          <div>
-            <Label>Meta Access Token</Label>
-            <Input value={form.meta_access_token} onChange={(e) => setForm({ ...form, meta_access_token: e.target.value })} placeholder="EAA..." />
+            <div className="flex items-center gap-3 pt-6">
+              <Switch
+                checked={form.elise_connected}
+                onCheckedChange={(v) => setForm({ ...form, elise_connected: v })}
+              />
+              <Label>Elise AI Connected</Label>
+            </div>
           </div>
           <div>
             <Label>Campaign Name</Label>
             <Input value={form.campaign_name} onChange={(e) => setForm({ ...form, campaign_name: e.target.value })} placeholder="Property Campaign" />
           </div>
           <div>
-            <Label>Promo URL</Label>
+            <Label>Promo / Special URL</Label>
             <Input value={form.promo_url} onChange={(e) => setForm({ ...form, promo_url: e.target.value })} placeholder="https://..." />
           </div>
           <div>
