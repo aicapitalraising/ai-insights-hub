@@ -36,6 +36,7 @@ import { AdsManagerTab } from '@/components/ads-manager/AdsManagerTab';
 import { ClientOffersSection } from '@/components/offers/ClientOffersSection';
 import { ClientFunnelsTab } from '@/components/quiz/ClientFunnelsTab';
 import { ClientFulfillmentWorkspace } from '@/components/fulfillment/ClientFulfillmentWorkspace';
+import { PropertyManagerTab } from '@/components/properties/PropertyManagerTab';
 import { AttributionSettings } from '@/components/ads-manager/AttributionSettings';
 import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
 import { useClient } from '@/hooks/useClients';
