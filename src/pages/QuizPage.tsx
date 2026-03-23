@@ -63,6 +63,13 @@ export default function QuizPage() {
       updateSubmission.mutate({ id: submissionId, answers: newAnswers, step_reached: currentQ + 1 });
     }
 
+    // DQ check: if first question answer is "No" (accredited check), redirect to DQ
+    const currentQuestion = questions[currentQ];
+    if (currentQ === 0 && value === 'No' && currentQuestion?.question?.toLowerCase().includes('accredited')) {
+      setTimeout(() => setPhase('dq'), 300);
+      return;
+    }
+
     setTimeout(() => {
       if (currentQ < questions.length - 1) {
         setCurrentQ(currentQ + 1);
