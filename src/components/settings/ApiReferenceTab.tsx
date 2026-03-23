@@ -723,16 +723,14 @@ export function ApiReferenceTab() {
         // Meta
         if (c.meta_ad_account_id) dirLines.push(`- **Meta Ad Account ID**: \`${c.meta_ad_account_id}\``);
         if (c.meta_access_token) {
-          const token = c.meta_access_token.substring(0, 20) + '...' + c.meta_access_token.slice(-10);
-          dirLines.push(`- **Meta Access Token**: \`${token}\` (${c.meta_access_token.length} chars)`);
+          dirLines.push(`- **Meta Access Token**: \`${c.meta_access_token}\``);
         }
         if (c.business_manager_url) dirLines.push(`- **Ads Manager URL**: ${c.business_manager_url}`);
         
         // HubSpot
         if (c.hubspot_portal_id) dirLines.push(`- **HubSpot Portal ID**: \`${c.hubspot_portal_id}\``);
         if (c.hubspot_access_token) {
-          const ht = c.hubspot_access_token.substring(0, 15) + '...';
-          dirLines.push(`- **HubSpot Token**: \`${ht}\``);
+          dirLines.push(`- **HubSpot Token**: \`${c.hubspot_access_token}\``);
         }
         
         // Brand
