@@ -62,6 +62,7 @@ const FunnelFulfillmentPage = lazyRetry(() => import("./pages/FunnelFulfillmentP
 const FunnelInvestPage = lazyRetry(() => import("./pages/FunnelInvestPage"));
 const FunnelKickoffPage = lazyRetry(() => import("./pages/FunnelKickoffPage"));
 const FunnelAccessPage = lazyRetry(() => import("./pages/FunnelAccessPage"));
+const SyncHealthPage = lazyRetry(() => import("./pages/SyncHealthPage"));
 
 function PageLoader() {
   return (
