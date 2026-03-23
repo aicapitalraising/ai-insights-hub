@@ -151,6 +151,18 @@ serve(async (req) => {
       const contactId = extractContactId(payload);
       
       console.log(`[AUTO-SYNC] ${webhookType} webhook - Client: ${client.name}, ContactId: ${contactId || 'unknown'}`);
+
+      // Log webhook to webhook_logs table
+      const logStatus = (contactId && client.ghl_api_key && client.ghl_location_id) ? 'success' : 'acknowledged';
+      await supabase.from('webhook_logs').insert({
+        client_id: clientId,
+        webhook_type: webhookType,
+        status: logStatus,
+        payload: payload,
+        error_message: !contactId ? 'No contact ID extracted' : (!client.ghl_api_key ? 'No GHL credentials' : null),
+      }).then(({ error: logErr }) => {
+        if (logErr) console.error('[WEBHOOK-LOG] Failed to log:', logErr);
+      });
       
       if (contactId && client.ghl_api_key && client.ghl_location_id) {
         // Fire-and-forget: call sync-ghl-contacts with single_contact mode
