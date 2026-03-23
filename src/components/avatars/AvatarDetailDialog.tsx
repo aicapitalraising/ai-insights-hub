@@ -33,7 +33,7 @@ import {
   Camera,
   Trash2,
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
