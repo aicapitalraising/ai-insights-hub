@@ -776,6 +776,68 @@ Deno.serve(async (req) => {
             const errText = await noteRes.text();
             console.error(`[RetargetIQ] Failed to push GHL note (${noteRes.status}):`, errText);
           }
+
+          // Auto-tag high income earners ($200K+)
+          try {
+            const incomeStr = dataFields.household_income || '';
+            const isHighIncome = (() => {
+              // Check for ranges like "$200,000 - $249,999", "$250,000+", "200000-249999", etc.
+              const numMatch = incomeStr.replace(/[$,]/g, '').match(/(\d+)/);
+              if (numMatch) {
+                const val = parseInt(numMatch[1], 10);
+                return val >= 200000;
+              }
+              // Check for text-based ranges
+              const upper = incomeStr.toUpperCase();
+              if (upper.includes('200') || upper.includes('250') || upper.includes('300') || upper.includes('500') || upper.includes('1M') || upper.includes('MILLION')) return true;
+              return false;
+            })();
+
+            if (isHighIncome) {
+              console.log(`[RetargetIQ] 🏷️ High income detected (${incomeStr}), tagging contact ${ghlContactId}`);
+              
+              // First get existing tags
+              const getContactRes = await fetch(`https://services.leadconnectorhq.com/contacts/${ghlContactId}`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${clientData.ghl_api_key}`,
+                  'Version': '2021-07-28',
+                  'Accept': 'application/json',
+                },
+              });
+              
+              let existingTags: string[] = [];
+              if (getContactRes.ok) {
+                const contactJson = await getContactRes.json();
+                existingTags = contactJson.contact?.tags || [];
+              }
+              
+              const tagName = 'High Income Earner';
+              if (!existingTags.includes(tagName)) {
+                const updatedTags = [...existingTags, tagName];
+                const tagRes = await fetch(`https://services.leadconnectorhq.com/contacts/${ghlContactId}`, {
+                  method: 'PUT',
+                  headers: {
+                    'Authorization': `Bearer ${clientData.ghl_api_key}`,
+                    'Version': '2021-07-28',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                  },
+                  body: JSON.stringify({ tags: updatedTags }),
+                });
+                if (tagRes.ok) {
+                  console.log(`[RetargetIQ] ✓ Tagged ${ghlContactId} as "${tagName}"`);
+                } else {
+                  const tagErr = await tagRes.text();
+                  console.error(`[RetargetIQ] Failed to tag (${tagRes.status}):`, tagErr);
+                }
+              } else {
+                console.log(`[RetargetIQ] Contact ${ghlContactId} already tagged as "${tagName}"`);
+              }
+            }
+          } catch (tagErr) {
+            console.error('[RetargetIQ] Tag push error (non-fatal):', tagErr);
+          }
         }
       }
     } catch (ghlErr) {
