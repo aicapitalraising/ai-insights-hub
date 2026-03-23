@@ -710,6 +710,9 @@ Deno.serve(async (req) => {
 
           const noteBody = lines.join('\n');
 
+          // Wait 5 seconds before pushing to GHL to ensure sync has completed
+          await new Promise(resolve => setTimeout(resolve, 5000));
+
           // POST note to GHL contact
           const noteRes = await fetch(`https://services.leadconnectorhq.com/contacts/${ghlContactId}/notes`, {
             method: 'POST',

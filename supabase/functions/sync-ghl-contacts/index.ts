@@ -7,6 +7,7 @@ declare const EdgeRuntime: {
 } | undefined;
 
 // Fire-and-forget enrichment for newly created leads
+// Waits 5 seconds before calling enrich to ensure DB persistence
 function triggerEnrichment(
   clientId: string,
   contact: GHLContact,
@@ -17,25 +18,27 @@ function triggerEnrichment(
   const firstName = contact.firstName || (contact.name ? contact.name.split(' ')[0] : '') || '';
   const lastName = contact.lastName || (contact.name ? contact.name.split(' ').slice(1).join(' ') : '') || '';
 
-  const enrichPromise = fetch(enrichUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${serviceKey}`,
-    },
-    body: JSON.stringify({
-      client_id: clientId,
-      external_id: contact.id,
-      phone: contact.phone || null,
-      email: contact.email || null,
-      first_name: firstName,
-      last_name: lastName,
-    }),
-  }).then(res => {
-    console.log(`[Enrich] Triggered for new lead ${contact.id}: ${res.status}`);
-  }).catch(err => {
-    console.error(`[Enrich] Failed to trigger for ${contact.id}:`, err);
-  });
+  const enrichPromise = new Promise<void>(resolve => setTimeout(resolve, 5000)).then(() =>
+    fetch(enrichUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        external_id: contact.id,
+        phone: contact.phone || null,
+        email: contact.email || null,
+        first_name: firstName,
+        last_name: lastName,
+      }),
+    }).then(res => {
+      console.log(`[Enrich] Triggered for new lead ${contact.id} (after 5s delay): ${res.status}`);
+    }).catch(err => {
+      console.error(`[Enrich] Failed to trigger for ${contact.id}:`, err);
+    })
+  );
 
   if (typeof EdgeRuntime !== 'undefined') {
     EdgeRuntime.waitUntil(enrichPromise);
