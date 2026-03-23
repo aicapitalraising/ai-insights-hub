@@ -196,7 +196,7 @@ export function InlineRecordsView({
       if (!clientId) return {};
       const data = await fetchAllRows<any>((sb) =>
         sb.from('lead_enrichment')
-          .select('external_id, lead_id, state, net_worth, household_income')
+          .select('external_id, lead_id, state, net_worth, household_income, linkedin_url')
           .eq('client_id', clientId)
       );
       const map: Record<string, EnrichmentData> = {};
