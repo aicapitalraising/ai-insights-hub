@@ -97,7 +97,7 @@ function ClientCard({ client, onSync, isSyncing }: { client: ClientRow; onSync: 
             : 'Never synced'}
         </p>
 
-        {client.ghl_sync_error && (
+        {resolvedError && (
           <div>
             <button
               onClick={() => setExpanded(!expanded)}
