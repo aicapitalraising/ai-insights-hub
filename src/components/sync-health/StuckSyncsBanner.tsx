@@ -39,8 +39,8 @@ export function StuckSyncsBanner() {
   if (!stuckSyncs?.count) return null;
 
   return (
-    <div className="flex items-center justify-between gap-3 p-3 rounded-lg border-2 border-yellow-500/30 bg-yellow-500/10">
-      <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+    <div className="flex items-center justify-between gap-3 p-3 rounded-lg border-2 border-warning/30 bg-warning/10">
+      <div className="flex items-center gap-2 text-warning-foreground">
         <AlertTriangle className="h-5 w-5 shrink-0" />
         <span className="text-sm font-medium">
           {stuckSyncs.count} sync{stuckSyncs.count > 1 ? 's' : ''} stuck running for 30+ minutes
