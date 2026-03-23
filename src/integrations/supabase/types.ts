@@ -490,6 +490,65 @@ export type Database = {
         }
         Relationships: []
       }
+      client_properties: {
+        Row: {
+          address: string | null
+          campaign_name: string | null
+          client_id: string
+          created_at: string | null
+          daily_budget: number | null
+          id: string
+          meta_access_token: string | null
+          meta_ad_account_id: string | null
+          name: string
+          notes: string | null
+          promo_url: string | null
+          sort_order: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          campaign_name?: string | null
+          client_id: string
+          created_at?: string | null
+          daily_budget?: number | null
+          id?: string
+          meta_access_token?: string | null
+          meta_ad_account_id?: string | null
+          name: string
+          notes?: string | null
+          promo_url?: string | null
+          sort_order?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          campaign_name?: string | null
+          client_id?: string
+          created_at?: string | null
+          daily_budget?: number | null
+          id?: string
+          meta_access_token?: string | null
+          meta_ad_account_id?: string | null
+          name?: string
+          notes?: string | null
+          promo_url?: string | null
+          sort_order?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_properties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_settings: {
         Row: {
           ads_library_url: string | null
