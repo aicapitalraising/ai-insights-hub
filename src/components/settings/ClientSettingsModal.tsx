@@ -1390,36 +1390,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
               <SlackChannelMappingSection clientId={client.id} />
             </div>
 
-            {/* Legacy: Slack Bot Channel (kept for backward compat) */}
-            <div className="border-2 border-border p-4 space-y-4">
-              <div>
-                <h4 className="font-medium mb-1 flex items-center gap-2">
-                  <MessageSquareIcon className="h-4 w-4" />
-                  Legacy Slack Bot Channel
-                </h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Single channel fallback for @HPA commands. Use the multi-channel mapping above for new setups.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slackChannelId">Slack Channel ID</Label>
-                <Input
-                  id="slackChannelId"
-                  value={slackChannelId}
-                  onChange={(e) => setSlackChannelId(e.target.value)}
-                  placeholder="C0123456789"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slackReviewChannelId">Slack Review Channel ID</Label>
-                <Input
-                  id="slackReviewChannelId"
-                  value={slackReviewChannelId}
-                  onChange={(e) => setSlackReviewChannelId(e.target.value)}
-                  placeholder="C0123456789"
-                />
-              </div>
-            </div>
           </TabsContent>
           
           <TabsContent value="webhooks" className="mt-4">
