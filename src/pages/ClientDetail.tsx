@@ -147,7 +147,7 @@ export default function ClientDetail() {
 
   const thresholds = useMemo(() => getThresholdsFromSettings(settings), [settings]);
   const fundedInvestorLabel = settings?.funded_investor_label || 'Funded Investors';
-  const isLeasing = (client as any)?.client_type === 'LEASING';
+  const isLeasing = (client as any)?.client_type === 'LEASING' || (client?.name || '').toLowerCase().includes('lscre') && (client?.name || '').toLowerCase().includes('leasing');
   const defaultTab = isLeasing ? 'properties' : 'performance';
   const resolvedTab = activeTab || defaultTab;
   const isLoading = clientLoading || metricsLoading;
