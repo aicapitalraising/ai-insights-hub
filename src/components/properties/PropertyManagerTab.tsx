@@ -374,11 +374,9 @@ export function PropertyManagerTab({ clientId, clientName }: PropertyManagerTabP
                       </Button>
                     ) : '—'}
                   </TableCell>
-                  <TableCell className="text-xs max-w-[120px] truncate">
+                  <TableCell className="text-xs max-w-[200px]">
                     {prop.promo_url ? (
-                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={(e) => { e.stopPropagation(); window.open(prop.promo_url!, '_blank'); }}>
-                        <ExternalLink className="h-3 w-3 mr-1" /> View
-                      </Button>
+                      <span className="text-foreground">{prop.promo_url}</span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
