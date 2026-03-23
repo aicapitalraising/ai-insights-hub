@@ -1,0 +1,1 @@
+ALTER TABLE public.client_properties DROP CONSTRAINT IF EXISTS client_properties_client_id_fkey;

@@ -597,6 +597,7 @@ export type Database = {
           client_id: string
           created_at: string | null
           daily_budget: number | null
+          elise_connected: boolean | null
           id: string
           meta_access_token: string | null
           meta_ad_account_id: string | null
@@ -605,7 +606,9 @@ export type Database = {
           promo_url: string | null
           sort_order: number | null
           status: string | null
+          units_count: number | null
           updated_at: string | null
+          website_url: string | null
         }
         Insert: {
           address?: string | null
@@ -613,6 +616,7 @@ export type Database = {
           client_id: string
           created_at?: string | null
           daily_budget?: number | null
+          elise_connected?: boolean | null
           id?: string
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
@@ -621,7 +625,9 @@ export type Database = {
           promo_url?: string | null
           sort_order?: number | null
           status?: string | null
+          units_count?: number | null
           updated_at?: string | null
+          website_url?: string | null
         }
         Update: {
           address?: string | null
@@ -629,6 +635,7 @@ export type Database = {
           client_id?: string
           created_at?: string | null
           daily_budget?: number | null
+          elise_connected?: boolean | null
           id?: string
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
@@ -637,17 +644,11 @@ export type Database = {
           promo_url?: string | null
           sort_order?: number | null
           status?: string | null
+          units_count?: number | null
           updated_at?: string | null
+          website_url?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "client_properties_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       client_settings: {
         Row: {
