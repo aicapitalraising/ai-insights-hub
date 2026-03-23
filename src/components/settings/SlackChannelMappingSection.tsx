@@ -222,8 +222,7 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder={loadingChannels ? "Loading channels..." : "Select a channel"} />
               </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="max-h-60">
+              <SelectContent className="max-h-[240px] overflow-y-auto">
                   {availableChannels.map(ch => (
                     <SelectItem key={ch.id} value={ch.id}>
                       <span className="flex items-center gap-1.5">
@@ -239,7 +238,6 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
                       No channels available
                     </div>
                   )}
-                </ScrollArea>
               </SelectContent>
             </Select>
           </div>
