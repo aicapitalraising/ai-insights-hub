@@ -34,6 +34,7 @@ import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { PipelineTab } from '@/components/pipeline/PipelineTab';
 import { AdsManagerTab } from '@/components/ads-manager/AdsManagerTab';
 import { ClientOffersSection } from '@/components/offers/ClientOffersSection';
+import { ClientFunnelsTab } from '@/components/quiz/ClientFunnelsTab';
 import { ClientFulfillmentWorkspace } from '@/components/fulfillment/ClientFulfillmentWorkspace';
 import { AttributionSettings } from '@/components/ads-manager/AttributionSettings';
 import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
