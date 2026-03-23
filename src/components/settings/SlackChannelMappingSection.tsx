@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +14,7 @@ import {
   useSlackActivityLog,
   useSyncSlackChannels,
 } from '@/hooks/useSlackIntegration';
+import { useSlackChannels } from '@/hooks/useSlackChannels';
 import { formatDistanceToNow } from 'date-fns';
 
 interface SlackChannelMappingSectionProps {
@@ -33,28 +33,32 @@ const CHANNEL_TYPES = [
 export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSectionProps) {
   const { data: mappings = [], isLoading } = useSlackChannelMappings(clientId);
   const { data: activityLog = [] } = useSlackActivityLog(clientId);
+  const { data: slackChannels = [], isLoading: loadingChannels } = useSlackChannels();
   const addChannel = useAddSlackChannel();
   const updateChannel = useUpdateSlackChannel();
   const removeChannel = useRemoveSlackChannel();
   const syncChannels = useSyncSlackChannels();
 
-  const [newChannelId, setNewChannelId] = useState('');
-  const [newChannelName, setNewChannelName] = useState('');
+  const [selectedChannelId, setSelectedChannelId] = useState('');
   const [newChannelType, setNewChannelType] = useState('general');
   const [showActivity, setShowActivity] = useState(false);
 
+  // Filter out already-mapped channels
+  const mappedIds = new Set(mappings.map(m => m.channel_id));
+  const availableChannels = slackChannels.filter(ch => !mappedIds.has(ch.id));
+
   const handleAdd = () => {
-    if (!newChannelId.trim()) return;
+    if (!selectedChannelId) return;
+    const channel = slackChannels.find(ch => ch.id === selectedChannelId);
     addChannel.mutate({
       client_id: clientId,
-      channel_id: newChannelId.trim(),
-      channel_name: newChannelName.trim() || null,
+      channel_id: selectedChannelId,
+      channel_name: channel ? `#${channel.name}` : null,
       channel_type: newChannelType,
       monitor_messages: true,
       auto_create_tasks: false,
     });
-    setNewChannelId('');
-    setNewChannelName('');
+    setSelectedChannelId('');
     setNewChannelType('general');
   };
 
@@ -211,24 +215,33 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
           <Plus className="h-3.5 w-3.5" />
           Add Channel
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-xs">Channel ID</Label>
-            <Input
-              value={newChannelId}
-              onChange={(e) => setNewChannelId(e.target.value)}
-              placeholder="C0123456789"
-              className="h-8 text-sm"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Name (optional)</Label>
-            <Input
-              value={newChannelName}
-              onChange={(e) => setNewChannelName(e.target.value)}
-              placeholder="#client-general"
-              className="h-8 text-sm"
-            />
+            <Label className="text-xs">Slack Channel</Label>
+            <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder={loadingChannels ? "Loading channels..." : "Select a channel"} />
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="max-h-60">
+                  {availableChannels.map(ch => (
+                    <SelectItem key={ch.id} value={ch.id}>
+                      <span className="flex items-center gap-1.5">
+                        {ch.is_private ? '🔒' : '#'} {ch.name}
+                        <span className="text-muted-foreground text-[10px] ml-1">
+                          ({ch.num_members} members)
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                  {availableChannels.length === 0 && !loadingChannels && (
+                    <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                      No channels available
+                    </div>
+                  )}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label className="text-xs">Type</Label>
@@ -249,14 +262,11 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
         <Button
           size="sm"
           onClick={handleAdd}
-          disabled={!newChannelId.trim() || addChannel.isPending}
+          disabled={!selectedChannelId || addChannel.isPending}
         >
           <Plus className="h-3.5 w-3.5 mr-1" />
           Add Channel
         </Button>
-        <p className="text-xs text-muted-foreground">
-          Right-click the channel in Slack → View channel details → copy the Channel ID at the bottom. The AI will read all messages and auto-create tasks when enabled.
-        </p>
       </div>
     </div>
   );
