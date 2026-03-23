@@ -1511,6 +1511,13 @@ export function InlineRecordsView({
                         <TableHead className={HEAD_CLASS}>Net Worth</TableHead>
                         <TableHead className={HEAD_CLASS}>Income</TableHead>
                         <TableHead className={HEAD_CLASS}>Q&A</TableHead>
+                        <TableHead className={HEAD_CLASS}>LinkedIn Profil…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Conversation Su…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Disposition</TableHead>
+                        <TableHead className={HEAD_CLASS}>Sentiment</TableHead>
+                        <TableHead className={HEAD_CLASS}>Recommended fol…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Reasoning</TableHead>
+                        <TableHead className={HEAD_CLASS}>Last Ti…</TableHead>
                         {uniqueQuestionNames.map((qName) => (
                           <TableHead key={qName} className={`${HEAD_CLASS} max-w-[120px] truncate`} title={qName}>
                             {qName.length > 15 ? qName.slice(0, 15) + '...' : qName}
