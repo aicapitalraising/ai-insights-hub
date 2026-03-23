@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShieldCheck, Users, ArrowRight, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Users, ArrowRight, CheckCircle, TrendingUp, Building2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuizFunnelBySlug, useCreateQuizSubmission, useUpdateQuizSubmission, QuizQuestion } from '@/hooks/useQuizFunnels';
 import { QuizQuestionStep } from '@/components/quiz/public/QuizQuestionStep';
@@ -9,7 +9,7 @@ import { QuizContactForm, QuizContactData } from '@/components/quiz/public/QuizC
 import { QuizScheduleStep } from '@/components/quiz/public/QuizScheduleStep';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
 
-type Phase = 'landing' | 'quiz' | 'contact' | 'calendar' | 'thanks';
+type Phase = 'landing' | 'quiz' | 'contact' | 'calendar' | 'thanks' | 'dq';
 
 export default function QuizPage() {
   const { slug } = useParams<{ slug: string }>();
