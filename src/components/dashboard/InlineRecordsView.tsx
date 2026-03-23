@@ -1607,6 +1607,41 @@ export function InlineRecordsView({
                                   <span className="text-muted-foreground">{lead.questions.length}</span>
                                 ) : '-'}
                               </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[120px] truncate`}>
+                                {(() => {
+                                  const linkedIn = enrichment?.linkedin_url || getGHLFieldValue(lead, GHL_FIELDS.LINKEDIN);
+                                  return linkedIn ? (
+                                    <a href={linkedIn.startsWith('http') ? linkedIn : `https://${linkedIn}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block max-w-[120px]">
+                                      {linkedIn.replace('https://www.linkedin.com/in/', '').replace(/\/$/, '').substring(0, 20)}
+                                    </a>
+                                  ) : '-';
+                                })()}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[140px] truncate`} title={getGHLFieldValue(lead, GHL_FIELDS.CONVERSATION_SUMMARY) || ''}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.CONVERSATION_SUMMARY) || '-'}
+                              </TableCell>
+                              <TableCell className={CELL_CLASS}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.DISPOSITION) || '-'}
+                              </TableCell>
+                              <TableCell className={CELL_CLASS}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.SENTIMENT) || '-'}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[120px] truncate`} title={getGHLFieldValue(lead, GHL_FIELDS.RECOMMENDED_FOLLOWUP) || ''}>
+                                {getGHLFieldValue(lead, GHL_FIELDS.RECOMMENDED_FOLLOWUP) || '-'}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} max-w-[140px] truncate`}>
+                                {(() => {
+                                  // Reasoning from call summary
+                                  const callForLead = calls.find(c => c.lead_id === lead.id || c.external_id === lead.external_id);
+                                  return callForLead?.summary ? callForLead.summary.substring(0, 60) : '-';
+                                })()}
+                              </TableCell>
+                              <TableCell className={`${CELL_CLASS} font-mono text-muted-foreground whitespace-nowrap`}>
+                                {(() => {
+                                  const callForLead = calls.find(c => c.lead_id === lead.id || c.external_id === lead.external_id);
+                                  return callForLead?.scheduled_at ? new Date(callForLead.scheduled_at).toLocaleDateString() : '-';
+                                })()}
+                              </TableCell>
                               {uniqueQuestionNames.map((qName) => {
                                 const answer = getQuestionAnswer(lead, qName);
                                 return (
