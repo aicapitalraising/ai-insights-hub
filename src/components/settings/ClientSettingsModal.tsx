@@ -1158,7 +1158,7 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
             {/* Webhook Status */}
             <div className="border-2 border-green-500/50 bg-green-500/10 p-4 space-y-2 rounded-lg">
               <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle className="h-4 w-4" />
                 <h4 className="font-medium">Webhooks Active</h4>
               </div>
               <p className="text-sm text-muted-foreground">
