@@ -193,6 +193,106 @@ export type Database = {
           },
         ]
       }
+      avatar_looks: {
+        Row: {
+          angle: string | null
+          avatar_id: string
+          background: string | null
+          created_at: string
+          id: string
+          image_url: string
+          is_primary: boolean
+          metadata: Json | null
+          outfit: string | null
+        }
+        Insert: {
+          angle?: string | null
+          avatar_id: string
+          background?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          is_primary?: boolean
+          metadata?: Json | null
+          outfit?: string | null
+        }
+        Update: {
+          angle?: string | null
+          avatar_id?: string
+          background?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_primary?: boolean
+          metadata?: Json | null
+          outfit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_looks_avatar_id_fkey"
+            columns: ["avatar_id"]
+            isOneToOne: false
+            referencedRelation: "avatars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avatars: {
+        Row: {
+          age_range: string | null
+          client_id: string | null
+          created_at: string
+          description: string | null
+          elevenlabs_voice_id: string | null
+          ethnicity: string | null
+          gender: string | null
+          id: string
+          image_url: string
+          is_stock: boolean
+          looks_count: number
+          name: string
+          style: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          elevenlabs_voice_id?: string | null
+          ethnicity?: string | null
+          gender?: string | null
+          id?: string
+          image_url: string
+          is_stock?: boolean
+          looks_count?: number
+          name: string
+          style?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          elevenlabs_voice_id?: string | null
+          ethnicity?: string | null
+          gender?: string | null
+          id?: string
+          image_url?: string
+          is_stock?: boolean
+          looks_count?: number
+          name?: string
+          style?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatars_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calls: {
         Row: {
           appointment_status: string | null
