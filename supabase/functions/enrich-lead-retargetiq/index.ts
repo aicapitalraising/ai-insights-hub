@@ -681,32 +681,77 @@ Deno.serve(async (req) => {
 
         if (ghlContactId) {
           // Build enrichment note
-          const lines: string[] = ['📊 **RetargetIQ Enrichment Data**', ''];
-          const er = enrichRecord;
-          if (er.city || er.state || er.zip) lines.push(`📍 Location: ${[er.city, er.state, er.zip].filter(Boolean).join(', ')}`);
-          if (er.address) lines.push(`🏠 Address: ${er.address}`);
-          if (dataFields.net_worth) lines.push(`💰 Net Worth: ${dataFields.net_worth}`);
-          if (dataFields.household_income) lines.push(`💵 HH Income: ${dataFields.household_income}`);
-          if (dataFields.home_value) lines.push(`🏡 Home Value: $${Number(dataFields.home_value).toLocaleString()}`);
-          if (dataFields.home_ownership) lines.push(`🔑 Ownership: ${dataFields.home_ownership}`);
-          if (dataFields.credit_range) lines.push(`💳 Credit: ${dataFields.credit_range}`);
-          if (dataFields.is_investor) lines.push(`📈 Investor: Yes`);
-          if (dataFields.education) lines.push(`🎓 Education: ${dataFields.education}`);
-          if (dataFields.occupation) lines.push(`💼 Occupation: ${dataFields.occupation}`);
-          if (er.company_name) lines.push(`🏢 Company: ${er.company_name}${er.company_title ? ` (${er.company_title})` : ''}`);
+          const lines: string[] = ['Enrichment Details:', ''];
+
+          // LinkedIn first if available
           if (er.linkedin_url) lines.push(`🔗 LinkedIn: ${er.linkedin_url}`);
-          if (er.gender) lines.push(`👤 Gender: ${er.gender}`);
-          if (dataFields.age) lines.push(`🎂 Age: ${dataFields.age}`);
-          if (dataFields.marital_status) lines.push(`💍 Marital: ${dataFields.marital_status}`);
-          if (spouseIdentities.length > 0) {
+
+          // Personal Info
+          if (er.gender || dataFields.age || dataFields.marital_status || dataFields.ethnicity) {
             lines.push('');
-            lines.push('👥 **Household Members:**');
-            for (const sp of spouseIdentities) {
-              lines.push(`  • ${sp.firstName || ''} ${sp.lastName || ''}${sp.occupation ? ` — ${sp.occupation}` : ''}`);
+            lines.push('— Personal —');
+            if (er.gender) lines.push(`👤 Gender: ${er.gender}`);
+            if (dataFields.age) lines.push(`🎂 Age: ${dataFields.age}`);
+            if (dataFields.marital_status) lines.push(`💍 Marital Status: ${dataFields.marital_status}`);
+            if (dataFields.generation) lines.push(`📅 Generation: ${dataFields.generation}`);
+            if (dataFields.ethnicity) lines.push(`🌍 Ethnicity: ${dataFields.ethnicity}`);
+            if (dataFields.language) lines.push(`🗣️ Language: ${dataFields.language}`);
+            if (dataFields.education) lines.push(`🎓 Education: ${dataFields.education}`);
+          }
+
+          // Location
+          if (er.address || er.city || er.state) {
+            lines.push('');
+            lines.push('— Location —');
+            if (er.address) lines.push(`🏠 Address: ${er.address}`);
+            if (er.city || er.state || er.zip) lines.push(`📍 ${[er.city, er.state, er.zip].filter(Boolean).join(', ')}`);
+            if (dataFields.urbanicity) lines.push(`🏙️ Urbanicity: ${dataFields.urbanicity}`);
+            if (dataFields.home_ownership) lines.push(`🔑 Ownership: ${dataFields.home_ownership}`);
+            if (dataFields.dwelling_type) lines.push(`🏘️ Dwelling: ${dataFields.dwelling_type}`);
+            if (dataFields.length_of_residence) lines.push(`📆 Residence: ${dataFields.length_of_residence} yrs`);
+          }
+
+          // Financial
+          if (dataFields.net_worth || dataFields.household_income || dataFields.home_value) {
+            lines.push('');
+            lines.push('— Financial —');
+            if (dataFields.net_worth) lines.push(`💰 Net Worth: ${dataFields.net_worth}`);
+            if (dataFields.household_income) lines.push(`💵 HH Income: ${dataFields.household_income}`);
+            if (dataFields.discretionary_income) lines.push(`💲 Discretionary Income: ${dataFields.discretionary_income}`);
+            if (dataFields.home_value) lines.push(`🏡 Home Value: $${Number(dataFields.home_value).toLocaleString()}`);
+            if (dataFields.mortgage_amount) lines.push(`🏦 Mortgage: $${Number(dataFields.mortgage_amount).toLocaleString()}`);
+            if (dataFields.credit_range) lines.push(`💳 Credit Range: ${dataFields.credit_range}`);
+            if (dataFields.is_investor) lines.push(`📈 Investor: Yes`);
+            if (dataFields.owns_investments) lines.push(`📊 Owns Investments: Yes`);
+            if (dataFields.owns_stocks_bonds) lines.push(`📉 Stocks/Bonds: Yes`);
+          }
+
+          // Professional
+          if (dataFields.occupation || er.company_name) {
+            lines.push('');
+            lines.push('— Professional —');
+            if (dataFields.occupation) lines.push(`💼 Occupation: ${dataFields.occupation}`);
+            if (dataFields.occupation_type) lines.push(`📋 Type: ${dataFields.occupation_type}`);
+            if (er.company_name) lines.push(`🏢 Company: ${er.company_name}${er.company_title ? ` — ${er.company_title}` : ''}`);
+          }
+
+          // Household
+          if (spouseIdentities.length > 0 || dataFields.household_adults || dataFields.has_children) {
+            lines.push('');
+            lines.push('— Household —');
+            if (dataFields.household_adults) lines.push(`👥 Adults: ${dataFields.household_adults}`);
+            if (dataFields.household_persons) lines.push(`👨‍👩‍👧‍👦 Persons: ${dataFields.household_persons}`);
+            if (dataFields.has_children) lines.push(`👶 Children: Yes`);
+            if (dataFields.is_veteran) lines.push(`🎖️ Veteran: Yes`);
+            if (spouseIdentities.length > 0) {
+              for (const sp of spouseIdentities) {
+                lines.push(`  • ${sp.firstName || ''} ${sp.lastName || ''}${sp.occupation ? ` — ${sp.occupation}` : ''}`);
+              }
             }
           }
+
           lines.push('');
-          lines.push(`🔄 Enriched: ${new Date().toLocaleDateString()} via ${merged.methods.join('+')}`);
+          lines.push(`Enriched: ${new Date().toLocaleDateString()} via ${merged.methods.join('+')}`);
 
           const noteBody = lines.join('\n');
 
