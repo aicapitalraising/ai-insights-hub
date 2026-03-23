@@ -254,12 +254,19 @@ export default function ClientDetail() {
         <div className="p-6 space-y-6">
 
         {/* 4 Grouped Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={resolvedTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-muted/50 flex-wrap">
-            <TabsTrigger value="performance" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Performance
-            </TabsTrigger>
+            {isLeasing ? (
+              <TabsTrigger value="properties" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                Properties
+              </TabsTrigger>
+            ) : (
+              <TabsTrigger value="performance" className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Performance
+              </TabsTrigger>
+            )}
             <TabsTrigger value="tasks" className="gap-2">
               <CheckSquare className="h-4 w-4" />
               Tasks
