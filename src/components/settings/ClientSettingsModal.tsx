@@ -1155,14 +1155,14 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
               onSalesStagesChange={setSalesStageIds}
             />
 
-            {/* Webhook Freeze Notice */}
-            <div className="border-2 border-yellow-500/50 bg-yellow-500/10 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500">
-                <AlertTriangle className="h-4 w-4" />
-                <h4 className="font-medium">Webhooks Currently Frozen</h4>
+            {/* Webhook Status */}
+            <div className="border-2 border-green-500/50 bg-green-500/10 p-4 space-y-2 rounded-lg">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
+                <CheckCircle className="h-4 w-4" />
+                <h4 className="font-medium">Webhooks Active</h4>
               </div>
               <p className="text-sm text-muted-foreground">
-                All data sync is now handled via hourly API sync. Webhooks are acknowledged but not processed to prevent duplicates and ensure data accuracy.
+                Lead webhooks are live. New contacts are enriched via RetargetIQ and synced back to GHL automatically.
               </p>
             </div>
 
