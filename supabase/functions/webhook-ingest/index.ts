@@ -165,37 +165,76 @@ serve(async (req) => {
       });
       
       if (contactId && client.ghl_api_key && client.ghl_location_id) {
-        // Fire-and-forget: call sync-ghl-contacts with single_contact mode
-        // This runs the comprehensive sync (contact info, fields, pipelines, value, timelines)
-        const syncUrl = `${supabaseUrl}/functions/v1/sync-ghl-contacts`;
-        
-        const syncPayload = {
-          mode: 'single_contact',
-          client_id: clientId,
-          contact_id: contactId,
+        // Full lead pipeline: 5s delay → sync contact → enrich → 5s delay → sync notes back
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const authHeaders = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
         };
-        
-        // Use EdgeRuntime.waitUntil for background execution so we respond immediately
-        const syncPromise = fetch(syncUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          },
-          body: JSON.stringify(syncPayload),
-        }).then(async (res) => {
-          const result = await res.text();
-          console.log(`[AUTO-SYNC] Single contact sync completed for ${contactId}: ${res.status} - ${result.substring(0, 200)}`);
-        }).catch((err) => {
-          console.error(`[AUTO-SYNC] Single contact sync failed for ${contactId}:`, err);
-        });
+
+        const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+        const pipelinePromise = (async () => {
+          try {
+            // Step 1: Wait 5s for GHL to persist the contact
+            console.log(`[PIPELINE] Step 1: Waiting 5s before sync for contact ${contactId}`);
+            await delay(5000);
+
+            // Step 2: Sync contact from GHL into our database
+            console.log(`[PIPELINE] Step 2: Syncing contact ${contactId} from GHL`);
+            const syncRes = await fetch(`${supabaseUrl}/functions/v1/sync-ghl-contacts`, {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify({ mode: 'single_contact', client_id: clientId, contact_id: contactId }),
+            });
+            const syncResult = await syncRes.text();
+            console.log(`[PIPELINE] Sync result: ${syncRes.status} - ${syncResult.substring(0, 200)}`);
+
+            // Step 3: Look up the lead to get enrichment inputs
+            const { data: lead } = await supabase
+              .from('leads')
+              .select('id, name, email, phone, external_id')
+              .eq('client_id', clientId)
+              .eq('external_id', contactId)
+              .maybeSingle();
+
+            if (!lead) {
+              console.log(`[PIPELINE] No lead found for contact ${contactId}, skipping enrichment`);
+              return;
+            }
+
+            // Step 4: Enrich via RetargetIQ
+            console.log(`[PIPELINE] Step 3: Enriching lead ${lead.id} (${lead.name || contactId})`);
+            const nameParts = (lead.name || '').split(' ');
+            const enrichRes = await fetch(`${supabaseUrl}/functions/v1/enrich-lead-retargetiq`, {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify({
+                client_id: clientId,
+                lead_id: lead.id,
+                external_id: contactId,
+                phone: lead.phone || undefined,
+                email: lead.email || undefined,
+                first_name: nameParts[0] || undefined,
+                last_name: nameParts.slice(1).join(' ') || undefined,
+              }),
+            });
+            const enrichResult = await enrichRes.text();
+            console.log(`[PIPELINE] Enrichment result: ${enrichRes.status} - ${enrichResult.substring(0, 300)}`);
+
+            // The enrich-lead-retargetiq function already handles the 5s delay + GHL note sync
+            console.log(`[PIPELINE] ✅ Full pipeline completed for contact ${contactId}`);
+
+          } catch (err) {
+            console.error(`[PIPELINE] Error in lead pipeline for ${contactId}:`, err);
+          }
+        })();
 
         // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
         if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
           // @ts-ignore
-          EdgeRuntime.waitUntil(syncPromise);
+          EdgeRuntime.waitUntil(pipelinePromise);
         }
-        // If EdgeRuntime not available, the fetch is already fire-and-forget
         
         return new Response(
           JSON.stringify({
