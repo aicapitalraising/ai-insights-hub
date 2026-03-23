@@ -81,6 +81,7 @@ function ClientCard({ client, onSync, isSyncing }: { client: ClientRow; onSync: 
   const [expanded, setExpanded] = useState(false);
   const badge = getSyncBadge(client);
   const hasCredentials = !!(client.ghl_api_key && client.ghl_location_id);
+  const resolvedError = getResolvedError(client);
 
   return (
     <Card className="relative">
