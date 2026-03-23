@@ -818,31 +818,32 @@ Deno.serve(async (req) => {
 
         if (hsContactId) {
           // Build note lines (reuse same data)
-          const hsLines: string[] = ['📊 RetargetIQ Enrichment Data', ''];
+          const hsLines: string[] = ['Enrichment Details:', ''];
           const er = enrichRecord;
-          if (er.address) hsLines.push(`📍 Address: ${er.address}`);
+          if (er.linkedin_url) hsLines.push(`🔗 LinkedIn: ${er.linkedin_url}`);
+          if (er.gender) hsLines.push(`👤 Gender: ${er.gender}`);
+          if (dataFields.age) hsLines.push(`🎂 Age: ${dataFields.age}`);
+          if (dataFields.marital_status) hsLines.push(`💍 Marital: ${dataFields.marital_status}`);
+          if (dataFields.education) hsLines.push(`🎓 Education: ${dataFields.education}`);
+          if (er.address) hsLines.push(`🏠 Address: ${er.address}`);
+          if (er.city || er.state) hsLines.push(`📍 ${[er.city, er.state, er.zip].filter(Boolean).join(', ')}`);
           if (dataFields.net_worth) hsLines.push(`💰 Net Worth: ${dataFields.net_worth}`);
           if (dataFields.household_income) hsLines.push(`💵 HH Income: ${dataFields.household_income}`);
           if (dataFields.home_value) hsLines.push(`🏡 Home Value: $${Number(dataFields.home_value).toLocaleString()}`);
           if (dataFields.home_ownership) hsLines.push(`🔑 Ownership: ${dataFields.home_ownership}`);
           if (dataFields.credit_range) hsLines.push(`💳 Credit: ${dataFields.credit_range}`);
           if (dataFields.is_investor) hsLines.push(`📈 Investor: Yes`);
-          if (dataFields.education) hsLines.push(`🎓 Education: ${dataFields.education}`);
           if (dataFields.occupation) hsLines.push(`💼 Occupation: ${dataFields.occupation}`);
-          if (er.company_name) hsLines.push(`🏢 Company: ${er.company_name}${er.company_title ? ` (${er.company_title})` : ''}`);
-          if (er.linkedin_url) hsLines.push(`🔗 LinkedIn: ${er.linkedin_url}`);
-          if (er.gender) hsLines.push(`👤 Gender: ${er.gender}`);
-          if (dataFields.age) hsLines.push(`🎂 Age: ${dataFields.age}`);
-          if (dataFields.marital_status) hsLines.push(`💍 Marital: ${dataFields.marital_status}`);
+          if (er.company_name) hsLines.push(`🏢 Company: ${er.company_name}${er.company_title ? ` — ${er.company_title}` : ''}`);
           if (spouseIdentities.length > 0) {
             hsLines.push('');
-            hsLines.push('👥 Household Members:');
+            hsLines.push('— Household —');
             for (const sp of spouseIdentities) {
               hsLines.push(`  • ${sp.firstName || ''} ${sp.lastName || ''}${sp.occupation ? ` — ${sp.occupation}` : ''}`);
             }
           }
           hsLines.push('');
-          hsLines.push(`🔄 Enriched: ${new Date().toLocaleDateString()} via ${merged.methods.join('+')}`);
+          hsLines.push(`Enriched: ${new Date().toLocaleDateString()} via ${merged.methods.join('+')}`);
 
           // Create HubSpot note engagement
           const noteRes = await fetch(`https://api.hubapi.com/crm/v3/objects/notes`, {
