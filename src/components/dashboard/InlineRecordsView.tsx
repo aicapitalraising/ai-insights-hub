@@ -102,6 +102,27 @@ interface EnrichmentData {
   state?: string | null;
   net_worth?: string | null;
   household_income?: string | null;
+  linkedin_url?: string | null;
+}
+
+// GHL custom field IDs for call/lead data
+const GHL_FIELDS = {
+  LINKEDIN: 'KuGBAp7FfYwkyKDxqhI6',
+  CONVERSATION_SUMMARY: 'aCCb99z3kv7KENtzlGqI',
+  DISPOSITION: 'nwXgYLXyibMPgTlUFzbp',
+  SENTIMENT: 'ZHjm3krQalEyLCltxthZ',
+  RECOMMENDED_FOLLOWUP: 'PsZ0FxJYrBk7FJftONUS',
+};
+
+// Helper to get a GHL custom field value from lead questions
+function getGHLFieldValue(lead: Lead, fieldId: string): string | null {
+  if (!lead.questions || !Array.isArray(lead.questions)) return null;
+  const q = (lead.questions as any[]).find((q: any) => String(q.question || '') === fieldId);
+  if (!q) return null;
+  const answer = q.answer;
+  if (answer === null || answer === undefined || answer === '') return null;
+  if (Array.isArray(answer)) return answer.join(', ');
+  return String(answer);
 }
 
 interface FundedInvestor {
