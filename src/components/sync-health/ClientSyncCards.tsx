@@ -21,11 +21,17 @@ interface ClientRow {
 
 function getSyncBadge(client: ClientRow): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' } {
   if (!client.ghl_api_key || !client.ghl_location_id) return { label: 'Not Configured', variant: 'outline' };
+  if (client.ghl_sync_status === 'healthy' || client.ghl_sync_status === 'completed') return { label: 'Healthy', variant: 'success' };
   if (client.ghl_sync_status === 'error') return { label: 'Error', variant: 'destructive' };
   if (!client.last_ghl_sync_at) return { label: 'Never Synced', variant: 'outline' };
   const hours = (Date.now() - new Date(client.last_ghl_sync_at).getTime()) / (1000 * 60 * 60);
   if (hours <= 24) return { label: 'Healthy', variant: 'success' };
   return { label: 'Stale', variant: 'secondary' };
+}
+
+function getResolvedError(client: ClientRow): string | null {
+  if (client.ghl_sync_status === 'healthy' || client.ghl_sync_status === 'completed') return null;
+  return client.ghl_sync_error;
 }
 
 export function ClientSyncCards() {
