@@ -306,6 +306,16 @@ export default function ClientDetail() {
           </TabsList>
 
           {/* ─── PERFORMANCE TAB ─── */}
+          {/* ─── PROPERTIES TAB (LEASING) ─── */}
+          {isLeasing && (
+            <TabsContent value="properties" className="space-y-6">
+              <SectionErrorBoundary sectionName="Properties">
+                <PropertyManagerTab clientId={clientId!} clientName={client.name} />
+              </SectionErrorBoundary>
+            </TabsContent>
+          )}
+
+          {/* ─── PERFORMANCE TAB ─── */}
           <TabsContent value="performance" className="space-y-6">
             {clientId && <OnboardingChecklist clientId={clientId} clientType={(client as any)?.client_type} />}
             <Collapsible open={kpiOpen} onOpenChange={setKpiOpen}>
