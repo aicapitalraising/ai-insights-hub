@@ -73,17 +73,13 @@ export function MultiAssigneeSelector({
       ? selectedPodIds.filter(id => id !== podId)
       : [...selectedPodIds, podId];
     
-    // Get all members in this pod
     const podMembers = membersByPod[podId] || [];
     const podMemberIds = podMembers.map(m => m.id);
     
-    // When adding a pod, also add all its members; when removing, remove pod members too
     let newMemberIds: string[];
     if (isCurrentlySelected) {
-      // Removing pod - also remove all pod members
       newMemberIds = selectedMemberIds.filter(id => !podMemberIds.includes(id));
     } else {
-      // Adding pod - also add all pod members (avoid duplicates)
       newMemberIds = [...new Set([...selectedMemberIds, ...podMemberIds])];
     }
     
@@ -128,7 +124,6 @@ export function MultiAssigneeSelector({
     onAssignmentChange?.();
   };
 
-  // Get display name - for public view show pod name instead of individual name
   const getAssigneeDisplay = (assignee: TaskAssignee) => {
     if (assignee.pod_id && assignee.pod) {
       return {
@@ -139,7 +134,6 @@ export function MultiAssigneeSelector({
     }
     if (assignee.member_id && assignee.member) {
       if (isPublicView && assignee.member.pod) {
-        // In public view, show pod name instead of individual
         return {
           name: `${assignee.member.pod.name} Team`,
           color: assignee.member.pod.color,
@@ -155,11 +149,9 @@ export function MultiAssigneeSelector({
     return { name: 'Unknown', icon: <User className="h-3 w-3" /> };
   };
 
-  // Deduplicate for public view (group by pod)
   const displayAssignees = useMemo(() => {
     if (!isPublicView) return assignees;
     
-    // For public view, deduplicate by pod
     const seen = new Set<string>();
     return assignees.filter(a => {
       const display = getAssigneeDisplay(a);
@@ -173,19 +165,12 @@ export function MultiAssigneeSelector({
     <div className="space-y-2">
       {/* Current assignees */}
       <div className="flex flex-wrap gap-1.5">
-        {/* Client badge */}
         {currentClientName && (
-          <Badge 
-            variant="secondary"
-            className="flex items-center gap-1 pr-1"
-          >
+          <Badge variant="secondary" className="flex items-center gap-1 pr-1">
             <Briefcase className="h-3 w-3 text-primary" />
             <span className="text-xs">{currentClientName}</span>
             {!isPublicView && (
-              <button
-                onClick={() => removeClient()}
-                className="ml-1 hover:bg-muted rounded p-0.5"
-              >
+              <button onClick={() => removeClient()} className="ml-1 hover:bg-muted rounded p-0.5">
                 <X className="h-3 w-3" />
               </button>
             )}
@@ -197,22 +182,12 @@ export function MultiAssigneeSelector({
           displayAssignees.map(assignee => {
             const display = getAssigneeDisplay(assignee);
             return (
-              <Badge 
-                key={assignee.id} 
-                variant="secondary"
-                className="flex items-center gap-1 pr-1"
-              >
-                <div 
-                  className="w-2 h-2 rounded-full mr-1" 
-                  style={{ backgroundColor: display.color || '#888' }}
-                />
+              <Badge key={assignee.id} variant="secondary" className="flex items-center gap-1 pr-1">
+                <div className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: display.color || '#888' }} />
                 {display.icon}
                 <span className="text-xs">{display.name}</span>
                 {!isPublicView && (
-                  <button
-                    onClick={() => removeAssignee(assignee)}
-                    className="ml-1 hover:bg-muted rounded p-0.5"
-                  >
+                  <button onClick={() => removeAssignee(assignee)} className="ml-1 hover:bg-muted rounded p-0.5">
                     <X className="h-3 w-3" />
                   </button>
                 )}
@@ -232,30 +207,9 @@ export function MultiAssigneeSelector({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-0" align="start">
-            <div className="max-h-64 overflow-y-auto p-2 space-y-2">
-                {/* Clients section */}
-                {clients.length > 0 && (
-                  <>
-                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
-                      Clients
-                    </div>
-                    {clients.filter(c => c.status === 'active').map(client => (
-                      <div
-                        key={client.id}
-                        className={cn(
-                          "flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted",
-                          currentClientName === client.name && "bg-muted"
-                        )}
-                        onClick={() => selectClient(client)}
-                      >
-                        <Checkbox checked={currentClientName === client.name} />
-                        <Briefcase className="h-3 w-3 text-primary" />
-                        <span className="text-sm">{client.name}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {/* Pods section */}
+            <ScrollArea className="h-64">
+              <div className="p-2 space-y-2">
+                {/* Pods/Teams section */}
                 <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
                   Teams
                 </div>
@@ -269,30 +223,23 @@ export function MultiAssigneeSelector({
                     onClick={() => togglePod(pod.id)}
                   >
                     <Checkbox checked={selectedPodIds.includes(pod.id)} />
-                    <div 
-                      className="w-2 h-2 rounded-full" 
-                      style={{ backgroundColor: pod.color || '#888' }}
-                    />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: pod.color || '#888' }} />
                     <Building2 className="h-3 w-3" />
                     <span className="text-sm">{pod.name} Team</span>
                   </div>
                 ))}
 
-                {/* Members section */}
+                {/* Individual members section */}
                 <div className="px-2 py-1 text-xs font-medium text-muted-foreground mt-2">
                   Individuals
                 </div>
                 {pods.map(pod => {
                   const members = membersByPod[pod.id] || [];
                   if (members.length === 0) return null;
-                  
                   return (
                     <div key={pod.id}>
                       <div className="px-2 py-0.5 text-xs text-muted-foreground flex items-center gap-1">
-                        <div 
-                          className="w-1.5 h-1.5 rounded-full" 
-                          style={{ backgroundColor: pod.color || '#888' }}
-                        />
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pod.color || '#888' }} />
                         {pod.name}
                       </div>
                       {members.map(member => (
@@ -335,7 +282,31 @@ export function MultiAssigneeSelector({
                     ))}
                   </>
                 )}
-            </div>
+
+                {/* Clients section - last */}
+                {clients.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground mt-2">
+                      Clients
+                    </div>
+                    {clients.filter(c => c.status === 'active').map(client => (
+                      <div
+                        key={client.id}
+                        className={cn(
+                          "flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted",
+                          currentClientName === client.name && "bg-muted"
+                        )}
+                        onClick={() => selectClient(client)}
+                      >
+                        <Checkbox checked={currentClientName === client.name} />
+                        <Briefcase className="h-3 w-3 text-primary" />
+                        <span className="text-sm">{client.name}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </ScrollArea>
           </PopoverContent>
         </Popover>
       )}
