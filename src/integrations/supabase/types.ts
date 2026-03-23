@@ -648,15 +648,7 @@ export type Database = {
           updated_at?: string | null
           website_url?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "client_properties_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       client_settings: {
         Row: {
