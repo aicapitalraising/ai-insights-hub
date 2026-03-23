@@ -1115,15 +1115,26 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
               const lastSync = hasHubspot 
                 ? (client as any).last_hubspot_sync_at 
                 : (client as any).last_ghl_sync_at;
+              const syncStatus = hasHubspot
+                ? (client as any).hubspot_sync_status
+                : (client as any).ghl_sync_status;
               const syncError = hasHubspot 
                 ? (client as any).hubspot_sync_error 
                 : (client as any).ghl_sync_error;
               
+              // If sync status is explicitly healthy/completed, don't show error
+              const resolvedStatus = (syncStatus === 'healthy' || syncStatus === 'completed')
+                ? 'healthy'
+                : getSyncStatus(lastSync, hasHubspot || hasGhl);
+              const resolvedError = (syncStatus === 'healthy' || syncStatus === 'completed')
+                ? null
+                : syncError;
+              
               return (
                 <SyncHealthIndicator
-                  status={getSyncStatus(lastSync, hasHubspot || hasGhl)}
+                  status={resolvedStatus}
                   lastSyncAt={lastSync}
-                  syncError={syncError}
+                  syncError={resolvedError}
                   source={source as 'ghl' | 'hubspot' | 'none'}
                 />
               );
