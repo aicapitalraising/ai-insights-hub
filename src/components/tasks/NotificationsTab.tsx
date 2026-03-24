@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,9 @@ import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
 import { cn } from '@/lib/utils';
+import { useAllTasks, Task } from '@/hooks/useTasks';
+import { useClients } from '@/hooks/useClients';
+import { TaskDetailPanel } from './TaskDetailPanel';
 
 interface Notification {
   id: string;
@@ -103,6 +106,26 @@ export function NotificationsTab({ onTaskClick }: { onTaskClick?: (taskId: strin
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { data: allTasks = [] } = useAllTasks();
+  const { data: clients = [] } = useClients();
+
+  const handleNotificationClick = useCallback((notification: { id: string; task_id: string | null; is_read: boolean }) => {
+    if (!notification.is_read) markRead.mutate(notification.id);
+    if (notification.task_id) {
+      const task = allTasks.find(t => t.id === notification.task_id);
+      if (task) {
+        setSelectedTask(task);
+      } else if (onTaskClick) {
+        // Fallback to parent handler if task not found locally
+        onTaskClick(notification.task_id);
+      }
+    }
+  }, [allTasks, markRead, onTaskClick]);
+
+  const selectedTaskClientName = selectedTask?.client_id 
+    ? clients.find(c => c.id === selectedTask.client_id)?.name 
+    : undefined;
 
   const filtered = useMemo(() => {
     if (filter === 'unread') return notifications.filter(n => !n.is_read);
@@ -182,10 +205,7 @@ export function NotificationsTab({ onTaskClick }: { onTaskClick?: (taskId: strin
                   "flex items-start gap-3 py-3 px-3 -mx-1 border-b border-border last:border-0 rounded-lg transition-colors cursor-pointer",
                   !notification.is_read ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50"
                 )}
-                onClick={() => {
-                  if (!notification.is_read) markRead.mutate(notification.id);
-                  if (notification.task_id && onTaskClick) onTaskClick(notification.task_id);
-                }}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="mt-0.5 flex-shrink-0">
                   {notification.is_read ? (
@@ -220,6 +240,14 @@ export function NotificationsTab({ onTaskClick }: { onTaskClick?: (taskId: strin
           </div>
         </ScrollArea>
       )}
+
+      <TaskDetailPanel
+        task={selectedTask}
+        open={!!selectedTask}
+        onOpenChange={(open) => { if (!open) setSelectedTask(null); }}
+        clientName={selectedTaskClientName}
+        clientId={selectedTask?.client_id || undefined}
+      />
     </div>
   );
 }
