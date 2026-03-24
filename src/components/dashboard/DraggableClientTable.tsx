@@ -435,24 +435,39 @@ export function DraggableClientTable({
                     </TableCell>
 
                     {/* Status */}
-                    <TableCell className="text-center py-0 px-1">
-                      <Badge
-                        variant={
-                          client.status === 'active' ? 'default' :
-                          client.status === 'onboarding' ? 'secondary' :
-                          client.status === 'paused' || client.status === 'on_hold' ? 'outline' :
-                          'destructive'
-                        }
-                        className={cn(
-                          "text-[9px] px-1.5 py-0",
-                          client.status === 'active' && 'bg-chart-2/15 text-chart-2 border-chart-2/30',
-                          client.status === 'onboarding' && 'bg-primary/15 text-primary border-primary/30',
-                          (client.status === 'paused' || client.status === 'on_hold') && 'bg-muted text-muted-foreground',
-                          client.status === 'inactive' && 'bg-destructive/15 text-destructive'
-                        )}
-                      >
-                        {client.status === 'on_hold' ? 'On Hold' : client.status?.charAt(0).toUpperCase() + client.status?.slice(1)}
-                      </Badge>
+                    <TableCell className="text-center py-0 px-1" onClick={(e) => e.stopPropagation()}>
+                      <Select value={client.status} onValueChange={(val) => handleStatusChange(client.id, val)}>
+                        <SelectTrigger className="h-6 w-[100px] text-[9px] border-0 bg-transparent p-0 justify-center [&>svg]:hidden">
+                          <Badge
+                            variant={
+                              client.status === 'active' ? 'default' :
+                              client.status === 'onboarding' ? 'secondary' :
+                              client.status === 'paused' || client.status === 'on_hold' ? 'outline' :
+                              'destructive'
+                            }
+                            className={cn(
+                              "text-[9px] px-1.5 py-0 cursor-pointer",
+                              client.status === 'active' && 'bg-chart-2/15 text-chart-2 border-chart-2/30',
+                              client.status === 'onboarding' && 'bg-primary/15 text-primary border-primary/30',
+                              (client.status === 'paused' || client.status === 'on_hold') && 'bg-muted text-muted-foreground',
+                              client.status === 'inactive' && 'bg-destructive/15 text-destructive'
+                            )}
+                          >
+                            {client.status === 'on_hold' ? 'On Hold' : client.status?.charAt(0).toUpperCase() + client.status?.slice(1)}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">
+                            <Badge className="bg-chart-2/15 text-chart-2 border-chart-2/30 text-[9px]">Active</Badge>
+                          </SelectItem>
+                          <SelectItem value="onboarding">
+                            <Badge className="bg-primary/15 text-primary border-primary/30 text-[9px]">Onboarding</Badge>
+                          </SelectItem>
+                          <SelectItem value="paused">
+                            <Badge className="bg-muted text-muted-foreground text-[9px]">Pause</Badge>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
 
                     {/* Meta Spend */}
