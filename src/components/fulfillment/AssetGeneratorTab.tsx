@@ -111,7 +111,7 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
       const { existing_research, existing_angles } = await getExistingContext();
       const intake = await getIntakeData();
 
-      const { data, error } = await supabase.functions.invoke('generate-asset', {
+      const { data, error } = await cloudSupabase.functions.invoke('generate-asset', {
         body: {
           client_id: client.id,
           asset_type: assetType,
