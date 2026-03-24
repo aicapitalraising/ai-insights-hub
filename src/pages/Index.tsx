@@ -63,6 +63,7 @@ import { QuizBuilderTab } from '@/components/quiz/QuizBuilderTab';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentMember, logout } = useTeamMember();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -75,6 +76,14 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedFunnelClientId, setSelectedFunnelClientId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Deep-link: if ?task= is present, auto-switch to tasks tab
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId) {
+      setActiveTab('tasks');
+    }
+  }, [searchParams]);
   const updateClientOrder = useUpdateClientOrder();
 
   const { startDate, endDate, sourceFilter } = useDateFilter();
