@@ -94,7 +94,7 @@ export function useDailyMetrics(clientId: string | undefined, startDate?: string
   });
 }
 
-export function useAllDailyMetrics(startDate?: string, endDate?: string) {
+export function useAllDailyMetrics(startDate?: string, endDate?: string, enabled: boolean = true) {
   return useQuery({
     queryKey: ['all-daily-metrics', startDate, endDate],
     queryFn: async () => {
@@ -114,6 +114,7 @@ export function useAllDailyMetrics(startDate?: string, endDate?: string) {
         return query;
       });
     },
+    enabled,
   });
 }
 
