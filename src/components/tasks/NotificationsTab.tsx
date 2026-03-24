@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,9 @@ import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
 import { cn } from '@/lib/utils';
+import { useAllTasks, Task } from '@/hooks/useTasks';
+import { useClients } from '@/hooks/useClients';
+import { TaskDetailPanel } from './TaskDetailPanel';
 
 interface Notification {
   id: string;
