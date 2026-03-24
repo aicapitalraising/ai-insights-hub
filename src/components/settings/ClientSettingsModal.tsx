@@ -264,7 +264,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         cost_of_capital_threshold_yellow: parseFloat(costOfCapitalYellow),
         cost_of_capital_threshold_red: parseFloat(costOfCapitalRed),
         funded_investor_label: fundedInvestorLabel,
-        metric_labels: metricLabels,
         mrr: parseFloat(mrr) || 0,
         ad_spend_fee_threshold: parseFloat(adSpendFeeThreshold) || 30000,
         ad_spend_fee_percent: parseFloat(adSpendFeePercent) || 10,
@@ -274,15 +273,12 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         total_raise_amount: parseFloat(totalRaiseAmount) || 0,
         default_lead_pipeline_value: parseFloat(defaultLeadPipelineValue) || 0,
         public_link_password: publicLinkPassword.trim() || null,
-        slack_review_channel_id: slackReviewChannelId.trim() || null,
         slack_channel_id: slackChannelId.trim() || null,
         // Calendar and pipeline settings
         tracked_calendar_ids: trackedCalendarIds,
         reconnect_calendar_ids: reconnectCalendarIds,
         funded_pipeline_id: fundedPipelineId,
         funded_stage_ids: fundedStageIds,
-        committed_stage_ids: committedStageIds,
-        sales_stage_ids: salesStageIds,
       } as any);
 
       // Save alert configs if slack webhook provided
