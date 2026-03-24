@@ -336,6 +336,7 @@ export function DraggableClientTable({
             <TableRow className="border-b h-7">
               <TableHead className="w-7 sticky left-0 bg-card z-10 py-0 px-1"></TableHead>
               <TableHead className="font-bold text-[11px] sticky left-7 bg-card z-10 min-w-[100px] py-0 px-1">Client</TableHead>
+              <TableHead className="font-bold text-[11px] py-0 px-1 text-center">Status</TableHead>
               <SortableHeader column="adSpend" label="Spend" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader column="dailyTarget" label="$/Day" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader column="metaLeads" label="Meta Leads" sortConfig={sortConfig} onSort={handleSort} />
@@ -424,6 +425,27 @@ export function DraggableClientTable({
                     {/* Client name */}
                     <TableCell className="font-medium text-[11px] sticky left-7 bg-card z-10 py-0 px-1 truncate max-w-[120px]">
                       {client.name}
+                    </TableCell>
+
+                    {/* Status */}
+                    <TableCell className="text-center py-0 px-1">
+                      <Badge
+                        variant={
+                          client.status === 'active' ? 'default' :
+                          client.status === 'onboarding' ? 'secondary' :
+                          client.status === 'paused' || client.status === 'on_hold' ? 'outline' :
+                          'destructive'
+                        }
+                        className={cn(
+                          "text-[9px] px-1.5 py-0",
+                          client.status === 'active' && 'bg-chart-2/15 text-chart-2 border-chart-2/30',
+                          client.status === 'onboarding' && 'bg-primary/15 text-primary border-primary/30',
+                          (client.status === 'paused' || client.status === 'on_hold') && 'bg-muted text-muted-foreground',
+                          client.status === 'inactive' && 'bg-destructive/15 text-destructive'
+                        )}
+                      >
+                        {client.status === 'on_hold' ? 'On Hold' : client.status?.charAt(0).toUpperCase() + client.status?.slice(1)}
+                      </Badge>
                     </TableCell>
 
                     {/* Meta Spend */}
