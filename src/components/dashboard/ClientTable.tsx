@@ -1,7 +1,14 @@
-import { Client } from '@/hooks/useClients';
+import { Client, useUpdateClient } from '@/hooks/useClients';
 import { AggregatedMetrics } from '@/hooks/useMetrics';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
