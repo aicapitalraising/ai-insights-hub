@@ -709,55 +709,87 @@ Deno.serve(async (req) => {
 
     // ── 5. Fetch Per-Entity Insights ──
     try {
-      const insightsFields = "campaign_id,impressions,clicks,spend,ctr,cpc,cpm";
-      checkCallBudget("campaign-insights");
-      const insights = await fetchAllPages(
-        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=${insightsFields}&level=campaign&${getTimeRange(startDate, endDate)}&time_increment=all_days`,
-        accessToken, 50, "campaign-insights"
-      );
-      for (const ins of insights) {
+      const insightsChunks = getDateChunks(startDate, endDate, 7);
+
+      // ── Campaign-level insights (chunked) ──
+      const campaignAccum = new Map<string, { spend: number; impressions: number; clicks: number; reach: number }>();
+      for (const chunk of insightsChunks) {
+        checkCallBudget("campaign-insights-chunk");
+        const chunkTimeRange = `time_range={"since":"${chunk.since}","until":"${chunk.until}"}`;
+        try {
+          const insights = await fetchAllPages(
+            `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=campaign_id,impressions,clicks,spend&level=campaign&${chunkTimeRange}&time_increment=all_days`,
+            accessToken, 50, `campaign-insights ${chunk.since}-${chunk.until}`
+          );
+          for (const ins of insights) {
+            const existing = campaignAccum.get(ins.campaign_id) || { spend: 0, impressions: 0, clicks: 0, reach: 0 };
+            existing.spend += Number(ins.spend) || 0;
+            existing.impressions += Number(ins.impressions) || 0;
+            existing.clicks += Number(ins.clicks) || 0;
+            campaignAccum.set(ins.campaign_id, existing);
+          }
+        } catch (chunkErr) {
+          console.warn(`Campaign insights chunk ${chunk.since}-${chunk.until} failed:`, chunkErr);
+          break;
+        }
+      }
+      for (const [campId, stats] of campaignAccum) {
+        const ctr = stats.impressions > 0 ? (stats.clicks / stats.impressions) * 100 : 0;
+        const cpc = stats.clicks > 0 ? stats.spend / stats.clicks : 0;
+        const cpm = stats.impressions > 0 ? (stats.spend / stats.impressions) * 1000 : 0;
         await supabase.from("meta_campaigns").update({
-          spend: Number(ins.spend) || 0,
-          impressions: Number(ins.impressions) || 0,
-          clicks: Number(ins.clicks) || 0,
-          ctr: Number(ins.ctr) || 0,
-          cpc: Number(ins.cpc) || 0,
-          cpm: Number(ins.cpm) || 0,
-        }).eq("client_id", clientId).eq("meta_campaign_id", ins.campaign_id);
+          spend: stats.spend, impressions: stats.impressions, clicks: stats.clicks,
+          ctr: Math.round(ctr * 100) / 100, cpc: Math.round(cpc * 100) / 100, cpm: Math.round(cpm * 100) / 100,
+        }).eq("client_id", clientId).eq("meta_campaign_id", campId);
       }
 
-      checkCallBudget("adset-insights");
-      const adSetInsights = await fetchAllPages(
-        `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=adset_id,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency&level=adset&${getTimeRange(startDate, endDate)}&time_increment=all_days&filtering=[{"field":"spend","operator":"GREATER_THAN","value":"0"}]`,
-        accessToken, 50, "adset-insights"
-      );
-      for (const ins of adSetInsights) {
+      // ── Ad-set-level insights (chunked) ──
+      const adSetAccum = new Map<string, { spend: number; impressions: number; clicks: number; reach: number; frequency: number }>();
+      for (const chunk of insightsChunks) {
+        checkCallBudget("adset-insights-chunk");
+        const chunkTimeRange = `time_range={"since":"${chunk.since}","until":"${chunk.until}"}`;
+        try {
+          const adSetInsights = await fetchAllPages(
+            `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=adset_id,impressions,clicks,spend,reach&level=adset&${chunkTimeRange}&time_increment=all_days&filtering=[{"field":"spend","operator":"GREATER_THAN","value":"0"}]`,
+            accessToken, 50, `adset-insights ${chunk.since}-${chunk.until}`
+          );
+          for (const ins of adSetInsights) {
+            const existing = adSetAccum.get(ins.adset_id) || { spend: 0, impressions: 0, clicks: 0, reach: 0, frequency: 0 };
+            existing.spend += Number(ins.spend) || 0;
+            existing.impressions += Number(ins.impressions) || 0;
+            existing.clicks += Number(ins.clicks) || 0;
+            existing.reach += Number(ins.reach) || 0;
+            adSetAccum.set(ins.adset_id, existing);
+          }
+        } catch (chunkErr) {
+          console.warn(`Adset insights chunk ${chunk.since}-${chunk.until} failed:`, chunkErr);
+          break;
+        }
+      }
+      for (const [adsetId, stats] of adSetAccum) {
+        const ctr = stats.impressions > 0 ? (stats.clicks / stats.impressions) * 100 : 0;
+        const cpc = stats.clicks > 0 ? stats.spend / stats.clicks : 0;
+        const cpm = stats.impressions > 0 ? (stats.spend / stats.impressions) * 1000 : 0;
+        const freq = stats.reach > 0 ? stats.impressions / stats.reach : 0;
         await supabase.from("meta_ad_sets").update({
-          spend: Number(ins.spend) || 0,
-          impressions: Number(ins.impressions) || 0,
-          clicks: Number(ins.clicks) || 0,
-          ctr: Number(ins.ctr) || 0,
-          cpc: Number(ins.cpc) || 0,
-          cpm: Number(ins.cpm) || 0,
-          reach: Number(ins.reach) || 0,
-          frequency: Number(ins.frequency) || 0,
-        }).eq("client_id", clientId).eq("meta_adset_id", ins.adset_id);
+          spend: stats.spend, impressions: stats.impressions, clicks: stats.clicks,
+          ctr: Math.round(ctr * 100) / 100, cpc: Math.round(cpc * 100) / 100, cpm: Math.round(cpm * 100) / 100,
+          reach: stats.reach, frequency: Math.round(freq * 100) / 100,
+        }).eq("client_id", clientId).eq("meta_adset_id", adsetId);
       }
 
-      // Ad-level insights: fetch in 7-day chunks to avoid Meta "reduce data" 500 errors
-      const adChunks = getDateChunks(startDate, endDate, 7);
-      const adSpendAccum = new Map<string, { spend: number; impressions: number; clicks: number; ctr: number; cpc: number; cpm: number; reach: number; conversions: number; costPerConversion: number }>();
-
-      for (const chunk of adChunks) {
+      // ── Ad-level insights (chunked) ──
+      const adSpendAccum = new Map<string, { spend: number; impressions: number; clicks: number; reach: number }>();
+      for (const chunk of insightsChunks) {
         checkCallBudget("ad-insights-chunk");
         const chunkTimeRange = `time_range={"since":"${chunk.since}","until":"${chunk.until}"}`;
         try {
           const adInsights = await fetchAllPages(
-            `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=ad_id,impressions,clicks,spend,ctr,cpc,cpm,reach&level=ad&${chunkTimeRange}&time_increment=all_days&filtering=[{"field":"spend","operator":"GREATER_THAN","value":"0"}]`,
+            `${META_GRAPH_API_URL}/${adAccountId}/insights?fields=ad_id,impressions,clicks,spend,reach&level=ad&${chunkTimeRange}&time_increment=all_days&filtering=[{"field":"spend","operator":"GREATER_THAN","value":"0"}]`,
             accessToken, 50, `ad-insights ${chunk.since}-${chunk.until}`
           );
           for (const ins of adInsights) {
-            const existing = adSpendAccum.get(ins.ad_id) || { spend: 0, impressions: 0, clicks: 0, ctr: 0, cpc: 0, cpm: 0, reach: 0, conversions: 0, costPerConversion: 0 };
+            const existing = adSpendAccum.get(ins.ad_id) || { spend: 0, impressions: 0, clicks: 0, reach: 0 };
             existing.spend += Number(ins.spend) || 0;
             existing.impressions += Number(ins.impressions) || 0;
             existing.clicks += Number(ins.clicks) || 0;
@@ -766,22 +798,16 @@ Deno.serve(async (req) => {
           }
         } catch (chunkErr) {
           console.warn(`Ad insights chunk ${chunk.since}-${chunk.until} failed:`, chunkErr);
-          break; // Budget exhausted or other error
+          break;
         }
       }
-
-      // Write accumulated ad insights
       for (const [adId, stats] of adSpendAccum) {
         const ctr = stats.impressions > 0 ? (stats.clicks / stats.impressions) * 100 : 0;
         const cpc = stats.clicks > 0 ? stats.spend / stats.clicks : 0;
         const cpm = stats.impressions > 0 ? (stats.spend / stats.impressions) * 1000 : 0;
         await supabase.from("meta_ads").update({
-          spend: stats.spend,
-          impressions: stats.impressions,
-          clicks: stats.clicks,
-          ctr: Math.round(ctr * 100) / 100,
-          cpc: Math.round(cpc * 100) / 100,
-          cpm: Math.round(cpm * 100) / 100,
+          spend: stats.spend, impressions: stats.impressions, clicks: stats.clicks,
+          ctr: Math.round(ctr * 100) / 100, cpc: Math.round(cpc * 100) / 100, cpm: Math.round(cpm * 100) / 100,
           reach: stats.reach,
         }).eq("client_id", clientId).eq("meta_ad_id", adId);
       }
