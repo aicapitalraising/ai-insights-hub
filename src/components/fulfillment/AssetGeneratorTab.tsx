@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/db';
+import { supabase as cloudSupabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, CheckCircle2, Clock, Edit3, Sparkles } from 'lucide-react';
@@ -110,7 +111,7 @@ export default function AssetGeneratorTab({ client, assetType, icon: Icon, title
       const { existing_research, existing_angles } = await getExistingContext();
       const intake = await getIntakeData();
 
-      const { data, error } = await supabase.functions.invoke('generate-asset', {
+      const { data, error } = await cloudSupabase.functions.invoke('generate-asset', {
         body: {
           client_id: client.id,
           asset_type: assetType,
