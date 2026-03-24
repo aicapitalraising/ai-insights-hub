@@ -30,6 +30,19 @@ interface ClientTableProps {
 
 export function ClientTable({ clients, metrics, onOpenSettings, onDeleteClient }: ClientTableProps) {
   const navigate = useNavigate();
+  const updateClient = useUpdateClient();
+
+  const statusOptions = [
+    { value: 'active', label: 'Active', variant: 'success' as const },
+    { value: 'onboarding', label: 'Onboarding', variant: 'secondary' as const },
+    { value: 'paused', label: 'Pause', variant: 'outline' as const },
+  ];
+
+  const handleStatusChange = (clientId: string, newStatus: string) => {
+    updateClient.mutate({ id: clientId, status: newStatus }, {
+      onSuccess: () => toast.success('Status updated'),
+    });
+  };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
