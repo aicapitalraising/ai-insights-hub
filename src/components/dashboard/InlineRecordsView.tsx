@@ -1520,9 +1520,12 @@ export function InlineRecordsView({
                         <TableHead className={HEAD_CLASS}>Last Ti…</TableHead>
                         {uniqueQuestionNames.map((qName) => (
                           <TableHead key={qName} className={`${HEAD_CLASS} max-w-[120px] truncate`} title={qName}>
-                            {qName.length > 15 ? qName.slice(0, 15) + '...' : qName}
+                            {qName.length > 15 ? qName.slice(0, 15) + '…' : qName}
                           </TableHead>
                         ))}
+                        <TableHead className={HEAD_CLASS}>Discovery Cal…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Last Inbound Te…</TableHead>
+                        <TableHead className={HEAD_CLASS}>Last Inbound</TableHead>
                         {ghlLocationId && <TableHead className={HEAD_CLASS}>Sync</TableHead>}
                         <TableHead className={`${HEAD_CLASS} text-right`}>Act</TableHead>
                       </TableRow>
