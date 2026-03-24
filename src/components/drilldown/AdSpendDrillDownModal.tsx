@@ -42,15 +42,16 @@ const PAGE_SIZE = 150;
 export const AdSpendDrillDownModal = forwardRef<HTMLDivElement, AdSpendDrillDownModalProps>(function AdSpendDrillDownModal({ clientId, open, onOpenChange }, ref) {
   const { startDate, endDate } = useDateFilter();
   
-  // Use appropriate hook based on whether we have a clientId
+  // Only fetch data when the modal is open to avoid expensive queries on page load
   const { data: clientMetrics = [], isLoading: clientLoading } = useDailyMetrics(
-    clientId, 
+    open ? clientId : undefined, 
     startDate, 
     endDate
   );
   const { data: allMetrics = [], isLoading: allLoading } = useAllDailyMetrics(
     clientId ? undefined : startDate,
-    clientId ? undefined : endDate
+    clientId ? undefined : endDate,
+    open && !clientId
   );
   
   const metrics = clientId ? clientMetrics : allMetrics;

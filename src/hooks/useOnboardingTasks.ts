@@ -22,7 +22,13 @@ export function useOnboardingTasks(clientId: string | undefined) {
         .select('*')
         .eq('client_id', clientId)
         .order('sort_order', { ascending: true });
-      if (error) throw error;
+      if (error) {
+        // Table may not exist in this environment
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find')) {
+          return [];
+        }
+        throw error;
+      }
       return data as OnboardingTask[];
     },
     enabled: !!clientId,
