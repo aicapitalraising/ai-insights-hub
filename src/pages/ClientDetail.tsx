@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Settings, DollarSign, Upload, History, Plus, ExternalLink, X, Phone, Video, BarChart3, TrendingUp, Palette, Layers, Cog, Megaphone, FileText, ClipboardList, CheckSquare, MessageSquare, Globe, Building2 } from 'lucide-react';
 import { SlackChatTab } from '@/components/slack/SlackChatTab';
 import { LeadsDrillDownModal } from '@/components/drilldown/LeadsDrillDownModal';
