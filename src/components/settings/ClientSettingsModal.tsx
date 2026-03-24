@@ -264,7 +264,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
         cost_of_capital_threshold_yellow: parseFloat(costOfCapitalYellow),
         cost_of_capital_threshold_red: parseFloat(costOfCapitalRed),
         funded_investor_label: fundedInvestorLabel,
-        metric_labels: metricLabels,
         mrr: parseFloat(mrr) || 0,
         ad_spend_fee_threshold: parseFloat(adSpendFeeThreshold) || 30000,
         ad_spend_fee_percent: parseFloat(adSpendFeePercent) || 10,
