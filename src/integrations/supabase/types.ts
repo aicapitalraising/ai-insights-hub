@@ -652,8 +652,11 @@ export type Database = {
       }
       client_settings: {
         Row: {
+          ad_spend_fee_percent: number | null
+          ad_spend_fee_threshold: number | null
           ads_library_url: string | null
           client_id: string
+          committed_stage_ids: Json | null
           cost_of_capital_threshold_red: number | null
           cost_of_capital_threshold_yellow: number | null
           cost_per_call_threshold_red: number | null
@@ -665,6 +668,8 @@ export type Database = {
           cpl_threshold_red: number | null
           cpl_threshold_yellow: number | null
           created_at: string
+          daily_ad_spend_target: number | null
+          default_lead_pipeline_value: number | null
           funded_investor_label: string | null
           funded_pipeline_id: string | null
           funded_stage_ids: Json | null
@@ -679,16 +684,26 @@ export type Database = {
           meetgeek_last_sync: string | null
           meetgeek_region: string | null
           meetgeek_webhook_secret: string | null
+          metric_labels: Json | null
+          monthly_ad_spend_target: number | null
+          mrr: number | null
+          public_link_password: string | null
           reconnect_calendar_ids: Json | null
+          sales_stage_ids: Json | null
           slack_channel_id: string | null
+          slack_review_channel_id: string | null
           slack_webhook_url: string | null
+          total_raise_amount: number | null
           tracked_calendar_ids: Json | null
           updated_at: string
           webhook_mappings: Json | null
         }
         Insert: {
+          ad_spend_fee_percent?: number | null
+          ad_spend_fee_threshold?: number | null
           ads_library_url?: string | null
           client_id: string
+          committed_stage_ids?: Json | null
           cost_of_capital_threshold_red?: number | null
           cost_of_capital_threshold_yellow?: number | null
           cost_per_call_threshold_red?: number | null
@@ -700,6 +715,8 @@ export type Database = {
           cpl_threshold_red?: number | null
           cpl_threshold_yellow?: number | null
           created_at?: string
+          daily_ad_spend_target?: number | null
+          default_lead_pipeline_value?: number | null
           funded_investor_label?: string | null
           funded_pipeline_id?: string | null
           funded_stage_ids?: Json | null
@@ -714,16 +731,26 @@ export type Database = {
           meetgeek_last_sync?: string | null
           meetgeek_region?: string | null
           meetgeek_webhook_secret?: string | null
+          metric_labels?: Json | null
+          monthly_ad_spend_target?: number | null
+          mrr?: number | null
+          public_link_password?: string | null
           reconnect_calendar_ids?: Json | null
+          sales_stage_ids?: Json | null
           slack_channel_id?: string | null
+          slack_review_channel_id?: string | null
           slack_webhook_url?: string | null
+          total_raise_amount?: number | null
           tracked_calendar_ids?: Json | null
           updated_at?: string
           webhook_mappings?: Json | null
         }
         Update: {
+          ad_spend_fee_percent?: number | null
+          ad_spend_fee_threshold?: number | null
           ads_library_url?: string | null
           client_id?: string
+          committed_stage_ids?: Json | null
           cost_of_capital_threshold_red?: number | null
           cost_of_capital_threshold_yellow?: number | null
           cost_per_call_threshold_red?: number | null
@@ -735,6 +762,8 @@ export type Database = {
           cpl_threshold_red?: number | null
           cpl_threshold_yellow?: number | null
           created_at?: string
+          daily_ad_spend_target?: number | null
+          default_lead_pipeline_value?: number | null
           funded_investor_label?: string | null
           funded_pipeline_id?: string | null
           funded_stage_ids?: Json | null
@@ -749,9 +778,16 @@ export type Database = {
           meetgeek_last_sync?: string | null
           meetgeek_region?: string | null
           meetgeek_webhook_secret?: string | null
+          metric_labels?: Json | null
+          monthly_ad_spend_target?: number | null
+          mrr?: number | null
+          public_link_password?: string | null
           reconnect_calendar_ids?: Json | null
+          sales_stage_ids?: Json | null
           slack_channel_id?: string | null
+          slack_review_channel_id?: string | null
           slack_webhook_url?: string | null
+          total_raise_amount?: number | null
           tracked_calendar_ids?: Json | null
           updated_at?: string
           webhook_mappings?: Json | null
