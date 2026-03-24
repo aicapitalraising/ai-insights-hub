@@ -1393,6 +1393,19 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
               <SlackChannelMappingSection clientId={client.id} />
             </div>
 
+            {/* Calendar Mapping per Page */}
+            <CalendarMappingSection
+              clientId={client.id}
+              ghlApiKey={client?.ghl_api_key || undefined}
+              ghlLocationId={client?.ghl_location_id || undefined}
+            />
+
+            {/* Lead Routing Rules */}
+            <LeadRoutingSection />
+
+            {/* Ad Pixel Feedback Loop */}
+            <AdPixelSection />
+
           </TabsContent>
           
           <TabsContent value="webhooks" className="mt-4">
