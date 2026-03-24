@@ -470,6 +470,12 @@ export default function ClientDetail() {
 
           {/* ─── SETTINGS TAB ─── */}
           <TabsContent value="client-settings" className="space-y-6">
+            {/* KPI & Revenue Settings */}
+            <SectionErrorBoundary sectionName="KPI Settings">
+              <h2 className="text-lg font-bold mb-3">KPI & Revenue Settings</h2>
+              <KPISettingsSection clientId={client.id} standalone />
+            </SectionErrorBoundary>
+
             {/* Billing */}
             {isAdmin && (
               <SectionErrorBoundary sectionName="Billing">
