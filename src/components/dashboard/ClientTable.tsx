@@ -1,7 +1,14 @@
-import { Client } from '@/hooks/useClients';
+import { Client, useUpdateClient } from '@/hooks/useClients';
 import { AggregatedMetrics } from '@/hooks/useMetrics';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -23,6 +30,19 @@ interface ClientTableProps {
 
 export function ClientTable({ clients, metrics, onOpenSettings, onDeleteClient }: ClientTableProps) {
   const navigate = useNavigate();
+  const updateClient = useUpdateClient();
+
+  const statusOptions = [
+    { value: 'active', label: 'Active', variant: 'success' as const },
+    { value: 'onboarding', label: 'Onboarding', variant: 'secondary' as const },
+    { value: 'paused', label: 'Pause', variant: 'outline' as const },
+  ];
+
+  const handleStatusChange = (clientId: string, newStatus: string) => {
+    updateClient.mutate({ id: clientId, status: newStatus }, {
+      onSuccess: () => toast.success('Status updated'),
+    });
+  };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -78,9 +98,20 @@ export function ClientTable({ clients, metrics, onOpenSettings, onDeleteClient }
               >
                 <TableCell className="font-medium">{client.name}</TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Badge variant={getStatusVariant(client.status)}>
-                    {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
-                  </Badge>
+                  <Select value={client.status} onValueChange={(val) => handleStatusChange(client.id, val)}>
+                    <SelectTrigger className="h-7 w-[130px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <Badge variant={opt.variant} className="pointer-events-none">
+                            {opt.label}
+                          </Badge>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{formatCurrency(m.totalAdSpend || 0)}</TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{m.totalLeads || 0}</TableCell>
