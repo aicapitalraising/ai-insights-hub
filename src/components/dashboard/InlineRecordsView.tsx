@@ -1653,6 +1653,31 @@ export function InlineRecordsView({
                                   </TableCell>
                                 );
                               })}
+                              {/* Discovery Call / Last Inbound columns */}
+                              {(() => {
+                                const leadCalls = calls.filter(c => c.lead_id === lead.id || c.external_id === lead.external_id);
+                                const discoveryCall = leadCalls.find(c => c.scheduled_at && (!c.is_reconnect));
+                                const inboundCalls = leadCalls.filter(c => c.direction === 'inbound').sort((a, b) => 
+                                  new Date(b.scheduled_at || b.created_at).getTime() - new Date(a.scheduled_at || a.created_at).getTime()
+                                );
+                                const lastInbound = inboundCalls[0];
+                                const lastInboundDate = lastInbound 
+                                  ? new Date(lastInbound.scheduled_at || lastInbound.created_at)
+                                  : null;
+                                return (
+                                  <>
+                                    <TableCell className={`${CELL_CLASS} font-mono text-muted-foreground whitespace-nowrap`}>
+                                      {discoveryCall?.scheduled_at || '-'}
+                                    </TableCell>
+                                    <TableCell className={`${CELL_CLASS} font-mono text-muted-foreground whitespace-nowrap`}>
+                                      {lastInboundDate ? lastInboundDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                    </TableCell>
+                                    <TableCell className={`${CELL_CLASS} font-mono text-muted-foreground whitespace-nowrap`}>
+                                      {lastInboundDate ? lastInboundDate.toLocaleDateString() : '-'}
+                                    </TableCell>
+                                  </>
+                                );
+                              })()}
                               {ghlLocationId && (
                                 <TableCell className={CELL_CLASS}>
                                   <div className="flex items-center gap-0.5">
