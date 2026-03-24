@@ -205,10 +205,7 @@ export function NotificationsTab({ onTaskClick }: { onTaskClick?: (taskId: strin
                   "flex items-start gap-3 py-3 px-3 -mx-1 border-b border-border last:border-0 rounded-lg transition-colors cursor-pointer",
                   !notification.is_read ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50"
                 )}
-                onClick={() => {
-                  if (!notification.is_read) markRead.mutate(notification.id);
-                  if (notification.task_id && onTaskClick) onTaskClick(notification.task_id);
-                }}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="mt-0.5 flex-shrink-0">
                   {notification.is_read ? (
