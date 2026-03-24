@@ -38,6 +38,7 @@ import { ClientFunnelsTab } from '@/components/quiz/ClientFunnelsTab';
 import { ClientFulfillmentWorkspace } from '@/components/fulfillment/ClientFulfillmentWorkspace';
 import { PropertyManagerTab } from '@/components/properties/PropertyManagerTab';
 import { AttributionSettings } from '@/components/ads-manager/AttributionSettings';
+import { KPISettingsSection } from '@/components/settings/KPISettingsSection';
 import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
 import { useClient } from '@/hooks/useClients';
 import { useDailyMetrics, useFundedInvestors } from '@/hooks/useMetrics';
