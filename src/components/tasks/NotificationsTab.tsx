@@ -106,6 +106,26 @@ export function NotificationsTab({ onTaskClick }: { onTaskClick?: (taskId: strin
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { data: allTasks = [] } = useAllTasks();
+  const { data: clients = [] } = useClients();
+
+  const handleNotificationClick = useCallback((notification: { id: string; task_id: string | null; is_read: boolean }) => {
+    if (!notification.is_read) markRead.mutate(notification.id);
+    if (notification.task_id) {
+      const task = allTasks.find(t => t.id === notification.task_id);
+      if (task) {
+        setSelectedTask(task);
+      } else if (onTaskClick) {
+        // Fallback to parent handler if task not found locally
+        onTaskClick(notification.task_id);
+      }
+    }
+  }, [allTasks, markRead, onTaskClick]);
+
+  const selectedTaskClientName = selectedTask?.client_id 
+    ? clients.find(c => c.id === selectedTask.client_id)?.name 
+    : undefined;
 
   const filtered = useMemo(() => {
     if (filter === 'unread') return notifications.filter(n => !n.is_read);
