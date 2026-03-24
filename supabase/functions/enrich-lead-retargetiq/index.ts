@@ -437,16 +437,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get website slug
-    let slug = website_slug;
-    if (!slug && client_id) {
-      const { data: settings } = await supabase.from('client_settings').select('retargetiq_website_slug').eq('client_id', client_id).single();
-      slug = settings?.retargetiq_website_slug;
-    }
-    if (!slug) {
-      return new Response(JSON.stringify({ success: false, error: 'RetargetIQ website slug not configured.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Use provided slug, or default to "high-performance-ads" for all clients
+    const slug = website_slug || 'high-performance-ads';
 
     // ========== RESOLVE KNOWN CONTACT NAME ==========
     let knownFirstName = first_name || '';
