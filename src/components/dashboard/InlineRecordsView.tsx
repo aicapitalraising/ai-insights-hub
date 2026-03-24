@@ -318,7 +318,7 @@ export function InlineRecordsView({
       }
     });
     return Array.from(names.entries())
-      .filter(([, count]) => count >= 2)
+      .filter(([, count]) => count >= 1)
       .sort((a, b) => b[1] - a[1])
       .map(([name]) => name);
   }, [leads]);
