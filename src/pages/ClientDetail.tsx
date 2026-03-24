@@ -82,6 +82,7 @@ import {
 export default function ClientDetail() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [csvImportType, setCsvImportType] = useState<ImportType>('ad_spend');
@@ -94,6 +95,14 @@ export default function ClientDetail() {
   const queryClient = useQueryClient();
   const { currentMember } = useTeamMember();
   const isAdmin = currentMember?.role === 'admin';
+
+  // Deep-link: if ?task= is present, auto-switch to tasks tab
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId) {
+      setActiveTab('tasks');
+    }
+  }, [searchParams]);
 
   // Collapsible section states
   const [kpiOpen, setKpiOpen] = useState(true);
