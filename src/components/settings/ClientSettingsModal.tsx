@@ -28,6 +28,9 @@ import { SyncHealthIndicator, getSyncStatus } from './SyncHealthIndicator';
 import { useSyncQueue } from '@/hooks/useSyncQueue';
 import { DollarSign, Target, Plug, Loader2, RefreshCw, CheckCircle, XCircle, Users, Lock, Eye, EyeOff, AlertTriangle, ListOrdered, MessageSquare as MessageSquareIcon } from 'lucide-react';
 import { SlackChannelMappingSection } from './SlackChannelMappingSection';
+import { CalendarMappingSection } from './CalendarMappingSection';
+import { LeadRoutingSection } from './LeadRoutingSection';
+import { AdPixelSection } from './AdPixelSection';
 interface ClientSettingsModalProps {
   client: Client | null;
   open: boolean;
@@ -1389,6 +1392,19 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
             <div className="border-2 border-border p-4 space-y-4">
               <SlackChannelMappingSection clientId={client.id} />
             </div>
+
+            {/* Calendar Mapping per Page */}
+            <CalendarMappingSection
+              clientId={client.id}
+              ghlApiKey={client?.ghl_api_key || undefined}
+              ghlLocationId={client?.ghl_location_id || undefined}
+            />
+
+            {/* Lead Routing Rules */}
+            <LeadRoutingSection />
+
+            {/* Ad Pixel Feedback Loop */}
+            <AdPixelSection />
 
           </TabsContent>
           
