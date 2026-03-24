@@ -98,9 +98,20 @@ export function ClientTable({ clients, metrics, onOpenSettings, onDeleteClient }
               >
                 <TableCell className="font-medium">{client.name}</TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Badge variant={getStatusVariant(client.status)}>
-                    {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
-                  </Badge>
+                  <Select value={client.status} onValueChange={(val) => handleStatusChange(client.id, val)}>
+                    <SelectTrigger className="h-7 w-[130px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <Badge variant={opt.variant} className="pointer-events-none">
+                            {opt.label}
+                          </Badge>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{formatCurrency(m.totalAdSpend || 0)}</TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{m.totalLeads || 0}</TableCell>
