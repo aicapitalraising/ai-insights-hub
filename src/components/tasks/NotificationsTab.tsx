@@ -240,6 +240,14 @@ export function NotificationsTab({ onTaskClick }: { onTaskClick?: (taskId: strin
           </div>
         </ScrollArea>
       )}
+
+      <TaskDetailPanel
+        task={selectedTask}
+        open={!!selectedTask}
+        onOpenChange={(open) => { if (!open) setSelectedTask(null); }}
+        clientName={selectedTaskClientName}
+        clientId={selectedTask?.client_id || undefined}
+      />
     </div>
   );
 }
