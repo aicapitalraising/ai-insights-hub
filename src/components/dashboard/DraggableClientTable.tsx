@@ -191,7 +191,20 @@ export function DraggableClientTable({
       const baseMrr = (s as any)?.mrr || 0;
       const adSpendFeeThreshold = (s as any)?.ad_spend_fee_threshold || 30000;
       const adSpendFeePct = (s as any)?.ad_spend_fee_percent || 10;
-      const mrr = calculateClientRevenue(baseMrr, m.totalAdSpend || 0, adSpendFeeThreshold, adSpendFeePct);
+      // Use monthly ad spend target (or calculated from daily) for MRR, not date-filtered spend
+      const monthlyAdSpend = (() => {
+        if (!s) return 0;
+        const monthlyTarget = (s as any)?.monthly_ad_spend_target || 0;
+        const dailyAdTarget = (s as any)?.daily_ad_spend_target || 0;
+        if (monthlyTarget > 0) return monthlyTarget;
+        if (dailyAdTarget > 0) {
+          const now = new Date();
+          const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+          return dailyAdTarget * daysInMonth;
+        }
+        return 0;
+      })();
+      const mrr = calculateClientRevenue(baseMrr, monthlyAdSpend, adSpendFeeThreshold, adSpendFeePct);
       // Calculate effective daily ad spend target
       const dailyTarget = (() => {
         if (!s) return 0;
