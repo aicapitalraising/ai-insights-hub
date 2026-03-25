@@ -232,26 +232,6 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <VoiceRecordButton clientId={client.id} clientName={client.name} isPublicView={false} />
-            <ActivityPanel
-              tasks={clientTasks}
-              voiceNotes={voiceNotes}
-              meetings={meetings}
-              creatives={creatives}
-              isPublicView={false}
-              clientId={client.id}
-              clientName={client.name}
-              onActivityClick={handleActivityClick}
-            />
-            <ShareableLinkButton
-              clientId={client.id}
-              clientName={client.name}
-              publicToken={client.public_token}
-              slug={client.slug}
-            />
-            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} title="Client Settings">
-              <Settings className="h-4 w-4" />
-            </Button>
             <ThemeToggle />
           </div>
         </div>
