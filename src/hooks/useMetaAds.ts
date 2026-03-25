@@ -74,10 +74,16 @@ export function useSyncMetaAds() {
       return data;
     },
     onSuccess: (data, { clientId }) => {
-      queryClient.invalidateQueries({ queryKey: ['meta-campaigns', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['meta-ad-sets', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['meta-ads', clientId] });
-      toast.success(`Synced ${data.campaigns} campaigns, ${data.adSets} ad sets, ${data.ads} ads (${data.metaApiCalls} API calls)`);
+      // Delay invalidation slightly for background syncs to allow processing
+      const delay = data.background ? 5000 : 0;
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['meta-campaigns', clientId] });
+        queryClient.invalidateQueries({ queryKey: ['meta-ad-sets', clientId] });
+        queryClient.invalidateQueries({ queryKey: ['meta-ads', clientId] });
+      }, delay);
+      toast.success(data.background 
+        ? 'Meta Ads sync started in background — data will update shortly'
+        : data.message || 'Meta Ads sync completed');
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to sync Meta Ads');
