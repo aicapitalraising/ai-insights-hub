@@ -188,7 +188,10 @@ export function DraggableClientTable({
       const showedToFunded = (m.showedCalls || 0) > 0 ? ((m.fundedInvestors || 0) / (m.showedCalls || 1)) * 100 : 0;
       const bottleneck = computeBottleneck(leadToBooked, bookedToShowed, showedToFunded);
       const metaSync = getMetaSyncStatus(s, client);
-      const mrr = (s as any)?.mrr || 0;
+      const baseMrr = (s as any)?.mrr || 0;
+      const adSpendFeeThreshold = (s as any)?.ad_spend_fee_threshold || 30000;
+      const adSpendFeePct = (s as any)?.ad_spend_fee_percent || 10;
+      const mrr = calculateClientRevenue(baseMrr, m.totalAdSpend || 0, adSpendFeeThreshold, adSpendFeePct);
       // Calculate effective daily ad spend target
       const dailyTarget = (() => {
         if (!s) return 0;
