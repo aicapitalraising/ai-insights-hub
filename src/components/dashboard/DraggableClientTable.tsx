@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { calculateClientRevenue } from '@/hooks/useClientMRR';
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { differenceInDays } from 'date-fns';
 import { Client, useUpdateClient } from '@/hooks/useClients';
