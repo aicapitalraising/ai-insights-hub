@@ -473,6 +473,8 @@ async function attributeCRMData(supabase: any, clientId: string, startDate?: str
   console.log(`Attribution complete: ${campaignStats.size} campaigns, ${adSetStats.size} ad sets, ${adStats.size} ads, ${unattributedCount} unattributed, ${updateErrors.length} errors`);
 }
 
+declare const EdgeRuntime: { waitUntil: (promise: Promise<any>) => void } | undefined;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -530,6 +532,10 @@ Deno.serve(async (req) => {
 
     console.log(`Syncing Meta Ads for ${client.name} (${adAccountId})`);
 
+    // ── Run heavy sync in background to avoid Edge Function timeout ──
+    const doSync = async () => {
+      try {
+
     // ── 1. Fetch Campaigns ──
     const campaignFields = "id,name,status,objective,buying_type,daily_budget,lifetime_budget,budget_remaining,start_time,stop_time,created_time,updated_time";
     const campaigns = await fetchAllPages(
@@ -555,8 +561,9 @@ Deno.serve(async (req) => {
       synced_at: new Date().toISOString(),
     }));
 
-    for (const rec of campaignRecords) {
-      await supabase.from("meta_campaigns").upsert(rec, { onConflict: "client_id,meta_campaign_id" });
+    // Batch upsert campaigns (chunks of 50)
+    for (let i = 0; i < campaignRecords.length; i += 50) {
+      await supabase.from("meta_campaigns").upsert(campaignRecords.slice(i, i + 50), { onConflict: "client_id,meta_campaign_id" });
     }
 
     const { data: dbCampaigns } = await supabase
@@ -642,8 +649,9 @@ Deno.serve(async (req) => {
       synced_at: new Date().toISOString(),
     }));
 
-    for (const rec of adSetRecords) {
-      await supabase.from("meta_ad_sets").upsert(rec, { onConflict: "client_id,meta_adset_id" });
+    // Batch upsert ad sets
+    for (let i = 0; i < adSetRecords.length; i += 50) {
+      await supabase.from("meta_ad_sets").upsert(adSetRecords.slice(i, i + 50), { onConflict: "client_id,meta_adset_id" });
     }
 
     const { data: dbAdSets } = await supabase
@@ -707,8 +715,9 @@ Deno.serve(async (req) => {
       };
     });
 
-    for (const rec of adRecords) {
-      await supabase.from("meta_ads").upsert(rec, { onConflict: "client_id,meta_ad_id" });
+    // Batch upsert ads
+    for (let i = 0; i < adRecords.length; i += 50) {
+      await supabase.from("meta_ads").upsert(adRecords.slice(i, i + 50), { onConflict: "client_id,meta_ad_id" });
     }
 
     // ── Fetch HD video source URLs for video ads ──
@@ -878,18 +887,39 @@ Deno.serve(async (req) => {
       meta_ads_last_sync: new Date().toISOString(),
       meta_ads_sync_streak: newStreak,
       meta_ads_last_sync_date: today,
-      meta_ads_sync_error: null, // Clear any previous error on success
+      meta_ads_sync_error: null,
     }, { onConflict: "client_id" });
 
     console.log(`Sync complete. Total Meta API calls: ${metaApiCallCount}/${META_API_CALL_LIMIT}`);
-    return new Response(JSON.stringify({
-      success: true,
-      campaigns: campaigns.length,
-      adSets: adSets.length,
-      ads: ads.length,
-      dailyMetrics: dailyRows,
-      metaApiCalls: metaApiCallCount,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      } catch (bgError) {
+        console.error("sync-meta-ads background error:", bgError);
+        try {
+          await supabase.from("client_settings").upsert({
+            client_id: clientId,
+            meta_ads_sync_error: bgError instanceof Error ? bgError.message : "Unknown error",
+          }, { onConflict: "client_id" });
+        } catch (e) {
+          console.error("Failed to record sync error:", e);
+        }
+      }
+    }; // end doSync
+
+    // Run in background if EdgeRuntime available, otherwise run inline
+    if (typeof EdgeRuntime !== "undefined") {
+      EdgeRuntime.waitUntil(doSync());
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Meta Ads sync started in background for ${client.name}`,
+        background: true,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } else {
+      await doSync();
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Meta Ads sync completed for ${client.name}`,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
   } catch (error) {
     console.error("sync-meta-ads error:", error);
     
