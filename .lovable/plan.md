@@ -1,27 +1,33 @@
 
 
-# Full Sync from Jan 1 2026 + Sync Architecture Audit & Consolidation
+## Plan: Fix Batch Generation Across the Board
 
-## Part 1: Trigger Full Sync Since January 1, 2026
+### Problems Identified
 
-The system already supports historical syncs. We need to:
+1. **`generate-static-ad` writes to wrong DB** — Uses `SUPABASE_URL` (Lovable Cloud) for storage uploads and asset record inserts instead of the production DB (`ORIGINAL_SUPABASE_URL`). Generated images are stored in Cloud storage, invisible to the frontend which reads from production.
 
-1. **Invoke `sync-ghl-all-clients` with `sinceDateDays` calculated from Jan 1, 2026 to today** (~80 days). This triggers contacts, calendar appointments, and pipeline syncs for every GHL client.
+2. **`_shared/get-gemini-key.ts` reads wrong DB** — Fetches `agency_settings` from Lovable Cloud instead of production, so it can't find the Gemini API key stored in the production `agency_settings` table.
 
-2. **Invoke `sync-hubspot-all-clients`** for HubSpot clients (same date range).
+3. **`edit-static-ad` writes to wrong DB** — Same issue as #1. AI-edited images get uploaded to Cloud storage instead of production.
 
-3. **Invoke `recalculate-daily-metrics`** with `startDate: "2026-01-01"` and `endDate: today` to rebuild all CRM metrics without destroying ad spend data.
+4. **`generate-video-from-image` edge function missing** — The "Animate with Veo3" feature in ResultsGallery calls this function, but it doesn't exist, causing every animation attempt to fail.
 
-4. **Invoke `daily-accuracy-check`** to validate and auto-fix any discrepancies.
+### Changes
 
-We'll add a **"Historical Sync" button** in the Agency Sync Panel that lets admins pick a start date and trigger all of the above as a single operation via a new `full-historical-sync` edge function.
+**File 1: `supabase/functions/_shared/get-gemini-key.ts`**
+- Use `ORIGINAL_SUPABASE_URL` / `ORIGINAL_SUPABASE_SERVICE_ROLE_KEY` to read `agency_settings` from the production DB.
 
----
+**File 2: `supabase/functions/generate-static-ad/index.ts`**
+- Use `ORIGINAL_SUPABASE_URL` / `ORIGINAL_SUPABASE_SERVICE_ROLE_KEY` for the Supabase client that handles storage uploads and asset record inserts.
+- This ensures generated ad images are uploaded to the production `assets` bucket and saved in the production `assets` table.
 
-## Part 2: Architecture Audit — Issues Found
+**File 3: `supabase/functions/edit-static-ad/index.ts`**
+- Same fix: route storage uploads and asset inserts to the production DB via `ORIGINAL_SUPABASE_*` env vars.
 
-### Critical Bug: `recalculateHistoricalMetrics` Still Deletes Ad Spend (lines 2782-2794)
-The `master_sync` mode calls `recalculateHistoricalMetrics` which **DELETEs all daily_metrics** for a client, then re-inserts rows using plain `insert` (not upsert). This destroys ad_spend/impressions/clicks/ctr data. The `recalculateRecentMetrics` function (line 2954) was already fixed to use upsert, but the historical version was not.
+**File 4: `supabase/functions/generate-video-from-image/index.ts`** (new)
+- Create the missing edge function that accepts an `imageUrl`, `prompt`, `aspectRatio`, and `duration`.
+- Use Lovable AI Gateway with Veo model to generate a video from a static image.
+- Upload result to production storage and return the video URL or an `operationId` for polling.
 
-### Redundant Metric Recalculation in 3 Places
-Metrics
+These 4 changes ensure that static batch generation, AI editing, and video animation all work consistently for every client by reading/writing to the correct production database.
+
