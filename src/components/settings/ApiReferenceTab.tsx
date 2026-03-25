@@ -802,40 +802,74 @@ function buildClientDirectoryText(entries: ClientDirectoryEntry[]): string {
   const dirLines: string[] = [];
   dirLines.push('## Client Directory (Master Admin — CONFIDENTIAL)');
   dirLines.push('');
-  dirLines.push('> Each client entry includes API keys, Meta Ads info, funnel links, and YTD KPIs.');
-  dirLines.push('');
 
   for (const c of entries) {
     const s = c.settings;
-    dirLines.push(`### ${c.name} [${c.status}] ${c.client_type ? `(${c.client_type})` : ''}`);
+
+    // Client Name & ID
+    dirLines.push(`### Client: ${c.name} [${c.status}] ${c.client_type ? `(${c.client_type})` : ''}`);
     dirLines.push(`- **Client ID**: \`${c.id}\``);
     if (c.slug) dirLines.push(`- **Slug**: ${c.slug}`);
-    
-    // GHL
-    if (c.ghl_location_id) dirLines.push(`- **GHL Location ID**: \`${c.ghl_location_id}\``);
-    if (c.ghl_api_key) dirLines.push(`- **GHL API Key**: \`${c.ghl_api_key}\``);
-    
-    // Meta
+
+    // Ad Account
     if (c.meta_ad_account_id) {
-      dirLines.push(`- **Meta Ad Account ID**: \`${c.meta_ad_account_id}\``);
-      dirLines.push(`- **Meta Ads Manager URL**: https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${c.meta_ad_account_id}`);
+      dirLines.push(`- **Ad Account**: \`${c.meta_ad_account_id}\``);
+      dirLines.push(`- **Ad URL**: https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${c.meta_ad_account_id}`);
     }
     if (c.meta_access_token) dirLines.push(`- **Meta Access Token**: \`${c.meta_access_token}\``);
     if (c.business_manager_url) dirLines.push(`- **Business Manager URL**: ${c.business_manager_url}`);
-    
-    // HubSpot
+
+    // MRR
+    const mrr = c.kpis?.mrr || 0;
+    dirLines.push(`- **MRR**: $${mrr.toLocaleString()}`);
+
+    // Offer Info
+    const offerItems: string[] = [];
+    if (c.offer_description) offerItems.push(c.offer_description);
+    if (c.description) offerItems.push(c.description);
+    if (c.product_url) offerItems.push(`Product URL: ${c.product_url}`);
+    if (offerItems.length > 0) {
+      dirLines.push(`- **Offer Info**:`);
+      offerItems.forEach((item, i) => {
+        dirLines.push(`  - #${i + 1}: ${item}`);
+      });
+    }
+
+    // Website
+    if (c.website_url) dirLines.push(`- **Website**: ${c.website_url}`);
+
+    // Brand Font & Color Codes
+    if (c.brand_fonts?.length || c.brand_colors?.length) {
+      dirLines.push(`- **Brand Font & Color Codes**:`);
+      if (c.brand_fonts?.length) dirLines.push(`  - Fonts: ${c.brand_fonts.join(', ')}`);
+      if (c.brand_colors?.length) dirLines.push(`  - Colors: ${c.brand_colors.join(', ')}`);
+    }
+    if (c.logo_url) dirLines.push(`- **Logo**: ${c.logo_url}`);
+
+    // Funnel Campaigns (Quiz Funnels)
+    if (c.quizFunnels?.length) {
+      c.quizFunnels.forEach((q, i) => {
+        const status = q.is_active ? '✅' : '⏸️';
+        const link = q.slug ? `https://report-bloom-magic.lovable.app/quiz/${q.slug}` : 'no slug';
+        dirLines.push(`- **Funnel Campaign #${i + 1}**: ${status} ${q.name}`);
+        dirLines.push(`  - Link: ${link}`);
+      });
+    }
+
+    // Funnel Steps
+    if (c.funnelSteps?.length) {
+      dirLines.push(`- **Funnel Pages**:`);
+      for (const f of c.funnelSteps) {
+        dirLines.push(`  - ${f.name}: ${f.url}`);
+      }
+    }
+
+    // GHL / HubSpot
+    if (c.ghl_location_id) dirLines.push(`- **GHL Location ID**: \`${c.ghl_location_id}\``);
+    if (c.ghl_api_key) dirLines.push(`- **GHL API Key**: \`${c.ghl_api_key}\``);
     if (c.hubspot_portal_id) dirLines.push(`- **HubSpot Portal ID**: \`${c.hubspot_portal_id}\``);
     if (c.hubspot_access_token) dirLines.push(`- **HubSpot Token**: \`${c.hubspot_access_token}\``);
-    
-    // Brand
-    if (c.website_url) dirLines.push(`- **Website**: ${c.website_url}`);
-    if (c.logo_url) dirLines.push(`- **Logo**: ${c.logo_url}`);
-    if (c.description) dirLines.push(`- **Description**: ${c.description}`);
-    if (c.offer_description) dirLines.push(`- **Offer**: ${c.offer_description}`);
-    if (c.product_url) dirLines.push(`- **Product URL**: ${c.product_url}`);
-    if (c.brand_colors?.length) dirLines.push(`- **Brand Colors**: ${c.brand_colors.join(', ')}`);
-    if (c.brand_fonts?.length) dirLines.push(`- **Brand Fonts**: ${c.brand_fonts.join(', ')}`);
-    
+
     // Settings
     if (s) {
       if (s.funded_pipeline_id) dirLines.push(`- **GHL Funded Pipeline ID**: \`${s.funded_pipeline_id}\``);
@@ -850,26 +884,8 @@ function buildClientDirectoryText(entries: ClientDirectoryEntry[]): string {
       if (s.slack_webhook_url) dirLines.push(`- **Slack Webhook**: ${s.slack_webhook_url}`);
       if (s.meetgeek_enabled) dirLines.push(`- **MeetGeek**: Enabled`);
     }
-    
-    // Quiz Funnels
-    if (c.quizFunnels?.length) {
-      dirLines.push(`- **Quiz Funnels**:`);
-      for (const q of c.quizFunnels) {
-        const status = q.is_active ? '✅' : '⏸️';
-        const link = q.slug ? `https://report-bloom-magic.lovable.app/quiz/${q.slug}` : 'no slug';
-        dirLines.push(`  - ${status} ${q.name}: ${link}`);
-      }
-    }
-    
-    // Funnel Steps
-    if (c.funnelSteps?.length) {
-      dirLines.push(`- **Funnel Pages**:`);
-      for (const f of c.funnelSteps) {
-        dirLines.push(`  - ${f.name}: ${f.url}`);
-      }
-    }
 
-    // KPIs
+    // YTD KPIs
     if (c.kpis) {
       const k = c.kpis;
       dirLines.push(`- **YTD KPIs (2026)**:`);
@@ -885,7 +901,6 @@ function buildClientDirectoryText(entries: ClientDirectoryEntry[]): string {
       if (k.costPerInvestor > 0) dirLines.push(`  - Cost/Investor: $${k.costPerInvestor.toFixed(2)}`);
       if (k.monthlyAdSpendTarget > 0) dirLines.push(`  - Monthly Ad Spend Target: $${k.monthlyAdSpendTarget.toLocaleString()}`);
       if (k.totalRaiseAmount > 0) dirLines.push(`  - Total Raise Amount: $${k.totalRaiseAmount.toLocaleString()}`);
-      if (k.mrr > 0) dirLines.push(`  - MRR: $${k.mrr.toLocaleString()}`);
     }
 
     // KPI Thresholds
