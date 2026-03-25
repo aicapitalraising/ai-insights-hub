@@ -887,19 +887,10 @@ Deno.serve(async (req) => {
       meta_ads_last_sync: new Date().toISOString(),
       meta_ads_sync_streak: newStreak,
       meta_ads_last_sync_date: today,
-      meta_ads_sync_error: null, // Clear any previous error on success
+      meta_ads_sync_error: null,
     }, { onConflict: "client_id" });
 
     console.log(`Sync complete. Total Meta API calls: ${metaApiCallCount}/${META_API_CALL_LIMIT}`);
-
-    await supabase.from("client_settings").upsert({
-      client_id: clientId,
-      meta_ads_sync_enabled: true,
-      meta_ads_last_sync: new Date().toISOString(),
-      meta_ads_sync_streak: newStreak,
-      meta_ads_last_sync_date: today,
-      meta_ads_sync_error: null,
-    }, { onConflict: "client_id" });
 
       } catch (bgError) {
         console.error("sync-meta-ads background error:", bgError);
