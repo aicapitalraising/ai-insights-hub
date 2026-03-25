@@ -878,6 +878,7 @@ Deno.serve(async (req) => {
       meta_ads_last_sync: new Date().toISOString(),
       meta_ads_sync_streak: newStreak,
       meta_ads_last_sync_date: today,
+      meta_ads_sync_error: null, // Clear any previous error on success
     }, { onConflict: "client_id" });
 
     console.log(`Sync complete. Total Meta API calls: ${metaApiCallCount}/${META_API_CALL_LIMIT}`);
