@@ -116,6 +116,13 @@ Deno.serve(async (req) => {
               comments: "Optional. Array of {author_name, content, comment_type?}",
             },
           },
+          create_member: {
+            description: "Create a team member and optionally assign them to a pod in one call",
+            fields: {
+              member: "Required. {name, email, role?}",
+              pod_id: "Optional. UUID of the pod to assign the member to",
+            },
+          },
           get_ads_overview: {
             description: "Get full Meta ads hierarchy (campaigns → ad sets → ads) for a client with spend & attribution metrics",
             fields: {
@@ -127,6 +134,32 @@ Deno.serve(async (req) => {
           },
         },
       });
+    }
+
+    // ========================
+    // COMPOSITE: create_member
+    // ========================
+    if (action === "create_member") {
+      const { member, pod_id } = body;
+      if (!member || !member.name || !member.email) {
+        return jsonResp({ error: "Missing 'member' object with 'name' and 'email'" }, 400);
+      }
+
+      const insertData: Record<string, unknown> = {
+        name: member.name,
+        email: member.email,
+        role: member.role || "member",
+      };
+      if (pod_id) insertData.pod_id = pod_id;
+
+      const { data: createdMember, error: memberError } = await supabase
+        .from("agency_members")
+        .insert(insertData)
+        .select("*, pod:agency_pods(id,name,color)")
+        .single();
+
+      if (memberError) return jsonResp({ error: `Member creation failed: ${memberError.message}` }, 400);
+      return jsonResp({ data: createdMember });
     }
 
     // ========================
