@@ -673,7 +673,7 @@ function MetaStatusCell({
   clients,
 }: {
   client: Client;
-  metaSync: { status: 'healthy' | 'stale' | 'not_synced'; lastSyncAt: string | null };
+  metaSync: { status: 'healthy' | 'stale' | 'not_synced' | 'error'; lastSyncAt: string | null; error: string | null };
   isDuplicate: boolean;
   clients: Client[];
 }) {
@@ -719,6 +719,28 @@ function MetaStatusCell({
                     <div className="text-muted-foreground mt-0.5">
                       {client.meta_ad_account_id} is also used by: {duplicateWith.join(', ')}
                     </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : metaSync.status === 'error' ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 gap-0.5">
+                    <XCircle className="h-2.5 w-2.5" />
+                    ERR
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="text-xs">
+                    <strong className="text-destructive">Meta Sync Error</strong>
+                    {metaSync.error && <div className="text-muted-foreground mt-0.5">{metaSync.error}</div>}
+                    {metaSync.lastSyncAt && (
+                      <div className="text-muted-foreground mt-0.5">
+                        Last sync: {formatDistanceToNow(new Date(metaSync.lastSyncAt), { addSuffix: true })}
+                      </div>
+                    )}
                   </div>
                 </TooltipContent>
               </Tooltip>
