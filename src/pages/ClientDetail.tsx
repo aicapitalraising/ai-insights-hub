@@ -38,6 +38,7 @@ import { ClientFunnelsTab } from '@/components/quiz/ClientFunnelsTab';
 import { ClientFulfillmentWorkspace } from '@/components/fulfillment/ClientFulfillmentWorkspace';
 import { PropertyManagerTab } from '@/components/properties/PropertyManagerTab';
 import { AttributionSettings } from '@/components/ads-manager/AttributionSettings';
+import { SlackChannelMappingSection } from '@/components/settings/SlackChannelMappingSection';
 import { KPISettingsSection } from '@/components/settings/KPISettingsSection';
 import { ClientBillingTab } from '@/components/billing/ClientBillingTab';
 import { useClient } from '@/hooks/useClients';
@@ -232,26 +233,6 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <VoiceRecordButton clientId={client.id} clientName={client.name} isPublicView={false} />
-            <ActivityPanel
-              tasks={clientTasks}
-              voiceNotes={voiceNotes}
-              meetings={meetings}
-              creatives={creatives}
-              isPublicView={false}
-              clientId={client.id}
-              clientName={client.name}
-              onActivityClick={handleActivityClick}
-            />
-            <ShareableLinkButton
-              clientId={client.id}
-              clientName={client.name}
-              publicToken={client.public_token}
-              slug={client.slug}
-            />
-            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} title="Client Settings">
-              <Settings className="h-4 w-4" />
-            </Button>
             <ThemeToggle />
           </div>
         </div>
@@ -480,6 +461,42 @@ export default function ClientDetail() {
 
           {/* ─── SETTINGS TAB ─── */}
           <TabsContent value="client-settings" className="space-y-6">
+            {/* Quick Actions (formerly in header) */}
+            <div className="space-y-3">
+              <h2 className="text-lg font-bold">Quick Actions</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <VoiceRecordButton clientId={client.id} clientName={client.name} isPublicView={false} />
+                <ActivityPanel
+                  tasks={clientTasks}
+                  voiceNotes={voiceNotes}
+                  meetings={meetings}
+                  creatives={creatives}
+                  isPublicView={false}
+                  clientId={client.id}
+                  clientName={client.name}
+                  onActivityClick={handleActivityClick}
+                />
+                <ShareableLinkButton
+                  clientId={client.id}
+                  clientName={client.name}
+                  publicToken={client.public_token}
+                  slug={client.slug}
+                />
+                <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Client Settings
+                </Button>
+              </div>
+            </div>
+
+            {/* Slack Integration */}
+            <SectionErrorBoundary sectionName="Slack Integration">
+              <h2 className="text-lg font-bold mb-3">Slack Integration</h2>
+              <div className="border-2 border-border p-4">
+                <SlackChannelMappingSection clientId={client.id} />
+              </div>
+            </SectionErrorBoundary>
+
             {/* KPI & Revenue Settings */}
             <SectionErrorBoundary sectionName="KPI Settings">
               <h2 className="text-lg font-bold mb-3">KPI & Revenue Settings</h2>
