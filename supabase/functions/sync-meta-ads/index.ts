@@ -473,6 +473,8 @@ async function attributeCRMData(supabase: any, clientId: string, startDate?: str
   console.log(`Attribution complete: ${campaignStats.size} campaigns, ${adSetStats.size} ad sets, ${adStats.size} ads, ${unattributedCount} unattributed, ${updateErrors.length} errors`);
 }
 
+declare const EdgeRuntime: { waitUntil: (promise: Promise<any>) => void } | undefined;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
