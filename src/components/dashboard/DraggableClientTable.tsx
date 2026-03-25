@@ -471,7 +471,7 @@ export function DraggableClientTable({
                     </TableCell>
 
                     {/* Meta Spend */}
-                    <TableCell className="text-right font-mono tabular-nums text-[11px] py-0 px-1">
+                    <TableCell className={`text-right font-mono tabular-nums text-[11px] py-0 px-1 ${(m.totalAdSpend || 0) === 0 ? 'text-destructive font-bold' : ''}`}>
                       {formatCurrency(m.totalAdSpend || 0)}
                     </TableCell>
 
