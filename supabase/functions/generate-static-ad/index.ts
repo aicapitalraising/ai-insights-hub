@@ -44,16 +44,11 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 // Map aspect ratio to dimensions
 function getImageDimensions(aspectRatio: string): { width: number; height: number } {
   switch (aspectRatio) {
-    case '1:1':
-      return { width: 1024, height: 1024 };
-    case '4:5':
-      return { width: 1024, height: 1280 };
-    case '9:16':
-      return { width: 768, height: 1365 };
-    case '16:9':
-      return { width: 1365, height: 768 };
-    default:
-      return { width: 1024, height: 1024 };
+    case '1:1': return { width: 1024, height: 1024 };
+    case '4:5': return { width: 1024, height: 1280 };
+    case '9:16': return { width: 768, height: 1365 };
+    case '16:9': return { width: 1365, height: 768 };
+    default: return { width: 1024, height: 1024 };
   }
 }
 
@@ -64,8 +59,6 @@ function buildAdPrompt(params: GenerateAdRequest): string {
   const hasReferenceImages = referenceImages && referenceImages.length > 0;
   const hasBrandColors = brandColors && brandColors.length > 0;
 
-  // Color logic: brand colors are OPTIONAL — only used when explicitly provided
-  // If no brand colors, derive colors from the reference image being cloned
   const colorInstruction = hasBrandColors
     ? strictBrandAdherence
       ? `STRICT BRAND ADHERENCE: You MUST use ONLY these exact brand colors throughout the entire design — no deviations, no similar shades, no artistic liberties: ${brandColors.join(', ')}`
@@ -82,13 +75,9 @@ function buildAdPrompt(params: GenerateAdRequest): string {
   
   const productContext = productDescription
     ? `Product/Service: ${productDescription}`
-    : productUrl
-    ? `Product from: ${productUrl}`
-    : '';
+    : productUrl ? `Product from: ${productUrl}` : '';
 
-  const offerContext = offerDescription
-    ? `Offer/Value Proposition: ${offerDescription}`
-    : '';
+  const offerContext = offerDescription ? `Offer/Value Proposition: ${offerDescription}` : '';
 
   const primaryRefNote = primaryReferenceImage
     ? `\n\nPRIMARY REFERENCE: The FIRST image provided is your PRIMARY template. You MUST replicate THIS specific image's layout, composition, colors (unless brand colors are specified), and visual style. Other reference images are supplementary context only — focus on cloning the PRIMARY reference.`
@@ -99,24 +88,23 @@ function buildAdPrompt(params: GenerateAdRequest): string {
 You are given reference advertisement images. Your job is to CLONE the PRIMARY reference image as closely as possible — treat it as an EXACT TEMPLATE.${primaryRefNote}
 
 MANDATORY REPLICATION RULES:
-1. LAYOUT: Copy the exact same layout grid, element placement, margins, padding, and spatial arrangement. If the reference has text at the top with an image below, yours must too — in the same proportions.
-2. COMPOSITION: Match the reference's composition pixel-for-pixel. Same visual hierarchy, same focal point placement, same balance of elements.
-3. COLORS & GRADIENTS: ${hasBrandColors ? 'Use the specified brand colors while maintaining the reference layout and composition.' : 'Extract and replicate the EXACT color palette from the reference — same hues, same gradients, same overlay opacities. Match dark/light areas precisely.'}
-4. TYPOGRAPHY STYLE: Replicate the same font weight, size ratios (headline vs body), text alignment, letter-spacing, and text effects (shadows, outlines, glows).
-5. VISUAL EFFECTS: Copy all overlays, shadows, glows, borders, rounded corners, badge/sticker placements, and decorative elements from the reference.
-6. BACKGROUND & IMAGERY: Recreate the same type of background (solid, gradient, photo, texture) and the same style of product/hero imagery arrangement.
-7. ONLY CHANGE THE COPY: Replace ONLY the text content (headlines, body copy, CTA text) with the new product's messaging. Everything else — structure, colors, imagery style, effects — must remain virtually identical to the reference.
+1. LAYOUT: Copy the exact same layout grid, element placement, margins, padding, and spatial arrangement.
+2. COMPOSITION: Match the reference's composition pixel-for-pixel.
+3. COLORS & GRADIENTS: ${hasBrandColors ? 'Use the specified brand colors while maintaining the reference layout and composition.' : 'Extract and replicate the EXACT color palette from the reference.'}
+4. TYPOGRAPHY STYLE: Replicate the same font weight, size ratios, text alignment, letter-spacing, and text effects.
+5. VISUAL EFFECTS: Copy all overlays, shadows, glows, borders, rounded corners, badge/sticker placements.
+6. BACKGROUND & IMAGERY: Recreate the same type of background and imagery arrangement.
+7. ONLY CHANGE THE COPY: Replace ONLY the text content with the new product's messaging.
 
-The output should look like a direct adaptation of the PRIMARY reference ad — someone viewing both side-by-side should see the SAME design template with different product content.`
+The output should look like a direct adaptation of the PRIMARY reference ad.`
     : '';
 
   const disclaimerInstruction = includeDisclaimer && disclaimerText
-    ? `MANDATORY DISCLAIMER: You MUST include the following disclaimer text clearly legible at the bottom of the ad in a small but readable font size: "${disclaimerText}"`
+    ? `MANDATORY DISCLAIMER: You MUST include the following disclaimer text clearly legible at the bottom of the ad: "${disclaimerText}"`
     : '';
 
-  // 9:16 safe zone instruction for IG Stories/Reels
   const safeZoneInstruction = aspectRatio === '9:16'
-    ? `INSTAGRAM STORIES/REELS SAFE ZONE: This ad is for Instagram Stories/Reels. Do NOT place important content (text, CTAs, key visuals) in the top 14% or bottom 20% of the image — those areas are covered by UI elements (profile info, swipe-up, buttons). Keep all critical content within the central 66% vertical safe zone.`
+    ? `INSTAGRAM STORIES/REELS SAFE ZONE: Do NOT place important content in the top 14% or bottom 20% of the image.`
     : '';
 
   if (prompt && !stylePrompt) {
@@ -137,28 +125,19 @@ DO NOT include:
 - Logos or brand marks of any kind`.trim();
   }
 
-  const aspectInstruction = `Image dimensions: ${dimensions.width}x${dimensions.height} (${aspectRatio} aspect ratio)`;
-
-  const builtPrompt = `
+  return `
 Create a high-converting advertisement image.
 
 ${stylePrompt || ''}
-
 ${productContext}
-
 ${offerContext}
-
 ${colorInstruction}
-
 ${fontInstruction}
-
 ${referenceInstruction}
-
 ${disclaimerInstruction}
-
 ${safeZoneInstruction}
 
-${aspectInstruction}
+Image dimensions: ${dimensions.width}x${dimensions.height} (${aspectRatio} aspect ratio)
 
 REQUIREMENTS:
 - Professional advertisement quality
@@ -166,9 +145,8 @@ REQUIREMENTS:
 - Clear focal point
 - Balanced composition
 - Modern, polished aesthetic
-- Suitable for digital advertising platforms
 - Ultra high resolution
-- If reference images are provided, you MUST clone their exact layout, composition, colors, typography style, effects, and design — only swap the text/copy for the new product. The output must look like the same template was used.
+- If reference images are provided, clone their exact layout and design — only swap the text/copy.
 
 DO NOT include:
 - Watermarks
@@ -176,8 +154,13 @@ DO NOT include:
 - Stock photo artifacts
 - Low quality or blurry elements
 `.trim();
+}
 
-  return builtPrompt;
+/** Create a Supabase client pointing at the PRODUCTION database */
+function getProductionSupabase() {
+  const url = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
+  const key = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  return createClient(url, key);
 }
 
 serve(async (req) => {
@@ -187,16 +170,8 @@ serve(async (req) => {
 
   try {
     const body: GenerateAdRequest = await req.json();
-    const { 
-      styleName, 
-      aspectRatio, 
-      projectId, 
-      clientId,
-      referenceImages = [],
-      idempotency_key,
-    } = body;
+    const { styleName, aspectRatio, projectId, clientId, referenceImages = [], idempotency_key } = body;
 
-    // Get API key from agency settings, then env var fallback
     const geminiApiKey = await getGeminiApiKey(undefined);
     if (!geminiApiKey) {
       return new Response(
@@ -207,29 +182,20 @@ serve(async (req) => {
 
     console.log('Generating ad with params:', { styleName, aspectRatio, projectId });
 
-    // Build the prompt
     const prompt = buildAdPrompt(body);
     console.log('Generated prompt:', prompt.slice(0, 300) + '...');
 
     // Build parts array with prompt and optional reference images
     const parts: any[] = [{ text: prompt }];
 
-    // Helper to add image to parts
     async function addImageToParts(imageUrl: string, label: string) {
       try {
         const imageResponse = await fetch(imageUrl);
         if (imageResponse.ok) {
           const imageBuffer = await imageResponse.arrayBuffer();
-          // Use chunked conversion to prevent stack overflow
           const base64Image = arrayBufferToBase64(imageBuffer);
           const contentType = imageResponse.headers.get('content-type') || 'image/png';
-          
-          parts.push({
-            inlineData: {
-              mimeType: contentType,
-              data: base64Image
-            }
-          });
+          parts.push({ inlineData: { mimeType: contentType, data: base64Image } });
           console.log(`Added ${label}:`, imageUrl.slice(0, 60));
           return true;
         }
@@ -239,28 +205,25 @@ serve(async (req) => {
       return false;
     }
 
-    // PRIORITY 1: Add PRIMARY reference image first — this is the one to clone
-    const primaryRef = body.primaryReferenceImage;
-    if (primaryRef) {
-      await addImageToParts(primaryRef, 'PRIMARY reference (clone this)');
+    // PRIORITY 1: PRIMARY reference image
+    if (body.primaryReferenceImage) {
+      await addImageToParts(body.primaryReferenceImage, 'PRIMARY reference');
     }
 
-    // PRIORITY 2: Add character/avatar image for identity consistency
-    const characterImageUrl = body.characterImageUrl;
-    if (characterImageUrl) {
-      await addImageToParts(characterImageUrl, 'character reference');
+    // PRIORITY 2: Character/avatar image
+    if (body.characterImageUrl) {
+      await addImageToParts(body.characterImageUrl, 'character reference');
     }
 
-    // PRIORITY 3: Add remaining reference images as supplementary context (skip primary to avoid duplication)
-    const maxAdditionalRefs = (primaryRef ? 3 : 4) - (characterImageUrl ? 1 : 0);
+    // PRIORITY 3: Remaining reference images
+    const maxAdditionalRefs = (body.primaryReferenceImage ? 3 : 4) - (body.characterImageUrl ? 1 : 0);
     for (const imageUrl of referenceImages.slice(0, maxAdditionalRefs + 1)) {
-      if (imageUrl === primaryRef || imageUrl === characterImageUrl) continue;
+      if (imageUrl === body.primaryReferenceImage || imageUrl === body.characterImageUrl) continue;
       await addImageToParts(imageUrl, 'supplementary reference');
     }
 
-    // PRIORITY 3: Add user-uploaded ad images
-    const adImageUrls = body.adImageUrls || [];
-    for (const imageUrl of adImageUrls.slice(0, 2)) {
+    // PRIORITY 4: User-uploaded ad images
+    for (const imageUrl of (body.adImageUrls || []).slice(0, 2)) {
       await addImageToParts(imageUrl, 'ad asset image');
     }
 
@@ -287,9 +250,6 @@ serve(async (req) => {
     }
 
     const geminiData = await geminiResponse.json();
-    console.log('Gemini response received');
-
-    // Extract image from response
     const candidates = geminiData.candidates || [];
     if (candidates.length === 0) {
       return new Response(
@@ -311,15 +271,10 @@ serve(async (req) => {
     const base64Image = imagePart.inlineData.data;
     const mimeType = imagePart.inlineData.mimeType || 'image/png';
 
-    // Upload to Supabase Storage
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Upload to PRODUCTION Supabase Storage
+    const supabase = getProductionSupabase();
 
-    // Convert base64 to bytes
     const imageBytes = Uint8Array.from(atob(base64Image), c => c.charCodeAt(0));
-
-    // Generate file path
     const timestamp = Date.now();
     const uuid = crypto.randomUUID().slice(0, 8);
     const extension = mimeType.split('/')[1] || 'png';
@@ -327,10 +282,7 @@ serve(async (req) => {
 
     const { error: uploadError } = await supabase.storage
       .from('assets')
-      .upload(filePath, imageBytes, {
-        contentType: mimeType,
-        upsert: false,
-      });
+      .upload(filePath, imageBytes, { contentType: mimeType, upsert: false });
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
@@ -340,12 +292,9 @@ serve(async (req) => {
       );
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('assets')
-      .getPublicUrl(filePath);
+    const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(filePath);
 
-    // Save asset record to database
+    // Save asset record to PRODUCTION database
     const { data: asset, error: assetError } = await supabase
       .from('assets')
       .insert({
@@ -374,15 +323,9 @@ serve(async (req) => {
     console.log('Ad generated successfully:', publicUrl);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        imageUrl: publicUrl,
-        storagePath: filePath,
-        assetId: asset?.id,
-      }),
+      JSON.stringify({ success: true, imageUrl: publicUrl, storagePath: filePath, assetId: asset?.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('Generate ad error:', error);
     return new Response(
