@@ -715,8 +715,9 @@ Deno.serve(async (req) => {
       };
     });
 
-    for (const rec of adRecords) {
-      await supabase.from("meta_ads").upsert(rec, { onConflict: "client_id,meta_ad_id" });
+    // Batch upsert ads
+    for (let i = 0; i < adRecords.length; i += 50) {
+      await supabase.from("meta_ads").upsert(adRecords.slice(i, i + 50), { onConflict: "client_id,meta_ad_id" });
     }
 
     // ── Fetch HD video source URLs for video ads ──
