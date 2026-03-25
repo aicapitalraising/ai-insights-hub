@@ -24,14 +24,40 @@ function checkCallBudget(label: string) {
   }
 }
 
+// Throttle: minimum delay between API calls to avoid rate limits
+const THROTTLE_MS = 300; // 300ms between calls ≈ max 3.3 req/s
+let lastCallTime = 0;
+
 async function fetchMeta(url: string, accessToken: string, label = "unknown"): Promise<MetaApiResponse> {
   checkCallBudget(label);
+  
+  // Enforce throttle delay between calls
+  const now = Date.now();
+  const elapsed = now - lastCallTime;
+  if (elapsed < THROTTLE_MS && lastCallTime > 0) {
+    await new Promise(r => setTimeout(r, THROTTLE_MS - elapsed));
+  }
+  lastCallTime = Date.now();
+  
   metaApiCallCount++;
   console.log(`Meta API call #${metaApiCallCount}/${META_API_CALL_LIMIT}: ${label}`);
   const separator = url.includes("?") ? "&" : "?";
   const res = await fetch(`${url}${separator}access_token=${accessToken}`);
   if (!res.ok) {
     const errBody = await res.text();
+    // If rate limited, wait and retry once
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("Retry-After");
+      const waitMs = retryAfter ? parseInt(retryAfter) * 1000 : 60000;
+      console.warn(`Meta API rate limited on ${label}, waiting ${waitMs / 1000}s...`);
+      await new Promise(r => setTimeout(r, waitMs));
+      const retryRes = await fetch(`${url}${separator}access_token=${accessToken}`);
+      if (!retryRes.ok) {
+        const retryErr = await retryRes.text();
+        throw new Error(`Meta API ${retryRes.status} (retry): ${retryErr.substring(0, 500)}`);
+      }
+      return retryRes.json();
+    }
     throw new Error(`Meta API ${res.status}: ${errBody.substring(0, 500)}`);
   }
   return res.json();
