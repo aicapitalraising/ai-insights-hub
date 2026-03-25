@@ -891,14 +891,44 @@ Deno.serve(async (req) => {
     }, { onConflict: "client_id" });
 
     console.log(`Sync complete. Total Meta API calls: ${metaApiCallCount}/${META_API_CALL_LIMIT}`);
-    return new Response(JSON.stringify({
-      success: true,
-      campaigns: campaigns.length,
-      adSets: adSets.length,
-      ads: ads.length,
-      dailyMetrics: dailyRows,
-      metaApiCalls: metaApiCallCount,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    await supabase.from("client_settings").upsert({
+      client_id: clientId,
+      meta_ads_sync_enabled: true,
+      meta_ads_last_sync: new Date().toISOString(),
+      meta_ads_sync_streak: newStreak,
+      meta_ads_last_sync_date: today,
+      meta_ads_sync_error: null,
+    }, { onConflict: "client_id" });
+
+      } catch (bgError) {
+        console.error("sync-meta-ads background error:", bgError);
+        try {
+          await supabase.from("client_settings").upsert({
+            client_id: clientId,
+            meta_ads_sync_error: bgError instanceof Error ? bgError.message : "Unknown error",
+          }, { onConflict: "client_id" });
+        } catch (e) {
+          console.error("Failed to record sync error:", e);
+        }
+      }
+    }; // end doSync
+
+    // Run in background if EdgeRuntime available, otherwise run inline
+    if (typeof EdgeRuntime !== "undefined") {
+      EdgeRuntime.waitUntil(doSync());
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Meta Ads sync started in background for ${client.name}`,
+        background: true,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } else {
+      await doSync();
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Meta Ads sync completed for ${client.name}`,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
   } catch (error) {
     console.error("sync-meta-ads error:", error);
     
