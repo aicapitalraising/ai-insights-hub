@@ -91,21 +91,23 @@ function extractTaskBlocks(content: string): { tasks: any[]; cleanContent: strin
 async function executeTaskCreation(tasks: any[]) {
   if (tasks.length === 0) return;
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-create-tasks`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ tasks }),
-      }
-    );
-    if (response.ok) {
-      const { results } = await response.json();
-      const created = results.filter((r: any) => r.success);
-      toast.success(`Created ${created.length} task${created.length !== 1 ? 's' : ''}`);
+    const { supabase } = await import('@/integrations/supabase/db');
+    const results = [];
+    for (const task of tasks) {
+      const { client_id, title, description, priority, due_date, status } = task;
+      if (!client_id || !title) continue;
+      const { data, error } = await supabase.from('tasks').insert({
+        client_id,
+        title,
+        description: description || null,
+        priority: priority || 'medium',
+        due_date: due_date || null,
+        status: status || 'todo',
+      }).select().single();
+      if (!error && data) results.push(data);
+    }
+    if (results.length > 0) {
+      toast.success(`Created ${results.length} task${results.length !== 1 ? 's' : ''}`);
     } else {
       toast.error('Failed to create tasks');
     }
