@@ -478,8 +478,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Reset API call counter for each request (fixes warm isolate bug)
+  // Reset API call counter and throttle timer for each request (fixes warm isolate bug)
   metaApiCallCount = 0;
+  lastCallTime = 0;
 
   try {
     const { clientId, startDate, endDate } = await req.json();
