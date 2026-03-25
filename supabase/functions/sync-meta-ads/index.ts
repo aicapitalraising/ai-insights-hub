@@ -532,6 +532,10 @@ Deno.serve(async (req) => {
 
     console.log(`Syncing Meta Ads for ${client.name} (${adAccountId})`);
 
+    // ── Run heavy sync in background to avoid Edge Function timeout ──
+    const doSync = async () => {
+      try {
+
     // ── 1. Fetch Campaigns ──
     const campaignFields = "id,name,status,objective,buying_type,daily_budget,lifetime_budget,budget_remaining,start_time,stop_time,created_time,updated_time";
     const campaigns = await fetchAllPages(
@@ -557,8 +561,9 @@ Deno.serve(async (req) => {
       synced_at: new Date().toISOString(),
     }));
 
-    for (const rec of campaignRecords) {
-      await supabase.from("meta_campaigns").upsert(rec, { onConflict: "client_id,meta_campaign_id" });
+    // Batch upsert campaigns (chunks of 50)
+    for (let i = 0; i < campaignRecords.length; i += 50) {
+      await supabase.from("meta_campaigns").upsert(campaignRecords.slice(i, i + 50), { onConflict: "client_id,meta_campaign_id" });
     }
 
     const { data: dbCampaigns } = await supabase
