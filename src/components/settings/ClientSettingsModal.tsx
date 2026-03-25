@@ -1215,6 +1215,37 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                   </p>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="businessManagerUrlMeta">Business Manager URL</Label>
+                  <Input
+                    id="businessManagerUrlMeta"
+                    value={businessManagerUrl}
+                    onChange={(e) => {
+                      const url = e.target.value;
+                      setBusinessManagerUrl(url);
+                      const actMatch = url.match(/act[=\/](\d+)/);
+                      if (actMatch && actMatch[1] && !metaAdAccountId) {
+                        setMetaAdAccountId(actMatch[1]);
+                        toast.success(`Auto-detected Ad Account ID: ${actMatch[1]}`);
+                      }
+                    }}
+                    placeholder="https://business.facebook.com/..."
+                  />
+                  {businessManagerUrl && (() => {
+                    const match = businessManagerUrl.match(/act[=\/](\d+)/);
+                    return match ? (
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        ✓ Detected Ad Account ID: {match[1]}
+                      </p>
+                    ) : null;
+                  })()}
+                  {businessManagerUrl && (
+                    <a href={businessManagerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                      Open in Meta Business Manager ↗
+                    </a>
+                  )}
+                </div>
+
                 {/* Meta Ads Last Sync */}
                 {(settings as any)?.meta_ads_last_sync && (
                   <div className="p-3 border-2 border-border bg-muted/30 space-y-1">
@@ -1237,7 +1268,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
                           toast.error('Please enter an Ad Account ID first');
                           return;
                         }
-                        // Save the ad account ID first
                         await supabase.from('clients').update({ meta_ad_account_id: metaAdAccountId }).eq('id', client.id);
                         setSyncingMeta(true);
                         try {
@@ -1413,38 +1443,6 @@ export function ClientSettingsModal({ client, open, onOpenChange }: ClientSettin
           </TabsContent>
 
           <TabsContent value="thresholds" className="space-y-4 mt-4">
-            <div className="border-2 border-border p-4 space-y-4">
-              <div>
-                <h4 className="font-medium mb-1">Business Manager</h4>
-                <p className="text-sm text-muted-foreground mb-3">Quick access link to the client's ad account</p>
-                <div className="space-y-2">
-                  <Label htmlFor="businessManagerUrl">Business Manager URL</Label>
-                  <Input
-                    id="businessManagerUrl"
-                    value={businessManagerUrl}
-                    onChange={(e) => {
-                      const url = e.target.value;
-                      setBusinessManagerUrl(url);
-                      // Auto-extract ad account ID from URL (act= parameter)
-                      const actMatch = url.match(/act[=\/](\d+)/);
-                      if (actMatch && actMatch[1] && !metaAdAccountId) {
-                        setMetaAdAccountId(actMatch[1]);
-                        toast.success(`Auto-detected Ad Account ID: ${actMatch[1]}`);
-                      }
-                    }}
-                    placeholder="https://business.facebook.com/..."
-                  />
-                  {businessManagerUrl && (() => {
-                    const match = businessManagerUrl.match(/act[=\/](\d+)/);
-                    return match ? (
-                      <p className="text-xs text-green-600 dark:text-green-400">
-                        ✓ Detected Ad Account ID: {match[1]}
-                      </p>
-                    ) : null;
-                  })()}
-                </div>
-              </div>
-            </div>
 
             <div className="border-2 border-border p-4 space-y-4">
               <div>
