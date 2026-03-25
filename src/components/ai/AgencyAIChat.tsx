@@ -248,24 +248,19 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
     if ((!input.trim() && attachments.length === 0) || isLoading) return;
     
     const message = input.trim();
-    const files = [...attachments];
     
     setInput('');
     setAttachments([]);
 
-    if (fullPortfolioMode) {
-      await sendFullContextMessage(
-        message,
-        messages,
-        model,
-        selectedClientId || 'all',
-        (used, system) => setTokenUsage({ used, system }),
-      );
-    } else {
-      const context = buildContext();
-      const legacyModel = model === 'gpt-5' ? 'openai' as const : 'gemini' as const;
-      await sendMessage(message, context, messages, legacyModel, files);
-    }
+    await sendMessage(
+      message,
+      clients,
+      clientMetrics,
+      messages,
+      model,
+      selectedClientId,
+      (used, system) => setTokenUsage({ used, system }),
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
