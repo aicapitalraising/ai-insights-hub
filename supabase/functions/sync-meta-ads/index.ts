@@ -649,8 +649,9 @@ Deno.serve(async (req) => {
       synced_at: new Date().toISOString(),
     }));
 
-    for (const rec of adSetRecords) {
-      await supabase.from("meta_ad_sets").upsert(rec, { onConflict: "client_id,meta_adset_id" });
+    // Batch upsert ad sets
+    for (let i = 0; i < adSetRecords.length; i += 50) {
+      await supabase.from("meta_ad_sets").upsert(adSetRecords.slice(i, i + 50), { onConflict: "client_id,meta_adset_id" });
     }
 
     const { data: dbAdSets } = await supabase
