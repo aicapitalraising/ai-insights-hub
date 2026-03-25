@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   MessageCircle, 
   X, 
@@ -91,21 +91,23 @@ function extractTaskBlocks(content: string): { tasks: any[]; cleanContent: strin
 async function executeTaskCreation(tasks: any[]) {
   if (tasks.length === 0) return;
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-create-tasks`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ tasks }),
-      }
-    );
-    if (response.ok) {
-      const { results } = await response.json();
-      const created = results.filter((r: any) => r.success);
-      toast.success(`Created ${created.length} task${created.length !== 1 ? 's' : ''}`);
+    const { supabase } = await import('@/integrations/supabase/db');
+    const results = [];
+    for (const task of tasks) {
+      const { client_id, title, description, priority, due_date, status } = task;
+      if (!client_id || !title) continue;
+      const { data, error } = await supabase.from('tasks').insert({
+        client_id,
+        title,
+        description: description || null,
+        priority: priority || 'medium',
+        due_date: due_date || null,
+        status: status || 'todo',
+      }).select().single();
+      if (!error && data) results.push(data);
+    }
+    if (results.length > 0) {
+      toast.success(`Created ${results.length} task${results.length !== 1 ? 's' : ''}`);
     } else {
       toast.error('Failed to create tasks');
     }
@@ -122,11 +124,10 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
   const [isRecording, setIsRecording] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [fullPortfolioMode, setFullPortfolioMode] = useState(true);
   const [tokenUsage, setTokenUsage] = useState({ used: 0, system: 0 });
   const [processedIndexes, setProcessedIndexes] = useState<Set<number>>(new Set());
   const [createdTaskCount, setCreatedTaskCount] = useState(0);
-  const { messages, isLoading, sendMessage, sendFullContextMessage, clearMessages } = useAgencyAIAnalysis();
+  const { messages, isLoading, sendMessage, clearMessages } = useAgencyAIAnalysis();
   const { data: meetings = [] } = useMeetings();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -178,95 +179,26 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
     }
   }, [isOpen]);
 
-  // Build context based on selected client filter
-  const buildContext = useCallback(() => {
-    const filteredClients = selectedClientId 
-      ? clients.filter(c => c.id === selectedClientId)
-      : clients;
-    
-    const clientSummaries = filteredClients.map(client => {
-      const metrics = clientMetrics[client.id];
-      if (!metrics) return null;
-      return {
-        name: client.name,
-        status: client.status,
-        adSpend: metrics.totalAdSpend,
-        leads: metrics.totalLeads,
-        calls: metrics.totalCalls,
-        showedCalls: metrics.showedCalls,
-        costPerLead: metrics.costPerLead,
-        costPerCall: metrics.costPerCall,
-        fundedInvestors: metrics.fundedInvestors,
-        fundedDollars: metrics.fundedDollars,
-        costOfCapital: metrics.costOfCapital,
-      };
-    }).filter(Boolean);
 
-    // If single client selected, use their metrics as totals
-    const totals = selectedClientId && clientMetrics[selectedClientId]
-      ? {
-          totalAdSpend: clientMetrics[selectedClientId].totalAdSpend,
-          totalLeads: clientMetrics[selectedClientId].totalLeads,
-          totalCalls: clientMetrics[selectedClientId].totalCalls,
-          showedCalls: clientMetrics[selectedClientId].showedCalls,
-          costPerLead: clientMetrics[selectedClientId].costPerLead,
-          costPerCall: clientMetrics[selectedClientId].costPerCall,
-          fundedInvestors: clientMetrics[selectedClientId].fundedInvestors,
-          fundedDollars: clientMetrics[selectedClientId].fundedDollars,
-          costOfCapital: clientMetrics[selectedClientId].costOfCapital,
-        }
-      : {
-          totalAdSpend: agencyMetrics.totalAdSpend,
-          totalLeads: agencyMetrics.totalLeads,
-          totalCalls: agencyMetrics.totalCalls,
-          showedCalls: agencyMetrics.showedCalls,
-          costPerLead: agencyMetrics.costPerLead,
-          costPerCall: agencyMetrics.costPerCall,
-          fundedInvestors: agencyMetrics.fundedInvestors,
-          fundedDollars: agencyMetrics.fundedDollars,
-          costOfCapital: agencyMetrics.costOfCapital,
-        };
 
-    // Build meeting summaries for AI context
-    const meetingSummaries = recentMeetings.map(m => ({
-      title: m.title,
-      date: m.meeting_date,
-      client: clients.find(c => c.id === m.client_id)?.name || 'Unassigned',
-      summary: m.summary?.slice(0, 500) || null,
-      actionItemsCount: Array.isArray(m.action_items) ? m.action_items.length : 0,
-      duration: m.duration_minutes,
-    }));
-
-    return {
-      agencyTotals: totals,
-      clients: clientSummaries,
-      focusedClient: selectedClient?.name || null,
-      recentMeetings: meetingSummaries,
-    };
-  }, [clients, clientMetrics, agencyMetrics, selectedClientId, selectedClient, recentMeetings]);
 
   const handleSend = async () => {
     if ((!input.trim() && attachments.length === 0) || isLoading) return;
     
     const message = input.trim();
-    const files = [...attachments];
     
     setInput('');
     setAttachments([]);
 
-    if (fullPortfolioMode) {
-      await sendFullContextMessage(
-        message,
-        messages,
-        model,
-        selectedClientId || 'all',
-        (used, system) => setTokenUsage({ used, system }),
-      );
-    } else {
-      const context = buildContext();
-      const legacyModel = model === 'gpt-5' ? 'openai' as const : 'gemini' as const;
-      await sendMessage(message, context, messages, legacyModel, files);
-    }
+    await sendMessage(
+      message,
+      clients,
+      clientMetrics,
+      messages,
+      model,
+      selectedClientId,
+      (used, system) => setTokenUsage({ used, system }),
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -470,9 +402,8 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
                     className="text-xs h-auto py-2 px-3 whitespace-normal text-left"
                     onClick={() => {
                       if (!isLoading) {
-                        const context = buildContext();
-                        const legacyModel = model === 'gpt-5' ? 'openai' as const : 'gemini' as const;
-                        sendMessage(q, context, messages, legacyModel);
+                        sendMessage(q, clients, clientMetrics, messages, model, selectedClientId,
+                          (used, system) => setTokenUsage({ used, system }));
                       }
                     }}
                     disabled={isLoading}

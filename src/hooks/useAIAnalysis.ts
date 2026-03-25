@@ -23,15 +23,6 @@ interface MetricsContext {
 
 type AIModel = 'gemini' | 'openai';
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-  });
-}
-
 export function useAIAnalysis() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,18 +42,17 @@ export function useAIAnalysis() {
     let assistantContent = '';
 
     try {
-      const fileContents: { name: string; type: string; content: string }[] = [];
-      if (files && files.length > 0) {
-        for (const file of files) {
-          const content = await fileToBase64(file);
-          fileContents.push({ name: file.name, type: file.type, content });
-        }
-      }
+      // Build system context from metrics
+      const systemContext = `# Client: ${context.clientName || 'Unknown'}
+**Performance Metrics:**
+- Ad Spend: $${(context.totalAdSpend || 0).toLocaleString()} | Leads: ${context.leads || 0} | CPL: $${(context.costPerLead || 0).toFixed(2)}
+- Calls: ${context.calls || 0} | Shows: ${context.showedCalls || 0} (${(context.showedPercent || 0).toFixed(1)}%) | Cost/Call: $${(context.costPerCall || 0).toFixed(2)}
+- Funded: ${context.fundedInvestors || 0} investors, $${(context.fundedDollars || 0).toLocaleString()} | Cost of Capital: ${(context.costOfCapital || 0).toFixed(2)}%`;
 
-      const selectedModel = model === 'openai' ? 'openai/gpt-5' : 'google/gemini-3-flash-preview';
+      const selectedModel = model === 'openai' ? 'gpt-5' : 'gemini-3-flash';
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-analysis`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent-full-context`,
         {
           method: 'POST',
           headers: {
@@ -71,9 +61,8 @@ export function useAIAnalysis() {
           },
           body: JSON.stringify({
             messages: allMessages,
-            context,
-            model,
-            files: fileContents,
+            systemContext,
+            model: selectedModel,
           }),
         }
       );
