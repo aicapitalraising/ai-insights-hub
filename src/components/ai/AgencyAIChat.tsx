@@ -122,11 +122,10 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
   const [isRecording, setIsRecording] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [fullPortfolioMode, setFullPortfolioMode] = useState(true);
   const [tokenUsage, setTokenUsage] = useState({ used: 0, system: 0 });
   const [processedIndexes, setProcessedIndexes] = useState<Set<number>>(new Set());
   const [createdTaskCount, setCreatedTaskCount] = useState(0);
-  const { messages, isLoading, sendMessage, sendFullContextMessage, clearMessages } = useAgencyAIAnalysis();
+  const { messages, isLoading, sendMessage, clearMessages } = useAgencyAIAnalysis();
   const { data: meetings = [] } = useMeetings();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
