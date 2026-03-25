@@ -179,72 +179,8 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
     }
   }, [isOpen]);
 
-  // Build context based on selected client filter
-  const buildContext = useCallback(() => {
-    const filteredClients = selectedClientId 
-      ? clients.filter(c => c.id === selectedClientId)
-      : clients;
-    
-    const clientSummaries = filteredClients.map(client => {
-      const metrics = clientMetrics[client.id];
-      if (!metrics) return null;
-      return {
-        name: client.name,
-        status: client.status,
-        adSpend: metrics.totalAdSpend,
-        leads: metrics.totalLeads,
-        calls: metrics.totalCalls,
-        showedCalls: metrics.showedCalls,
-        costPerLead: metrics.costPerLead,
-        costPerCall: metrics.costPerCall,
-        fundedInvestors: metrics.fundedInvestors,
-        fundedDollars: metrics.fundedDollars,
-        costOfCapital: metrics.costOfCapital,
-      };
-    }).filter(Boolean);
 
-    // If single client selected, use their metrics as totals
-    const totals = selectedClientId && clientMetrics[selectedClientId]
-      ? {
-          totalAdSpend: clientMetrics[selectedClientId].totalAdSpend,
-          totalLeads: clientMetrics[selectedClientId].totalLeads,
-          totalCalls: clientMetrics[selectedClientId].totalCalls,
-          showedCalls: clientMetrics[selectedClientId].showedCalls,
-          costPerLead: clientMetrics[selectedClientId].costPerLead,
-          costPerCall: clientMetrics[selectedClientId].costPerCall,
-          fundedInvestors: clientMetrics[selectedClientId].fundedInvestors,
-          fundedDollars: clientMetrics[selectedClientId].fundedDollars,
-          costOfCapital: clientMetrics[selectedClientId].costOfCapital,
-        }
-      : {
-          totalAdSpend: agencyMetrics.totalAdSpend,
-          totalLeads: agencyMetrics.totalLeads,
-          totalCalls: agencyMetrics.totalCalls,
-          showedCalls: agencyMetrics.showedCalls,
-          costPerLead: agencyMetrics.costPerLead,
-          costPerCall: agencyMetrics.costPerCall,
-          fundedInvestors: agencyMetrics.fundedInvestors,
-          fundedDollars: agencyMetrics.fundedDollars,
-          costOfCapital: agencyMetrics.costOfCapital,
-        };
 
-    // Build meeting summaries for AI context
-    const meetingSummaries = recentMeetings.map(m => ({
-      title: m.title,
-      date: m.meeting_date,
-      client: clients.find(c => c.id === m.client_id)?.name || 'Unassigned',
-      summary: m.summary?.slice(0, 500) || null,
-      actionItemsCount: Array.isArray(m.action_items) ? m.action_items.length : 0,
-      duration: m.duration_minutes,
-    }));
-
-    return {
-      agencyTotals: totals,
-      clients: clientSummaries,
-      focusedClient: selectedClient?.name || null,
-      recentMeetings: meetingSummaries,
-    };
-  }, [clients, clientMetrics, agencyMetrics, selectedClientId, selectedClient, recentMeetings]);
 
   const handleSend = async () => {
     if ((!input.trim() && attachments.length === 0) || isLoading) return;
