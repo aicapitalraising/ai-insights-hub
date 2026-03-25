@@ -137,6 +137,32 @@ Deno.serve(async (req) => {
     }
 
     // ========================
+    // COMPOSITE: create_member
+    // ========================
+    if (action === "create_member") {
+      const { member, pod_id } = body;
+      if (!member || !member.name || !member.email) {
+        return jsonResp({ error: "Missing 'member' object with 'name' and 'email'" }, 400);
+      }
+
+      const insertData: Record<string, unknown> = {
+        name: member.name,
+        email: member.email,
+        role: member.role || "member",
+      };
+      if (pod_id) insertData.pod_id = pod_id;
+
+      const { data: createdMember, error: memberError } = await supabase
+        .from("agency_members")
+        .insert(insertData)
+        .select("*, pod:agency_pods(id,name,color)")
+        .single();
+
+      if (memberError) return jsonResp({ error: `Member creation failed: ${memberError.message}` }, 400);
+      return jsonResp({ data: createdMember });
+    }
+
+    // ========================
     // COMPOSITE: create_task
     // ========================
     if (action === "create_task") {
