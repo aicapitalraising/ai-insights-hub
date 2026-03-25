@@ -35,7 +35,7 @@ serve(async (req) => {
     // Paginate through all channels
     do {
       const params = new URLSearchParams({
-        types: "public_channel",
+        types: "public_channel,private_channel",
         limit: "200",
         exclude_archived: "true",
       });
