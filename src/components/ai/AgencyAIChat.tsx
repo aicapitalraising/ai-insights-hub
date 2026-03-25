@@ -464,9 +464,8 @@ export function AgencyAIChat({ clients, clientMetrics, agencyMetrics }: AgencyAI
                     className="text-xs h-auto py-2 px-3 whitespace-normal text-left"
                     onClick={() => {
                       if (!isLoading) {
-                        const context = buildContext();
-                        const legacyModel = model === 'gpt-5' ? 'openai' as const : 'gemini' as const;
-                        sendMessage(q, context, messages, legacyModel);
+                        sendMessage(q, clients, clientMetrics, messages, model, selectedClientId,
+                          (used, system) => setTokenUsage({ used, system }));
                       }
                     }}
                     disabled={isLoading}
