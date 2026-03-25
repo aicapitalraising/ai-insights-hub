@@ -99,18 +99,26 @@ function getClientSyncStatus(client: Client): {
 
 // Get Meta sync status from client settings
 function getMetaSyncStatus(settings: ClientSettings | undefined, client: Client): {
-  status: 'healthy' | 'stale' | 'not_synced';
+  status: 'healthy' | 'stale' | 'not_synced' | 'error';
   lastSyncAt: string | null;
+  error: string | null;
 } {
   const hasMetaAccount = !!client.meta_ad_account_id;
-  if (!hasMetaAccount) return { status: 'not_synced', lastSyncAt: null };
+  if (!hasMetaAccount) return { status: 'not_synced', lastSyncAt: null, error: null };
 
   const lastSync = (settings as any)?.meta_ads_last_sync || null;
-  if (!lastSync) return { status: 'not_synced', lastSyncAt: null };
+  const syncError = (settings as any)?.meta_ads_sync_error || null;
+  
+  // If there's a recorded error, show error state
+  if (syncError) return { status: 'error', lastSyncAt: lastSync, error: syncError };
+  
+  if (!lastSync) return { status: 'not_synced', lastSyncAt: null, error: null };
 
   const hoursSince = (Date.now() - new Date(lastSync).getTime()) / (1000 * 60 * 60);
-  if (hoursSince <= 24) return { status: 'healthy', lastSyncAt: lastSync };
-  return { status: 'stale', lastSyncAt: lastSync };
+  if (hoursSince <= 24) return { status: 'healthy', lastSyncAt: lastSync, error: null };
+  if (hoursSince <= 72) return { status: 'stale', lastSyncAt: lastSync, error: null };
+  // Over 72 hours = effectively an error / very stale
+  return { status: 'error', lastSyncAt: lastSync, error: `Last synced ${Math.floor(hoursSince / 24)} days ago` };
 }
 
 // Compute bottleneck from conversion rates
@@ -665,7 +673,7 @@ function MetaStatusCell({
   clients,
 }: {
   client: Client;
-  metaSync: { status: 'healthy' | 'stale' | 'not_synced'; lastSyncAt: string | null };
+  metaSync: { status: 'healthy' | 'stale' | 'not_synced' | 'error'; lastSyncAt: string | null; error: string | null };
   isDuplicate: boolean;
   clients: Client[];
 }) {
@@ -711,6 +719,28 @@ function MetaStatusCell({
                     <div className="text-muted-foreground mt-0.5">
                       {client.meta_ad_account_id} is also used by: {duplicateWith.join(', ')}
                     </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : metaSync.status === 'error' ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 gap-0.5">
+                    <XCircle className="h-2.5 w-2.5" />
+                    ERR
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="text-xs">
+                    <strong className="text-destructive">Meta Sync Error</strong>
+                    {metaSync.error && <div className="text-muted-foreground mt-0.5">{metaSync.error}</div>}
+                    {metaSync.lastSyncAt && (
+                      <div className="text-muted-foreground mt-0.5">
+                        Last sync: {formatDistanceToNow(new Date(metaSync.lastSyncAt), { addSuffix: true })}
+                      </div>
+                    )}
                   </div>
                 </TooltipContent>
               </Tooltip>

@@ -684,6 +684,7 @@ export type Database = {
           meetgeek_last_sync: string | null
           meetgeek_region: string | null
           meetgeek_webhook_secret: string | null
+          meta_ads_sync_error: string | null
           metric_labels: Json | null
           monthly_ad_spend_target: number | null
           mrr: number | null
@@ -731,6 +732,7 @@ export type Database = {
           meetgeek_last_sync?: string | null
           meetgeek_region?: string | null
           meetgeek_webhook_secret?: string | null
+          meta_ads_sync_error?: string | null
           metric_labels?: Json | null
           monthly_ad_spend_target?: number | null
           mrr?: number | null
@@ -778,6 +780,7 @@ export type Database = {
           meetgeek_last_sync?: string | null
           meetgeek_region?: string | null
           meetgeek_webhook_secret?: string | null
+          meta_ads_sync_error?: string | null
           metric_labels?: Json | null
           monthly_ad_spend_target?: number | null
           mrr?: number | null

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS clients_meta_ad_account_id_unique ON public.clients (meta_ad_account_id) WHERE meta_ad_account_id IS NOT NULL;

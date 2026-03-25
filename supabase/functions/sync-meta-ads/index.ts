@@ -24,14 +24,40 @@ function checkCallBudget(label: string) {
   }
 }
 
+// Throttle: minimum delay between API calls to avoid rate limits
+const THROTTLE_MS = 300; // 300ms between calls ≈ max 3.3 req/s
+let lastCallTime = 0;
+
 async function fetchMeta(url: string, accessToken: string, label = "unknown"): Promise<MetaApiResponse> {
   checkCallBudget(label);
+  
+  // Enforce throttle delay between calls
+  const now = Date.now();
+  const elapsed = now - lastCallTime;
+  if (elapsed < THROTTLE_MS && lastCallTime > 0) {
+    await new Promise(r => setTimeout(r, THROTTLE_MS - elapsed));
+  }
+  lastCallTime = Date.now();
+  
   metaApiCallCount++;
   console.log(`Meta API call #${metaApiCallCount}/${META_API_CALL_LIMIT}: ${label}`);
   const separator = url.includes("?") ? "&" : "?";
   const res = await fetch(`${url}${separator}access_token=${accessToken}`);
   if (!res.ok) {
     const errBody = await res.text();
+    // If rate limited, wait and retry once
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("Retry-After");
+      const waitMs = retryAfter ? parseInt(retryAfter) * 1000 : 60000;
+      console.warn(`Meta API rate limited on ${label}, waiting ${waitMs / 1000}s...`);
+      await new Promise(r => setTimeout(r, waitMs));
+      const retryRes = await fetch(`${url}${separator}access_token=${accessToken}`);
+      if (!retryRes.ok) {
+        const retryErr = await retryRes.text();
+        throw new Error(`Meta API ${retryRes.status} (retry): ${retryErr.substring(0, 500)}`);
+      }
+      return retryRes.json();
+    }
     throw new Error(`Meta API ${res.status}: ${errBody.substring(0, 500)}`);
   }
   return res.json();
@@ -452,8 +478,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Reset API call counter for each request (fixes warm isolate bug)
+  // Reset API call counter and throttle timer for each request (fixes warm isolate bug)
   metaApiCallCount = 0;
+  lastCallTime = 0;
 
   try {
     const { clientId, startDate, endDate } = await req.json();
@@ -851,6 +878,7 @@ Deno.serve(async (req) => {
       meta_ads_last_sync: new Date().toISOString(),
       meta_ads_sync_streak: newStreak,
       meta_ads_last_sync_date: today,
+      meta_ads_sync_error: null, // Clear any previous error on success
     }, { onConflict: "client_id" });
 
     console.log(`Sync complete. Total Meta API calls: ${metaApiCallCount}/${META_API_CALL_LIMIT}`);
@@ -864,6 +892,23 @@ Deno.serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("sync-meta-ads error:", error);
+    
+    // Record sync error in client_settings so dashboard shows red status
+    try {
+      const { clientId } = await req.clone().json().catch(() => ({}));
+      if (clientId) {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const sb = createClient(supabaseUrl, supabaseKey);
+        await sb.from("client_settings").upsert({
+          client_id: clientId,
+          meta_ads_sync_error: error instanceof Error ? error.message : "Unknown error",
+        }, { onConflict: "client_id" });
+      }
+    } catch (settingsErr) {
+      console.error("Failed to record sync error:", settingsErr);
+    }
+    
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
