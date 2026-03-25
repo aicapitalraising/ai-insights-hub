@@ -672,9 +672,327 @@ function ApiCallCard({ call }: { call: ApiCall }) {
   );
 }
 
+interface ClientDirectoryEntry {
+  id: string;
+  name: string;
+  slug?: string;
+  status: string;
+  client_type?: string;
+  ghl_location_id?: string;
+  ghl_api_key?: string;
+  meta_ad_account_id?: string;
+  meta_access_token?: string;
+  business_manager_url?: string;
+  hubspot_portal_id?: string;
+  hubspot_access_token?: string;
+  website_url?: string;
+  logo_url?: string;
+  description?: string;
+  offer_description?: string;
+  product_url?: string;
+  brand_colors?: string[];
+  brand_fonts?: string[];
+  settings?: Record<string, any>;
+  funnelSteps?: { name: string; url: string }[];
+  quizFunnels?: { name: string; slug: string; is_active: boolean }[];
+  kpis?: {
+    totalAdSpend: number;
+    totalLeads: number;
+    totalCalls: number;
+    totalShowed: number;
+    totalFundedInvestors: number;
+    totalFundedDollars: number;
+    cpl: number;
+    costPerCall: number;
+    costPerShow: number;
+    costPerInvestor: number;
+    monthlyAdSpendTarget: number;
+    totalRaiseAmount: number;
+    mrr: number;
+  };
+}
+
+async function fetchClientDirectory(): Promise<ClientDirectoryEntry[]> {
+  const [clientsRes, settingsRes, funnelsRes, quizRes, metricsRes, fundedRes] = await Promise.all([
+    supabase.from('clients').select('id, name, slug, status, client_type, ghl_api_key, ghl_location_id, website_url, business_manager_url, meta_ad_account_id, meta_access_token, logo_url, brand_colors, brand_fonts, description, offer_description, product_url, hubspot_portal_id, hubspot_access_token').order('name'),
+    supabase.from('client_settings').select('client_id, funded_pipeline_id, hubspot_funded_pipeline_id, ads_library_url, tracked_calendar_ids, reconnect_calendar_ids, funded_stage_ids, hubspot_funded_stage_ids, hubspot_committed_stage_ids, slack_channel_id, slack_webhook_url, meetgeek_enabled, meetgeek_api_key, monthly_ad_spend_target, total_raise_amount, mrr, cpl_threshold_yellow, cpl_threshold_red, cost_per_call_threshold_yellow, cost_per_call_threshold_red, cost_per_show_threshold_yellow, cost_per_show_threshold_red, cost_per_investor_threshold_yellow, cost_per_investor_threshold_red'),
+    supabase.from('client_funnel_steps' as any).select('client_id, name, url, sort_order').order('client_id').order('sort_order'),
+    supabase.from('quiz_funnels').select('client_id, name, slug, is_active'),
+    supabase.from('daily_metrics').select('client_id, ad_spend, leads, calls, showed_calls, funded_investors, funded_dollars').gte('date', '2026-01-01'),
+    supabase.from('funded_investors').select('client_id, funded_amount').gte('funded_at', '2026-01-01T00:00:00'),
+  ]);
+
+  const clients = (clientsRes.data || []) as any[];
+  const settings = settingsRes.data || [];
+  const funnels = (funnelsRes.data || []) as any[];
+  const quizzes = quizRes.data || [];
+  const metrics = metricsRes.data || [];
+  const funded = fundedRes.data || [];
+
+  const settingsMap = Object.fromEntries(settings.map((s: any) => [s.client_id, s]));
+  
+  const funnelMap: Record<string, any[]> = {};
+  for (const f of funnels) {
+    if (!funnelMap[f.client_id]) funnelMap[f.client_id] = [];
+    funnelMap[f.client_id].push(f);
+  }
+
+  const quizMap: Record<string, any[]> = {};
+  for (const q of quizzes) {
+    if (!quizMap[q.client_id]) quizMap[q.client_id] = [];
+    quizMap[q.client_id].push(q);
+  }
+
+  // Aggregate metrics per client
+  const metricsMap: Record<string, { adSpend: number; leads: number; calls: number; showed: number; fundedInvestors: number; fundedDollars: number }> = {};
+  for (const m of metrics) {
+    if (!metricsMap[m.client_id]) metricsMap[m.client_id] = { adSpend: 0, leads: 0, calls: 0, showed: 0, fundedInvestors: 0, fundedDollars: 0 };
+    metricsMap[m.client_id].adSpend += Number(m.ad_spend || 0);
+    metricsMap[m.client_id].leads += Number(m.leads || 0);
+    metricsMap[m.client_id].calls += Number(m.calls || 0);
+    metricsMap[m.client_id].showed += Number(m.showed_calls || 0);
+    metricsMap[m.client_id].fundedInvestors += Number(m.funded_investors || 0);
+    metricsMap[m.client_id].fundedDollars += Number(m.funded_dollars || 0);
+  }
+
+  // Also aggregate from funded_investors table for more accuracy
+  const fundedMap: Record<string, { count: number; dollars: number }> = {};
+  for (const f of funded) {
+    if (!fundedMap[f.client_id]) fundedMap[f.client_id] = { count: 0, dollars: 0 };
+    fundedMap[f.client_id].count += 1;
+    fundedMap[f.client_id].dollars += Number(f.funded_amount || 0);
+  }
+
+  return clients.map((c: any) => {
+    const s = settingsMap[c.id];
+    const m = metricsMap[c.id];
+    const fi = fundedMap[c.id];
+    const totalAdSpend = m?.adSpend || 0;
+    const totalLeads = m?.leads || 0;
+    const totalCalls = m?.calls || 0;
+    const totalShowed = m?.showed || 0;
+    const totalFundedInvestors = fi?.count || m?.fundedInvestors || 0;
+    const totalFundedDollars = fi?.dollars || m?.fundedDollars || 0;
+
+    return {
+      ...c,
+      settings: s || null,
+      funnelSteps: funnelMap[c.id] || [],
+      quizFunnels: quizMap[c.id] || [],
+      kpis: {
+        totalAdSpend,
+        totalLeads,
+        totalCalls,
+        totalShowed,
+        totalFundedInvestors,
+        totalFundedDollars,
+        cpl: totalLeads > 0 ? totalAdSpend / totalLeads : 0,
+        costPerCall: totalCalls > 0 ? totalAdSpend / totalCalls : 0,
+        costPerShow: totalShowed > 0 ? totalAdSpend / totalShowed : 0,
+        costPerInvestor: totalFundedInvestors > 0 ? totalAdSpend / totalFundedInvestors : 0,
+        monthlyAdSpendTarget: s?.monthly_ad_spend_target || 0,
+        totalRaiseAmount: s?.total_raise_amount || 0,
+        mrr: s?.mrr || 0,
+      },
+    };
+  });
+}
+
+function buildClientDirectoryText(entries: ClientDirectoryEntry[]): string {
+  const dirLines: string[] = [];
+  dirLines.push('## Client Directory (Master Admin — CONFIDENTIAL)');
+  dirLines.push('');
+  dirLines.push('> Each client entry includes API keys, Meta Ads info, funnel links, and YTD KPIs.');
+  dirLines.push('');
+
+  for (const c of entries) {
+    const s = c.settings;
+    dirLines.push(`### ${c.name} [${c.status}] ${c.client_type ? `(${c.client_type})` : ''}`);
+    dirLines.push(`- **Client ID**: \`${c.id}\``);
+    if (c.slug) dirLines.push(`- **Slug**: ${c.slug}`);
+    
+    // GHL
+    if (c.ghl_location_id) dirLines.push(`- **GHL Location ID**: \`${c.ghl_location_id}\``);
+    if (c.ghl_api_key) dirLines.push(`- **GHL API Key**: \`${c.ghl_api_key}\``);
+    
+    // Meta
+    if (c.meta_ad_account_id) {
+      dirLines.push(`- **Meta Ad Account ID**: \`${c.meta_ad_account_id}\``);
+      dirLines.push(`- **Meta Ads Manager URL**: https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${c.meta_ad_account_id}`);
+    }
+    if (c.meta_access_token) dirLines.push(`- **Meta Access Token**: \`${c.meta_access_token}\``);
+    if (c.business_manager_url) dirLines.push(`- **Business Manager URL**: ${c.business_manager_url}`);
+    
+    // HubSpot
+    if (c.hubspot_portal_id) dirLines.push(`- **HubSpot Portal ID**: \`${c.hubspot_portal_id}\``);
+    if (c.hubspot_access_token) dirLines.push(`- **HubSpot Token**: \`${c.hubspot_access_token}\``);
+    
+    // Brand
+    if (c.website_url) dirLines.push(`- **Website**: ${c.website_url}`);
+    if (c.logo_url) dirLines.push(`- **Logo**: ${c.logo_url}`);
+    if (c.description) dirLines.push(`- **Description**: ${c.description}`);
+    if (c.offer_description) dirLines.push(`- **Offer**: ${c.offer_description}`);
+    if (c.product_url) dirLines.push(`- **Product URL**: ${c.product_url}`);
+    if (c.brand_colors?.length) dirLines.push(`- **Brand Colors**: ${c.brand_colors.join(', ')}`);
+    if (c.brand_fonts?.length) dirLines.push(`- **Brand Fonts**: ${c.brand_fonts.join(', ')}`);
+    
+    // Settings
+    if (s) {
+      if (s.funded_pipeline_id) dirLines.push(`- **GHL Funded Pipeline ID**: \`${s.funded_pipeline_id}\``);
+      if (s.funded_stage_ids?.length) dirLines.push(`- **Funded Stage IDs**: ${JSON.stringify(s.funded_stage_ids)}`);
+      if (s.hubspot_funded_pipeline_id) dirLines.push(`- **HubSpot Funded Pipeline**: \`${s.hubspot_funded_pipeline_id}\``);
+      if (s.hubspot_funded_stage_ids?.length) dirLines.push(`- **HubSpot Funded Stages**: ${JSON.stringify(s.hubspot_funded_stage_ids)}`);
+      if (s.hubspot_committed_stage_ids?.length) dirLines.push(`- **HubSpot Committed Stages**: ${JSON.stringify(s.hubspot_committed_stage_ids)}`);
+      if (s.tracked_calendar_ids?.length) dirLines.push(`- **Tracked Calendar IDs**: ${JSON.stringify(s.tracked_calendar_ids)}`);
+      if (s.reconnect_calendar_ids?.length) dirLines.push(`- **Reconnect Calendar IDs**: ${JSON.stringify(s.reconnect_calendar_ids)}`);
+      if (s.ads_library_url) dirLines.push(`- **Ads Library**: ${s.ads_library_url}`);
+      if (s.slack_channel_id) dirLines.push(`- **Slack Channel**: \`${s.slack_channel_id}\``);
+      if (s.slack_webhook_url) dirLines.push(`- **Slack Webhook**: ${s.slack_webhook_url}`);
+      if (s.meetgeek_enabled) dirLines.push(`- **MeetGeek**: Enabled`);
+    }
+    
+    // Quiz Funnels
+    if (c.quizFunnels?.length) {
+      dirLines.push(`- **Quiz Funnels**:`);
+      for (const q of c.quizFunnels) {
+        const status = q.is_active ? '✅' : '⏸️';
+        const link = q.slug ? `https://report-bloom-magic.lovable.app/quiz/${q.slug}` : 'no slug';
+        dirLines.push(`  - ${status} ${q.name}: ${link}`);
+      }
+    }
+    
+    // Funnel Steps
+    if (c.funnelSteps?.length) {
+      dirLines.push(`- **Funnel Pages**:`);
+      for (const f of c.funnelSteps) {
+        dirLines.push(`  - ${f.name}: ${f.url}`);
+      }
+    }
+
+    // KPIs
+    if (c.kpis) {
+      const k = c.kpis;
+      dirLines.push(`- **YTD KPIs (2026)**:`);
+      dirLines.push(`  - Ad Spend: $${k.totalAdSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      dirLines.push(`  - Leads: ${k.totalLeads.toLocaleString()}`);
+      dirLines.push(`  - Calls: ${k.totalCalls.toLocaleString()}`);
+      dirLines.push(`  - Showed: ${k.totalShowed.toLocaleString()}`);
+      dirLines.push(`  - Funded Investors: ${k.totalFundedInvestors.toLocaleString()}`);
+      dirLines.push(`  - Funded $: $${k.totalFundedDollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      if (k.cpl > 0) dirLines.push(`  - CPL: $${k.cpl.toFixed(2)}`);
+      if (k.costPerCall > 0) dirLines.push(`  - Cost/Call: $${k.costPerCall.toFixed(2)}`);
+      if (k.costPerShow > 0) dirLines.push(`  - Cost/Show: $${k.costPerShow.toFixed(2)}`);
+      if (k.costPerInvestor > 0) dirLines.push(`  - Cost/Investor: $${k.costPerInvestor.toFixed(2)}`);
+      if (k.monthlyAdSpendTarget > 0) dirLines.push(`  - Monthly Ad Spend Target: $${k.monthlyAdSpendTarget.toLocaleString()}`);
+      if (k.totalRaiseAmount > 0) dirLines.push(`  - Total Raise Amount: $${k.totalRaiseAmount.toLocaleString()}`);
+      if (k.mrr > 0) dirLines.push(`  - MRR: $${k.mrr.toLocaleString()}`);
+    }
+
+    // KPI Thresholds
+    if (s) {
+      const hasThresholds = s.cpl_threshold_yellow || s.cost_per_call_threshold_yellow;
+      if (hasThresholds) {
+        dirLines.push(`  - **KPI Thresholds**: CPL ⚠️$${s.cpl_threshold_yellow} 🔴$${s.cpl_threshold_red} | Cost/Call ⚠️$${s.cost_per_call_threshold_yellow} 🔴$${s.cost_per_call_threshold_red} | Cost/Show ⚠️$${s.cost_per_show_threshold_yellow} 🔴$${s.cost_per_show_threshold_red} | Cost/Investor ⚠️$${s.cost_per_investor_threshold_yellow} 🔴$${s.cost_per_investor_threshold_red}`);
+      }
+    }
+
+    dirLines.push('');
+  }
+  
+  return dirLines.join('\n');
+}
+
+function ClientDirectorySection({ entries, loading }: { entries: ClientDirectoryEntry[]; loading: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="border-2 border-border rounded-md p-4 flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading client directory...
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-2 border-border rounded-md">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="flex items-center gap-2 w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors">
+          {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+          <h4 className="font-medium text-sm">📇 Live Client Directory</h4>
+          <Badge variant="secondary" className="text-[10px]">{entries.length} clients</Badge>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="divide-y divide-border/50 max-h-[600px] overflow-y-auto">
+            {entries.map((c) => (
+              <div key={c.id} className="px-4 py-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">{c.name}</span>
+                  <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">{c.status}</Badge>
+                  {c.client_type && <Badge variant="outline" className="text-[10px]">{c.client_type}</Badge>}
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                  {c.meta_ad_account_id && (
+                    <span>Meta: <code className="text-foreground">{c.meta_ad_account_id}</code></span>
+                  )}
+                  {c.business_manager_url && (
+                    <a href={c.business_manager_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                      Ads Manager ↗
+                    </a>
+                  )}
+                  {c.meta_ad_account_id && !c.business_manager_url && (
+                    <a href={`https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${c.meta_ad_account_id}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                      Ads Manager ↗
+                    </a>
+                  )}
+                  {c.ghl_location_id && <span>GHL: <code className="text-foreground">{c.ghl_location_id}</code></span>}
+                  {c.hubspot_portal_id && <span>HubSpot: <code className="text-foreground">{c.hubspot_portal_id}</code></span>}
+                  {c.website_url && (
+                    <a href={c.website_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                      {c.website_url.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                </div>
+                {c.quizFunnels && c.quizFunnels.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Quiz Funnels: {c.quizFunnels.map(q => (
+                      <span key={q.slug} className="mr-2">
+                        {q.is_active ? '✅' : '⏸️'} {q.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {c.kpis && c.kpis.totalAdSpend > 0 && (
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <span>Spend: <strong>${c.kpis.totalAdSpend.toLocaleString('en-US', { maximumFractionDigits: 0 })}</strong></span>
+                    <span>Leads: <strong>{c.kpis.totalLeads}</strong></span>
+                    <span>Calls: <strong>{c.kpis.totalCalls}</strong></span>
+                    <span>Showed: <strong>{c.kpis.totalShowed}</strong></span>
+                    <span>Funded: <strong>{c.kpis.totalFundedInvestors}</strong></span>
+                    {c.kpis.cpl > 0 && <span>CPL: <strong>${c.kpis.cpl.toFixed(0)}</strong></span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
+
 export function ApiReferenceTab() {
   const [copiedEndpoint, setCopiedEndpoint] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
+  const [clientDirectory, setClientDirectory] = useState<ClientDirectoryEntry[]>([]);
+  const [loadingDirectory, setLoadingDirectory] = useState(true);
+
+  useEffect(() => {
+    fetchClientDirectory().then(entries => {
+      setClientDirectory(entries);
+      setLoadingDirectory(false);
+    }).catch(() => setLoadingDirectory(false));
+  }, []);
 
   const handleCopyEndpoint = () => {
     navigator.clipboard.writeText(API_ENDPOINT);
@@ -684,95 +1002,18 @@ export function ApiReferenceTab() {
   };
 
   const handleCopyAll = async () => {
-    let clientDirectory = '';
-    try {
-      const { supabase } = await import('@/integrations/supabase/db');
-
-      const [clientsRes, settingsRes, funnelsRes] = await Promise.all([
-        supabase.from('clients').select('id, name, slug, status, client_type, ghl_api_key, ghl_location_id, website_url, business_manager_url, meta_ad_account_id, meta_access_token, logo_url, brand_colors, brand_fonts, description, offer_description, product_url, hubspot_portal_id, hubspot_access_token').order('name'),
-        supabase.from('client_settings').select('client_id, funded_pipeline_id, hubspot_funded_pipeline_id, ads_library_url, tracked_calendar_ids, reconnect_calendar_ids, funded_stage_ids, hubspot_funded_stage_ids, hubspot_committed_stage_ids, slack_channel_id, slack_webhook_url, meetgeek_enabled, meetgeek_api_key'),
-        supabase.from('client_funnel_steps').select('client_id, name, url, sort_order').order('client_id').order('sort_order'),
-      ]);
-
-      const clients = clientsRes.data || [];
-      const settings = settingsRes.data || [];
-      const funnels = funnelsRes.data || [];
-
-      const settingsMap = Object.fromEntries(settings.map(s => [s.client_id, s]));
-      const funnelMap: Record<string, typeof funnels> = {};
-      for (const f of funnels) {
-        if (!funnelMap[f.client_id]) funnelMap[f.client_id] = [];
-        funnelMap[f.client_id].push(f);
+    let entries = clientDirectory;
+    if (entries.length === 0) {
+      try {
+        entries = await fetchClientDirectory();
+      } catch (err) {
+        console.error('Failed to fetch client data for copy:', err);
       }
-
-      const dirLines: string[] = [];
-      dirLines.push('## Client Directory (Master Admin — CONFIDENTIAL)');
-      dirLines.push('');
-      dirLines.push('> Each client entry includes all API keys, GHL locations, Meta tokens, and pipeline IDs needed for integration.');
-      dirLines.push('');
-
-      for (const c of clients) {
-        const s = settingsMap[c.id];
-        dirLines.push(`### ${c.name} [${c.status}] ${c.client_type ? `(${c.client_type})` : ''}`);
-        dirLines.push(`- **Client ID**: \`${c.id}\``);
-        if (c.slug) dirLines.push(`- **Slug**: ${c.slug}`);
-        
-        // GHL
-        if (c.ghl_location_id) dirLines.push(`- **GHL Location ID**: \`${c.ghl_location_id}\``);
-        if (c.ghl_api_key) dirLines.push(`- **GHL API Key**: \`${c.ghl_api_key}\``);
-        
-        // Meta
-        if (c.meta_ad_account_id) dirLines.push(`- **Meta Ad Account ID**: \`${c.meta_ad_account_id}\``);
-        if (c.meta_access_token) {
-          dirLines.push(`- **Meta Access Token**: \`${c.meta_access_token}\``);
-        }
-        if (c.business_manager_url) dirLines.push(`- **Ads Manager URL**: ${c.business_manager_url}`);
-        
-        // HubSpot
-        if (c.hubspot_portal_id) dirLines.push(`- **HubSpot Portal ID**: \`${c.hubspot_portal_id}\``);
-        if (c.hubspot_access_token) {
-          dirLines.push(`- **HubSpot Token**: \`${c.hubspot_access_token}\``);
-        }
-        
-        // Brand
-        if (c.website_url) dirLines.push(`- **Website**: ${c.website_url}`);
-        if (c.logo_url) dirLines.push(`- **Logo**: ${c.logo_url}`);
-        if (c.description) dirLines.push(`- **Description**: ${c.description}`);
-        if (c.offer_description) dirLines.push(`- **Offer**: ${c.offer_description}`);
-        if (c.product_url) dirLines.push(`- **Product URL**: ${c.product_url}`);
-        if (c.brand_colors?.length) dirLines.push(`- **Brand Colors**: ${c.brand_colors.join(', ')}`);
-        if (c.brand_fonts?.length) dirLines.push(`- **Brand Fonts**: ${c.brand_fonts.join(', ')}`);
-        
-        // Settings
-        if (s) {
-          if (s.funded_pipeline_id) dirLines.push(`- **GHL Funded Pipeline ID**: \`${s.funded_pipeline_id}\``);
-          if (s.funded_stage_ids?.length) dirLines.push(`- **Funded Stage IDs**: ${JSON.stringify(s.funded_stage_ids)}`);
-          if (s.hubspot_funded_pipeline_id) dirLines.push(`- **HubSpot Funded Pipeline**: \`${s.hubspot_funded_pipeline_id}\``);
-          if (s.hubspot_funded_stage_ids?.length) dirLines.push(`- **HubSpot Funded Stages**: ${JSON.stringify(s.hubspot_funded_stage_ids)}`);
-          if (s.hubspot_committed_stage_ids?.length) dirLines.push(`- **HubSpot Committed Stages**: ${JSON.stringify(s.hubspot_committed_stage_ids)}`);
-          if (s.tracked_calendar_ids?.length) dirLines.push(`- **Tracked Calendar IDs**: ${JSON.stringify(s.tracked_calendar_ids)}`);
-          if (s.reconnect_calendar_ids?.length) dirLines.push(`- **Reconnect Calendar IDs**: ${JSON.stringify(s.reconnect_calendar_ids)}`);
-          if (s.ads_library_url) dirLines.push(`- **Ads Library**: ${s.ads_library_url}`);
-          if (s.slack_channel_id) dirLines.push(`- **Slack Channel**: \`${s.slack_channel_id}\``);
-          if (s.slack_webhook_url) dirLines.push(`- **Slack Webhook**: ${s.slack_webhook_url}`);
-          if (s.meetgeek_enabled) dirLines.push(`- **MeetGeek**: Enabled`);
-        }
-        
-        const clientFunnels = funnelMap[c.id];
-        if (clientFunnels?.length) {
-          dirLines.push(`- **Funnel Pages**:`);
-          for (const f of clientFunnels) {
-            dirLines.push(`  - ${f.name}: ${f.url}`);
-          }
-        }
-        dirLines.push('');
-      }
-      
-      clientDirectory = dirLines.join('\n');
-    } catch (err) {
-      console.error('Failed to fetch client data for copy:', err);
-      clientDirectory = '## Client Directory\n(Failed to load — try again)\n';
     }
+    
+    const clientDirectoryText = entries.length > 0
+      ? buildClientDirectoryText(entries)
+      : '## Client Directory\n(Failed to load — try again)\n';
 
     const lines: string[] = [];
     lines.push('# OpenClaw / Jarvis API Reference');
@@ -827,7 +1068,7 @@ export function ApiReferenceTab() {
     lines.push('');
 
     // Client directory with all keys
-    lines.push(clientDirectory);
+    lines.push(clientDirectoryText);
 
     for (const section of API_SECTIONS) {
       lines.push(`## ${section.title}${section.badge ? ` [${section.badge}]` : ''}`);
@@ -865,7 +1106,7 @@ export function ApiReferenceTab() {
 
     navigator.clipboard.writeText(lines.join('\n'));
     setCopiedAll(true);
-    toast.success('Full API reference copied to clipboard');
+    toast.success('Full API reference with client directory copied to clipboard');
     setTimeout(() => setCopiedAll(false), 3000);
   };
 
@@ -875,13 +1116,16 @@ export function ApiReferenceTab() {
       <div className="flex items-center justify-between border-2 border-primary/30 bg-primary/5 rounded-md p-3">
         <div>
           <h4 className="font-medium text-sm">Full API Documentation</h4>
-          <p className="text-xs text-muted-foreground">Copy the entire API reference to paste into OpenClaw</p>
+          <p className="text-xs text-muted-foreground">Copy the entire API reference with live client directory, funnel links, Meta Ads info & KPIs</p>
         </div>
         <Button variant="default" size="sm" onClick={handleCopyAll} className="shrink-0">
           {copiedAll ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
           {copiedAll ? 'Copied!' : 'Copy All'}
         </Button>
       </div>
+
+      {/* Live Client Directory */}
+      <ClientDirectorySection entries={clientDirectory} loading={loadingDirectory} />
 
       {/* Endpoint */}
       <div className="border-2 border-border p-4 space-y-2">
