@@ -892,6 +892,23 @@ Deno.serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("sync-meta-ads error:", error);
+    
+    // Record sync error in client_settings so dashboard shows red status
+    try {
+      const { clientId } = await req.clone().json().catch(() => ({}));
+      if (clientId) {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const sb = createClient(supabaseUrl, supabaseKey);
+        await sb.from("client_settings").upsert({
+          client_id: clientId,
+          meta_ads_sync_error: error instanceof Error ? error.message : "Unknown error",
+        }, { onConflict: "client_id" });
+      }
+    } catch (settingsErr) {
+      console.error("Failed to record sync error:", settingsErr);
+    }
+    
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
