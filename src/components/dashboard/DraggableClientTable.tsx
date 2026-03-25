@@ -99,18 +99,26 @@ function getClientSyncStatus(client: Client): {
 
 // Get Meta sync status from client settings
 function getMetaSyncStatus(settings: ClientSettings | undefined, client: Client): {
-  status: 'healthy' | 'stale' | 'not_synced';
+  status: 'healthy' | 'stale' | 'not_synced' | 'error';
   lastSyncAt: string | null;
+  error: string | null;
 } {
   const hasMetaAccount = !!client.meta_ad_account_id;
-  if (!hasMetaAccount) return { status: 'not_synced', lastSyncAt: null };
+  if (!hasMetaAccount) return { status: 'not_synced', lastSyncAt: null, error: null };
 
   const lastSync = (settings as any)?.meta_ads_last_sync || null;
-  if (!lastSync) return { status: 'not_synced', lastSyncAt: null };
+  const syncError = (settings as any)?.meta_ads_sync_error || null;
+  
+  // If there's a recorded error, show error state
+  if (syncError) return { status: 'error', lastSyncAt: lastSync, error: syncError };
+  
+  if (!lastSync) return { status: 'not_synced', lastSyncAt: null, error: null };
 
   const hoursSince = (Date.now() - new Date(lastSync).getTime()) / (1000 * 60 * 60);
-  if (hoursSince <= 24) return { status: 'healthy', lastSyncAt: lastSync };
-  return { status: 'stale', lastSyncAt: lastSync };
+  if (hoursSince <= 24) return { status: 'healthy', lastSyncAt: lastSync, error: null };
+  if (hoursSince <= 72) return { status: 'stale', lastSyncAt: lastSync, error: null };
+  // Over 72 hours = effectively an error / very stale
+  return { status: 'error', lastSyncAt: lastSync, error: `Last synced ${Math.floor(hoursSince / 24)} days ago` };
 }
 
 // Compute bottleneck from conversion rates
