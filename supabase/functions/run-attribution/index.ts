@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabase = createClient(Deno.env.get("ORIGINAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!, Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const dateStart = startDate ? `${startDate}T00:00:00.000Z` : null;
     const dateEnd = endDate ? `${endDate}T23:59:59.999Z` : null;
