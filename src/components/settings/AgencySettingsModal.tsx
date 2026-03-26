@@ -19,6 +19,12 @@ import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
 import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2 } from 'lucide-react';
 import { ApiReferenceTab } from './ApiReferenceTab';
+import DatabaseView from '@/pages/DatabaseView';
+import SpamBlacklist from '@/pages/SpamBlacklist';
+import { AgencyBillingTab } from '@/components/billing/AgencyBillingTab';
+import { DataAccuracyAuditPanel } from '@/components/dashboard/DataAccuracyAuditPanel';
+import { Shield, Receipt, ShieldAlert, Database as DatabaseIcon } from 'lucide-react';
+import { useClients } from '@/hooks/useClients';
 
 const OPENAI_MODELS = [
   { value: 'gpt-5', label: 'GPT-5' },
