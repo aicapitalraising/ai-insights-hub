@@ -232,6 +232,48 @@ export type Database = {
           },
         ]
       }
+      assets: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          name: string | null
+          project_id: string | null
+          public_url: string | null
+          status: string
+          storage_path: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          project_id?: string | null
+          public_url?: string | null
+          status?: string
+          storage_path?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          project_id?: string | null
+          public_url?: string | null
+          status?: string
+          storage_path?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       avatar_looks: {
         Row: {
           angle: string | null
@@ -1424,6 +1466,42 @@ export type Database = {
           },
         ]
       }
+      projects: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          offer_description: string | null
+          settings: Json
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          offer_description?: string | null
+          settings?: Json
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          offer_description?: string | null
+          settings?: Json
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       quiz_funnels: {
         Row: {
           badge_text: string | null
@@ -1755,6 +1833,50 @@ export type Database = {
           viral_hashtags?: Json | null
         }
         Relationships: []
+      }
+      scripts: {
+        Row: {
+          content: string
+          created_at: string
+          duration_seconds: number | null
+          framework: string | null
+          hook: string | null
+          id: string
+          project_id: string
+          selected: boolean
+          title: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          duration_seconds?: number | null
+          framework?: string | null
+          hook?: string | null
+          id?: string
+          project_id: string
+          selected?: boolean
+          title?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          duration_seconds?: number | null
+          framework?: string | null
+          hook?: string | null
+          id?: string
+          project_id?: string
+          selected?: boolean
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scripts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       slack_activity_log: {
         Row: {
