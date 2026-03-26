@@ -35,15 +35,24 @@ const CHANNEL_TYPES = [
 export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSectionProps) {
   const { data: mappings = [], isLoading } = useSlackChannelMappings(clientId);
   const { data: activityLog = [] } = useSlackActivityLog(clientId);
-  const { data: slackChannels = [], isLoading: loadingChannels } = useSlackChannels();
+  const { data: slackChannels = [], isLoading: loadingChannels, isFetching: fetchingChannels } = useSlackChannels();
   const addChannel = useAddSlackChannel();
   const updateChannel = useUpdateSlackChannel();
   const removeChannel = useRemoveSlackChannel();
   const syncChannels = useSyncSlackChannels();
+  const queryClient = useQueryClient();
 
   const [selectedChannelId, setSelectedChannelId] = useState('');
   const [newChannelType, setNewChannelType] = useState('general');
   const [showActivity, setShowActivity] = useState(false);
+  const [isResyncing, setIsResyncing] = useState(false);
+
+  const handleResyncChannels = async () => {
+    setIsResyncing(true);
+    await queryClient.invalidateQueries({ queryKey: ['slack-channels'] });
+    toast.success('Channel list refreshed from Slack');
+    setIsResyncing(false);
+  };
 
   // Filter out already-mapped channels
   const mappedIds = new Set(mappings.map(m => m.channel_id));
