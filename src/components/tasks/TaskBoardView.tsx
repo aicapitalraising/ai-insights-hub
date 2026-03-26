@@ -15,6 +15,7 @@ import {
   Bell,
   Maximize2,
   Minimize2,
+  FileText,
 } from 'lucide-react';
 import { useAllTasks, Task } from '@/hooks/useTasks';
 import { useClients, Client } from '@/hooks/useClients';
@@ -28,6 +29,7 @@ import { CreateTaskModal } from './CreateTaskModal';
 import { TaskHistoryTab } from './TaskHistoryTab';
 import { NotificationsTab, useNotifications } from './NotificationsTab';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
+import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 
 interface TaskBoardViewProps {
   clientId?: string;
@@ -44,6 +46,7 @@ export function TaskBoardView({ clientId, onClose, isPublicView = false }: TaskB
   const { data: notifications = [] } = useNotifications(currentMember?.id);
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.is_read).length : 0;
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   // Deep-link: if ?task= is present, ensure we're on kanban view so KanbanBoard picks it up
@@ -157,6 +160,12 @@ export function TaskBoardView({ clientId, onClose, isPublicView = false }: TaskB
             >
               {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
+            {!isPublicView && clientId && (
+              <Button size="sm" variant="outline" onClick={() => setShowTemplate(true)}>
+                <FileText className="h-4 w-4 mr-1" />
+                Apply Template
+              </Button>
+            )}
             <Button size="sm" onClick={() => setShowCreateTask(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add Task
@@ -190,6 +199,15 @@ export function TaskBoardView({ clientId, onClose, isPublicView = false }: TaskB
         defaultClientId={clientId}
         isPublicView={isPublicView}
       />
+
+      {clientId && (
+        <ApplyTemplateDialog
+          open={showTemplate}
+          onOpenChange={setShowTemplate}
+          clientId={clientId}
+          clientName={filteredClients.find(c => c.id === clientId)?.name || 'Client'}
+        />
+      )}
     </Card>
   );
 }
