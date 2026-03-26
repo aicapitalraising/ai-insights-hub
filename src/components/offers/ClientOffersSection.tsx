@@ -33,11 +33,19 @@ import {
 import { Plus, FileText, Image, File, Trash2, Download, ExternalLink, Upload, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { OfferAssetHub } from './OfferAssetHub';
 
 interface ClientOffersSectionProps {
   clientId: string;
   clientName: string;
   isPublicView?: boolean;
+  brandColors?: string[] | null;
+  brandFonts?: string[] | null;
+  clientDescription?: string | null;
+  offerDescription?: string | null;
+  websiteUrl?: string | null;
+  industry?: string | null;
+  clientType?: string | null;
 }
 
 export function ClientOffersSection({ clientId, clientName, isPublicView = false }: ClientOffersSectionProps) {
