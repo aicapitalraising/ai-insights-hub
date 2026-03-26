@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/db';
 import type { StaticBatchConfig, GeneratedAd, AdStyle, Client } from '@/types';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 
 interface UseStaticBatchGenerationOptions {
@@ -98,7 +98,7 @@ export function useStaticBatchGeneration({
 
       try {
         // Call the edge function with Nano Banana Pro
-        const { data, error } = await supabase.functions.invoke('generate-static-ad', {
+        const { data, error } = await invokeCloudFunction('generate-static-ad', {
           body: {
             prompt: style.prompt_template,
             stylePrompt: style.prompt_template,
