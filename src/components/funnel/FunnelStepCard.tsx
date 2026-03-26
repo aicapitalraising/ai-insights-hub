@@ -163,7 +163,7 @@ export function FunnelStepCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={runSpeedTest}
+              onClick={() => runSpeedTest(false)}
               disabled={speedTestLoading}
               className="h-7 px-2 text-xs"
               title="Speed Test"
