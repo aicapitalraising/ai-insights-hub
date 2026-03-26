@@ -1443,6 +1443,36 @@ export type Database = {
           },
         ]
       }
+      pagespeed_cache: {
+        Row: {
+          fetched_at: string
+          id: string
+          metrics: Json | null
+          performance_score: number | null
+          step_id: string
+          strategy: string
+          url: string
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          metrics?: Json | null
+          performance_score?: number | null
+          step_id: string
+          strategy?: string
+          url: string
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          metrics?: Json | null
+          performance_score?: number | null
+          step_id?: string
+          strategy?: string
+          url?: string
+        }
+        Relationships: []
+      }
       pending_meeting_tasks: {
         Row: {
           assigned_to: string | null

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,15 +7,15 @@ const corsHeaders = {
 };
 
 const PAGESPEED_API = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
+const CACHE_TTL_HOURS = 24;
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { url, strategy = 'mobile' } = await req.json();
+    const { url, strategy = 'mobile', stepId, forceRefresh = false } = await req.json();
 
     if (!url) {
       return new Response(
@@ -23,10 +24,43 @@ serve(async (req) => {
       );
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Check cache if stepId provided and not forcing refresh
+    if (stepId && !forceRefresh) {
+      const { data: cached } = await supabase
+        .from('pagespeed_cache')
+        .select('*')
+        .eq('step_id', stepId)
+        .eq('strategy', strategy)
+        .single();
+
+      if (cached) {
+        const fetchedAt = new Date(cached.fetched_at).getTime();
+        const now = Date.now();
+        const ageHours = (now - fetchedAt) / (1000 * 60 * 60);
+
+        if (ageHours < CACHE_TTL_HOURS) {
+          console.log(`Returning cached PageSpeed result for step ${stepId} (${ageHours.toFixed(1)}h old)`);
+          return new Response(
+            JSON.stringify({
+              performanceScore: cached.performance_score,
+              metrics: cached.metrics,
+              cached: true,
+              fetchedAt: cached.fetched_at,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     console.log(`Running PageSpeed test for: ${url} (strategy: ${strategy})`);
 
     const apiUrl = `${PAGESPEED_API}?url=${encodeURIComponent(url)}&strategy=${strategy}&category=performance`;
-    
+
     let response: Response | null = null;
     const maxRetries = 4;
     let delay = 2000;
@@ -40,7 +74,7 @@ serve(async (req) => {
       }
       break;
     }
-    
+
     if (!response || !response.ok) {
       const errorText = response ? await response.text() : 'No response';
       console.error('PageSpeed API error:', errorText);
@@ -48,30 +82,40 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-
-    // Extract key metrics from Lighthouse results
     const lighthouse = data.lighthouseResult;
-    
+
     if (!lighthouse || !lighthouse.categories || !lighthouse.audits) {
       throw new Error('Invalid response from PageSpeed API');
     }
 
-    const result = {
-      performanceScore: (lighthouse.categories.performance?.score || 0) * 100,
-      metrics: {
-        firstContentfulPaint: lighthouse.audits['first-contentful-paint']?.displayValue || 'N/A',
-        speedIndex: lighthouse.audits['speed-index']?.displayValue || 'N/A',
-        largestContentfulPaint: lighthouse.audits['largest-contentful-paint']?.displayValue || 'N/A',
-        timeToInteractive: lighthouse.audits['interactive']?.displayValue || 'N/A',
-        totalBlockingTime: lighthouse.audits['total-blocking-time']?.displayValue || 'N/A',
-        cumulativeLayoutShift: lighthouse.audits['cumulative-layout-shift']?.displayValue || 'N/A',
-      }
+    const metrics = {
+      firstContentfulPaint: lighthouse.audits['first-contentful-paint']?.displayValue || 'N/A',
+      speedIndex: lighthouse.audits['speed-index']?.displayValue || 'N/A',
+      largestContentfulPaint: lighthouse.audits['largest-contentful-paint']?.displayValue || 'N/A',
+      timeToInteractive: lighthouse.audits['interactive']?.displayValue || 'N/A',
+      totalBlockingTime: lighthouse.audits['total-blocking-time']?.displayValue || 'N/A',
+      cumulativeLayoutShift: lighthouse.audits['cumulative-layout-shift']?.displayValue || 'N/A',
     };
 
-    console.log(`PageSpeed test complete. Score: ${result.performanceScore}`);
+    const performanceScore = (lighthouse.categories.performance?.score || 0) * 100;
+    const fetchedAt = new Date().toISOString();
+
+    // Store in cache if stepId provided
+    if (stepId) {
+      await supabase.from('pagespeed_cache').upsert({
+        step_id: stepId,
+        strategy,
+        url,
+        performance_score: performanceScore,
+        metrics,
+        fetched_at: fetchedAt,
+      }, { onConflict: 'step_id,strategy' });
+    }
+
+    console.log(`PageSpeed test complete. Score: ${performanceScore}`);
 
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({ performanceScore, metrics, cached: false, fetchedAt }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {

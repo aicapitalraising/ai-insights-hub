@@ -50,6 +50,8 @@ interface PageSpeedResults {
     totalBlockingTime: string;
     cumulativeLayoutShift: string;
   };
+  cached?: boolean;
+  fetchedAt?: string;
 }
 
 export function FunnelStepCard({
@@ -74,12 +76,12 @@ export function FunnelStepCard({
   
   const hasVariants = variants.length > 0;
 
-  const runSpeedTest = async () => {
+  const runSpeedTest = async (forceRefresh = false) => {
     setSpeedTestLoading(true);
     try {
       const strategy = deviceType === 'desktop' ? 'desktop' : 'mobile';
       const { data, error } = await supabase.functions.invoke('pagespeed-test', {
-        body: { url: step.url, strategy }
+        body: { url: step.url, strategy, stepId: step.id, forceRefresh }
       });
       
       if (error) throw error;
@@ -163,7 +165,7 @@ export function FunnelStepCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={runSpeedTest}
+              onClick={() => runSpeedTest(false)}
               disabled={speedTestLoading}
               className="h-7 px-2 text-xs"
               title="Speed Test"
@@ -261,6 +263,8 @@ export function FunnelStepCard({
         results={speedResults}
         url={step.url}
         strategy={deviceType === 'desktop' ? 'desktop' : 'mobile'}
+        onRefresh={() => runSpeedTest(true)}
+        refreshing={speedTestLoading}
       />
 
       <PixelVerificationModal
