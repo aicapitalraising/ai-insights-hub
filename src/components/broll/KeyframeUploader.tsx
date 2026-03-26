@@ -32,15 +32,22 @@ function FrameDropZone({
 
   const handleFileSelect = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error('Image must be under 10MB'); return; }
+    if (file.size > 10 * 1024 * 1024 * 1024) { toast.error('File must be under 10GB'); return; }
     setIsUploading(true);
     try {
       const ext = file.name.split('.').pop() || 'png';
       const path = `broll-keyframes/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from('assets').upload(path, file, { contentType: file.type, upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from('assets').getPublicUrl(path);
-      onImageChange(data.publicUrl);
+      let publicUrl: string;
+      if (file.size > 5 * 1024 * 1024) {
+        const { uploadWithProgress } = await import('@/lib/uploadWithProgress');
+        publicUrl = await uploadWithProgress('assets', path, file);
+      } else {
+        const { error } = await supabase.storage.from('assets').upload(path, file, { contentType: file.type, upsert: false });
+        if (error) throw error;
+        const { data } = supabase.storage.from('assets').getPublicUrl(path);
+        publicUrl = data.publicUrl;
+      }
+      onImageChange(publicUrl);
       toast.success(`${label} uploaded`);
     } catch (err: any) {
       console.error('Upload error:', err);
