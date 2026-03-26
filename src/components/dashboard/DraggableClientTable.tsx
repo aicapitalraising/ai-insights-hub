@@ -1,7 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/db';
 import { calculateClientRevenue } from '@/hooks/useClientMRR';
 import { useDateFilter } from '@/contexts/DateFilterContext';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, subDays, format } from 'date-fns';
 import { Client, useUpdateClient } from '@/hooks/useClients';
 import { AggregatedMetrics } from '@/hooks/useMetrics';
 import { KPIThresholds, ClientSettings } from '@/hooks/useClientSettings';
@@ -166,6 +168,36 @@ export function DraggableClientTable({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: '', direction: null });
   const updateClient = useUpdateClient();
+
+  // Fetch yesterday's metrics to flag inactive clients
+  const yesterday = useMemo(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'), []);
+  const { data: yesterdayMetrics = [] } = useQuery({
+    queryKey: ['yesterday-metrics', yesterday],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('daily_metrics')
+        .select('client_id, ad_spend, leads')
+        .eq('date', yesterday);
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const inactiveClientIds = useMemo(() => {
+    const set = new Set<string>();
+    const clientIdsInTable = new Set(clients.map(c => c.id));
+    // Clients with no row at all for yesterday are also inactive
+    const clientsWithData = new Set(yesterdayMetrics.map(m => m.client_id));
+    clientIdsInTable.forEach(id => {
+      if (!clientsWithData.has(id)) set.add(id);
+    });
+    yesterdayMetrics.forEach(m => {
+      if ((m.ad_spend ?? 0) === 0 && (m.leads ?? 0) === 0) {
+        set.add(m.client_id);
+      }
+    });
+    return set;
+  }, [yesterdayMetrics, clients]);
 
   // Detect duplicate Meta ad account IDs
   const duplicateMetaAccounts = useMemo(() => {
@@ -391,15 +423,20 @@ export function DraggableClientTable({
               const t = thresholds[client.id] || {};
               const syncInfo = getClientSyncStatus(client);
               const syncBorderStyle = getSyncBorderStyle(syncInfo.status);
+              const isInactive = inactiveClientIds.has(client.id);
 
               return (
                 <TooltipProvider key={client.id}>
                   <TableRow
                     className={cn(
-                      "cursor-pointer hover:bg-muted/50 border-b h-7",
+                      "cursor-pointer hover:bg-muted/50 border-b h-7 relative",
                       draggedId === client.id && "opacity-50",
-                      syncBorderStyle
+                      syncBorderStyle,
+                      isInactive && "opacity-60"
                     )}
+                    style={isInactive ? {
+                      backgroundImage: 'linear-gradient(transparent calc(50% - 0.5px), hsl(var(--destructive) / 0.35) calc(50% - 0.5px), hsl(var(--destructive) / 0.35) calc(50% + 0.5px), transparent calc(50% + 0.5px))',
+                    } : undefined}
                     draggable
                     onDragStart={(e) => handleDragStart(e, client.id)}
                     onDragOver={handleDragOver}
@@ -456,7 +493,19 @@ export function DraggableClientTable({
 
                     {/* Client name */}
                     <TableCell className="font-medium text-[11px] sticky left-7 bg-card z-10 py-0 px-1 truncate max-w-[120px]">
-                      {client.name}
+                      <span className="flex items-center gap-1">
+                        {client.name}
+                        {isInactive && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="text-xs">
+                              $0 ad spend &amp; 0 leads yesterday
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </span>
                     </TableCell>
 
                     {/* Status */}
