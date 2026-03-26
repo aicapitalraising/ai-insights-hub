@@ -234,6 +234,103 @@ export function CreativesTab() {
     setSelectedIds(new Set());
   };
 
+  // Single upload handler
+  const handleSingleUpload = async () => {
+    if (!newCreative.title || !newCreative.client_id) {
+      toast.error('Please select a client and enter a title');
+      return;
+    }
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      let fileUrl = null;
+      let aspectRatio = null;
+      if (newCreative.file && (newCreative.type === 'image' || newCreative.type === 'video')) {
+        aspectRatio = await detectAspectRatio(newCreative.file);
+        fileUrl = await uploadCreativeFile(newCreative.file, newCreative.client_id, (pct) => setUploadProgress(pct));
+      }
+      const clientName = clientMap[newCreative.client_id] || '';
+      await createCreative.mutateAsync({
+        client_id: newCreative.client_id,
+        client_name: clientName,
+        title: newCreative.title,
+        type: newCreative.type,
+        platform: newCreative.platform,
+        file_url: fileUrl,
+        headline: newCreative.headline || null,
+        body_copy: newCreative.body_copy || null,
+        cta_text: newCreative.cta_text || null,
+        status: 'draft',
+        comments: [],
+        aspect_ratio: aspectRatio,
+        isAgencyUpload: true,
+      });
+      toast.success('Creative uploaded successfully');
+      setUploadOpen(false);
+      setNewCreative({ title: '', type: 'image', platform: 'meta', headline: '', body_copy: '', cta_text: '', file: null, client_id: '' });
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Bulk upload handler
+  const handleBulkUpload = async () => {
+    if (!bulkClientId || bulkFiles.length === 0) {
+      toast.error('Please select a client and add files');
+      return;
+    }
+    setUploading(true);
+    setUploadTotalFiles(bulkFiles.length);
+    let successCount = 0;
+    let failCount = 0;
+    const clientName = clientMap[bulkClientId] || '';
+    try {
+      for (let i = 0; i < bulkFiles.length; i++) {
+        const file = bulkFiles[i];
+        setUploadFileIndex(i + 1);
+        setUploadCurrentFile(file.name);
+        setUploadProgress(0);
+        try {
+          const isVideo = file.type.startsWith('video/');
+          const aspectRatio = await detectAspectRatio(file);
+          const fileUrl = await uploadCreativeFile(file, bulkClientId, (pct) => setUploadProgress(pct));
+          const fileName = file.name.replace(/\.[^/.]+$/, '');
+          const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          await createCreative.mutateAsync({
+            client_id: bulkClientId,
+            client_name: clientName,
+            title,
+            type: isVideo ? 'video' : 'image',
+            platform: bulkPlatform,
+            file_url: fileUrl,
+            headline: null,
+            body_copy: null,
+            cta_text: null,
+            status: 'draft',
+            comments: [],
+            aspect_ratio: aspectRatio,
+            isAgencyUpload: true,
+          });
+          successCount++;
+        } catch (err) {
+          console.error('Failed to upload file:', file.name, err);
+          failCount++;
+        }
+      }
+      if (successCount > 0) toast.success(`Uploaded ${successCount} creative${successCount !== 1 ? 's' : ''}`);
+      if (failCount > 0) toast.error(`Failed to upload ${failCount} file${failCount !== 1 ? 's' : ''}`);
+      setBulkUploadOpen(false);
+      setBulkFiles([]);
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      toast.error('Bulk upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (creativesLoading) {
     return <CashBagLoader message="Loading creatives..." />;
   }
