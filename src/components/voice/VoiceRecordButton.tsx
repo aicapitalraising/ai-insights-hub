@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { useCreateVoiceNote } from '@/hooks/useVoiceNotes';
 import { toast } from 'sonner';
+import { VoiceTaskApprovalDialog } from './VoiceTaskApprovalDialog';
 
 interface VoiceRecordButtonProps {
   clientId: string;
@@ -23,6 +24,12 @@ export function VoiceRecordButton({
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Approval dialog state
+  const [approvalOpen, setApprovalOpen] = useState(false);
+  const [extractedTasks, setExtractedTasks] = useState<any[]>([]);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceSummary, setVoiceSummary] = useState('');
 
   const createVoiceNote = useCreateVoiceNote();
 
@@ -59,11 +66,10 @@ export function VoiceRecordButton({
         }
       };
 
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
 
-      // Start timer
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
@@ -80,7 +86,6 @@ export function VoiceRecordButton({
       return;
     }
 
-    // Stop timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -97,13 +102,11 @@ export function VoiceRecordButton({
       mediaRecorderRef.current.onstop = async () => {
         setIsRecording(false);
 
-        // Stop all tracks
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
 
-        // Create blob from chunks
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         audioChunksRef.current = [];
 
@@ -113,7 +116,6 @@ export function VoiceRecordButton({
           return;
         }
 
-        // Convert to base64
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64 = (reader.result as string).split(',')[1];
@@ -130,14 +132,18 @@ export function VoiceRecordButton({
             });
 
             toast.dismiss('processing-voice');
-            
-            const taskMsg = result.tasksCreated > 0 
-              ? ` • ${result.tasksCreated} task${result.tasksCreated > 1 ? 's' : ''} pending approval`
-              : '';
-            
-            toast.success(`Voice note saved: "${result.voiceNote.title}"${taskMsg}`, {
-              duration: 5000,
-            });
+
+            // Show approval dialog with extracted tasks
+            if (result.voiceNote.action_items && result.voiceNote.action_items.length > 0) {
+              setExtractedTasks(result.voiceNote.action_items);
+              setVoiceTranscript(result.voiceNote.transcript || '');
+              setVoiceSummary(result.voiceNote.summary || '');
+              setApprovalOpen(true);
+            } else {
+              toast.success(`Voice note saved: "${result.voiceNote.title}"`, {
+                duration: 5000,
+              });
+            }
 
             onNoteCreated?.(result.voiceNote);
           } catch (error) {
@@ -170,29 +176,46 @@ export function VoiceRecordButton({
   const isProcessing = createVoiceNote.isPending;
 
   return (
-    <Button
-      variant={isRecording ? 'destructive' : 'outline'}
-      size="sm"
-      onClick={handleClick}
-      disabled={isProcessing}
-      className="gap-2"
-    >
-      {isProcessing ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Processing...</span>
-        </>
-      ) : isRecording ? (
-        <>
-          <Square className="h-4 w-4 fill-current" />
-          <span>{formatTime(recordingTime)}</span>
-        </>
-      ) : (
-        <>
-          <Mic className="h-4 w-4" />
-          <span>Record</span>
-        </>
-      )}
-    </Button>
+    <>
+      <Button
+        variant={isRecording ? 'destructive' : 'outline'}
+        size="sm"
+        onClick={handleClick}
+        disabled={isProcessing}
+        className="gap-2"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Processing...</span>
+          </>
+        ) : isRecording ? (
+          <>
+            <Square className="h-4 w-4 fill-current" />
+            <span>{formatTime(recordingTime)}</span>
+          </>
+        ) : (
+          <>
+            <Mic className="h-4 w-4" />
+            <span>Record</span>
+          </>
+        )}
+      </Button>
+
+      <VoiceTaskApprovalDialog
+        open={approvalOpen}
+        onOpenChange={setApprovalOpen}
+        tasks={extractedTasks.map(t => ({
+          title: t.title || '',
+          description: t.description || '',
+          priority: t.priority || 'medium',
+          selected: true,
+        }))}
+        clientId={clientId}
+        clientName={clientName || 'Client'}
+        transcript={voiceTranscript}
+        summary={voiceSummary}
+      />
+    </>
   );
 }
