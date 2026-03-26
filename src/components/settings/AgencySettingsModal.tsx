@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,14 +17,14 @@ import { useAgencySettings, useUpdateAgencySettings } from '@/hooks/useAgencySet
 import { useSyncMeetings } from '@/hooks/useMeetings';
 import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
-import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2 } from 'lucide-react';
+import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Shield, Receipt, ShieldAlert } from 'lucide-react';
 import { ApiReferenceTab } from './ApiReferenceTab';
-import DatabaseView from '@/pages/DatabaseView';
-import SpamBlacklist from '@/pages/SpamBlacklist';
-import { AgencyBillingTab } from '@/components/billing/AgencyBillingTab';
-import { DataAccuracyAuditPanel } from '@/components/dashboard/DataAccuracyAuditPanel';
-import { Shield, Receipt, ShieldAlert, Database as DatabaseIcon } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
+
+const DatabaseView = lazy(() => import('@/pages/DatabaseView'));
+const SpamBlacklist = lazy(() => import('@/pages/SpamBlacklist'));
+const AgencyBillingTab = lazy(() => import('@/components/billing/AgencyBillingTab').then((module) => ({ default: module.AgencyBillingTab })));
+const DataAccuracyAuditPanel = lazy(() => import('@/components/dashboard/DataAccuracyAuditPanel').then((module) => ({ default: module.DataAccuracyAuditPanel })));
 
 const OPENAI_MODELS = [
   { value: 'gpt-5', label: 'GPT-5' },
