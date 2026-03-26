@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/db';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 
-  (supabase as any).supabaseUrl || '';
+const SUPABASE_URL = (supabase as any).supabaseUrl || 
+  import.meta.env.VITE_SUPABASE_URL || '';
 
 /**
  * Upload a file to Supabase Storage with progress tracking via XMLHttpRequest.
