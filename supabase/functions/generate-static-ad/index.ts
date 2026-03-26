@@ -156,10 +156,10 @@ DO NOT include:
 `.trim();
 }
 
-/** Create a Supabase client pointing at the PRODUCTION database */
-function getProductionSupabase() {
-  const url = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
-  const key = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+/** Create a Supabase client pointing at the current Supabase project */
+function getSupabaseClient() {
+  const url = Deno.env.get('SUPABASE_URL')!;
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   return createClient(url, key);
 }
 
