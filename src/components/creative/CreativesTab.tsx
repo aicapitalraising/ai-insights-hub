@@ -1,8 +1,8 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAllCreatives } from '@/hooks/useAllCreatives';
 import { useClients, Client } from '@/hooks/useClients';
-import { Creative, useUpdateCreativeStatus, useDeleteCreative } from '@/hooks/useCreatives';
+import { Creative, useUpdateCreativeStatus, useDeleteCreative, useCreateCreative, uploadCreativeFile, detectAspectRatio } from '@/hooks/useCreatives';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -22,10 +24,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { CreativeHorizontalPreview } from './CreativeHorizontalPreview';
 import { CreativeAIActions } from './CreativeAIActions';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
+import { formatFileSize } from '@/lib/uploadWithProgress';
 import {
   Search,
   Image,
@@ -51,6 +55,7 @@ import {
   Scissors,
   History,
   Inbox,
+  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -83,6 +88,31 @@ export function CreativesTab() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedCreative, setSelectedCreative] = useState<CreativeWithClient | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Upload state
+  const createCreative = useCreateCreative();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadCurrentFile, setUploadCurrentFile] = useState('');
+  const [uploadFileIndex, setUploadFileIndex] = useState(0);
+  const [uploadTotalFiles, setUploadTotalFiles] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkClientId, setBulkClientId] = useState<string>('');
+  const [bulkPlatform, setBulkPlatform] = useState<'meta' | 'tiktok' | 'youtube' | 'google'>('meta');
+  const [newCreative, setNewCreative] = useState({
+    title: '',
+    type: 'image' as 'image' | 'video' | 'copy',
+    platform: 'meta' as 'meta' | 'tiktok' | 'youtube' | 'google',
+    headline: '',
+    body_copy: '',
+    cta_text: '',
+    file: null as File | null,
+    client_id: '',
+  });
 
   // Map client names to creatives
   const clientMap = clients.reduce((acc, client) => {
@@ -204,6 +234,103 @@ export function CreativesTab() {
     setSelectedIds(new Set());
   };
 
+  // Single upload handler
+  const handleSingleUpload = async () => {
+    if (!newCreative.title || !newCreative.client_id) {
+      toast.error('Please select a client and enter a title');
+      return;
+    }
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      let fileUrl = null;
+      let aspectRatio = null;
+      if (newCreative.file && (newCreative.type === 'image' || newCreative.type === 'video')) {
+        aspectRatio = await detectAspectRatio(newCreative.file);
+        fileUrl = await uploadCreativeFile(newCreative.file, newCreative.client_id, (pct) => setUploadProgress(pct));
+      }
+      const clientName = clientMap[newCreative.client_id] || '';
+      await createCreative.mutateAsync({
+        client_id: newCreative.client_id,
+        client_name: clientName,
+        title: newCreative.title,
+        type: newCreative.type,
+        platform: newCreative.platform,
+        file_url: fileUrl,
+        headline: newCreative.headline || null,
+        body_copy: newCreative.body_copy || null,
+        cta_text: newCreative.cta_text || null,
+        status: 'draft',
+        comments: [],
+        aspect_ratio: aspectRatio,
+        isAgencyUpload: true,
+      });
+      toast.success('Creative uploaded successfully');
+      setUploadOpen(false);
+      setNewCreative({ title: '', type: 'image', platform: 'meta', headline: '', body_copy: '', cta_text: '', file: null, client_id: '' });
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Bulk upload handler
+  const handleBulkUpload = async () => {
+    if (!bulkClientId || bulkFiles.length === 0) {
+      toast.error('Please select a client and add files');
+      return;
+    }
+    setUploading(true);
+    setUploadTotalFiles(bulkFiles.length);
+    let successCount = 0;
+    let failCount = 0;
+    const clientName = clientMap[bulkClientId] || '';
+    try {
+      for (let i = 0; i < bulkFiles.length; i++) {
+        const file = bulkFiles[i];
+        setUploadFileIndex(i + 1);
+        setUploadCurrentFile(file.name);
+        setUploadProgress(0);
+        try {
+          const isVideo = file.type.startsWith('video/');
+          const aspectRatio = await detectAspectRatio(file);
+          const fileUrl = await uploadCreativeFile(file, bulkClientId, (pct) => setUploadProgress(pct));
+          const fileName = file.name.replace(/\.[^/.]+$/, '');
+          const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          await createCreative.mutateAsync({
+            client_id: bulkClientId,
+            client_name: clientName,
+            title,
+            type: isVideo ? 'video' : 'image',
+            platform: bulkPlatform,
+            file_url: fileUrl,
+            headline: null,
+            body_copy: null,
+            cta_text: null,
+            status: 'draft',
+            comments: [],
+            aspect_ratio: aspectRatio,
+            isAgencyUpload: true,
+          });
+          successCount++;
+        } catch (err) {
+          console.error('Failed to upload file:', file.name, err);
+          failCount++;
+        }
+      }
+      if (successCount > 0) toast.success(`Uploaded ${successCount} creative${successCount !== 1 ? 's' : ''}`);
+      if (failCount > 0) toast.error(`Failed to upload ${failCount} file${failCount !== 1 ? 's' : ''}`);
+      setBulkUploadOpen(false);
+      setBulkFiles([]);
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      toast.error('Bulk upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (creativesLoading) {
     return <CashBagLoader message="Loading creatives..." />;
   }
@@ -307,6 +434,176 @@ export function CreativesTab() {
             <SelectItem value="rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Upload Buttons */}
+        <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Upload
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Bulk Upload Creatives</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium">Client *</label>
+                <Select value={bulkClientId} onValueChange={setBulkClientId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Platform</label>
+                <div className="flex gap-2 mt-1">
+                  {(['meta', 'tiktok', 'youtube', 'google'] as const).map((p) => (
+                    <Button key={p} type="button" variant={bulkPlatform === p ? 'default' : 'outline'} size="sm" onClick={() => setBulkPlatform(p)}>
+                      {p === 'meta' ? 'Meta/IG' : p === 'tiktok' ? 'TikTok' : p === 'youtube' ? 'YouTube' : 'Google PPC'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div
+                className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => bulkFileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); setBulkFiles(Array.from(e.dataTransfer.files)); }}
+              >
+                {bulkFiles.length > 0 ? (
+                  <p className="text-sm font-medium">{bulkFiles.length} file{bulkFiles.length !== 1 ? 's' : ''} selected</p>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                    <p className="text-xs text-muted-foreground">Drag & drop or click to select • Up to 10 GB per file</p>
+                  </>
+                )}
+              </div>
+              <input ref={bulkFileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => setBulkFiles(Array.from(e.target.files || []))} />
+              {uploading && (
+                <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium truncate max-w-[200px]">File {uploadFileIndex}/{uploadTotalFiles}: {uploadCurrentFile}</span>
+                    <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
+              <Button onClick={handleBulkUpload} className="w-full" disabled={uploading || bulkFiles.length === 0 || !bulkClientId}>
+                {uploading ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading {uploadFileIndex}/{uploadTotalFiles}...</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" />Upload {bulkFiles.length} Creative{bulkFiles.length !== 1 ? 's' : ''}</>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Upload Creative
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Upload New Creative</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium">Client *</label>
+                <Select value={newCreative.client_id} onValueChange={(v) => setNewCreative({ ...newCreative, client_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Title *</label>
+                <Input value={newCreative.title} onChange={(e) => setNewCreative({ ...newCreative, title: e.target.value })} placeholder="Creative title" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Type</label>
+                <div className="flex gap-2 mt-1">
+                  {(['image', 'video', 'copy'] as const).map((type) => (
+                    <Button key={type} type="button" variant={newCreative.type === type ? 'default' : 'outline'} size="sm" onClick={() => setNewCreative({ ...newCreative, type })}>
+                      {type === 'image' ? <Image className="h-4 w-4 mr-1" /> : type === 'video' ? <Video className="h-4 w-4 mr-1" /> : <FileText className="h-4 w-4 mr-1" />}
+                      <span className="capitalize">{type}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Platform</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {(['meta', 'tiktok', 'youtube', 'google'] as const).map((p) => (
+                    <Button key={p} type="button" variant={newCreative.platform === p ? 'default' : 'outline'} size="sm" onClick={() => setNewCreative({ ...newCreative, platform: p })}>
+                      {p === 'meta' ? 'Meta/IG' : p === 'tiktok' ? 'TikTok' : p === 'youtube' ? 'YouTube' : 'Google PPC'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {(newCreative.type === 'image' || newCreative.type === 'video') && (
+                <div>
+                  <label className="text-sm font-medium">File</label>
+                  <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => fileInputRef.current?.click()}>
+                    {newCreative.file ? (
+                      <div className="flex items-center justify-center gap-2">
+                        {newCreative.type === 'video' ? <Video className="h-4 w-4" /> : <Image className="h-4 w-4" />}
+                        <span className="text-sm truncate max-w-[200px]">{newCreative.file.name}</span>
+                        <span className="text-xs text-muted-foreground">({formatFileSize(newCreative.file.size)})</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                        <p className="text-xs text-muted-foreground">Click to select • Up to 10 GB • 4K supported</p>
+                      </>
+                    )}
+                  </div>
+                  <input ref={fileInputRef} type="file" accept={newCreative.type === 'image' ? 'image/*' : 'video/*'} onChange={(e) => setNewCreative({ ...newCreative, file: e.target.files?.[0] || null })} className="hidden" />
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium">Headline</label>
+                <Input value={newCreative.headline} onChange={(e) => setNewCreative({ ...newCreative, headline: e.target.value })} placeholder="Ad headline" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Body Copy</label>
+                <Textarea value={newCreative.body_copy} onChange={(e) => setNewCreative({ ...newCreative, body_copy: e.target.value })} placeholder="Ad body text" rows={3} />
+              </div>
+              {uploading && (
+                <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium">Uploading...</span>
+                    <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
+              <Button onClick={handleSingleUpload} className="w-full" disabled={uploading || !newCreative.client_id}>
+                {uploading ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading... {uploadProgress}%</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" />Upload Creative</>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Bulk Action Bar */}
@@ -388,7 +685,7 @@ export function CreativesTab() {
                 <Upload className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">No creatives found</p>
                 <p className="text-sm text-muted-foreground">
-                  Upload creatives from individual client dashboards
+                  Click "Upload Creative" above to get started
                 </p>
               </CardContent>
             </Card>
