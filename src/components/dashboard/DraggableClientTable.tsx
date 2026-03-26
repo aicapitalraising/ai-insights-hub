@@ -36,7 +36,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Settings, ExternalLink, Copy, Trash2, GripVertical, BarChart3, ArrowUp, ArrowDown, ArrowUpDown, AlertCircle, CheckCircle, Clock, XCircle, AlertTriangle, Pencil } from 'lucide-react';
+import { Settings, ExternalLink, Copy, Trash2, GripVertical, BarChart3, ArrowUp, ArrowDown, ArrowUpDown, AlertCircle, CheckCircle, Clock, XCircle, AlertTriangle, Pencil, RefreshCw, Link } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -746,11 +746,16 @@ function MetaStatusCell({
   const [adAccountId, setAdAccountId] = useState(client.meta_ad_account_id || '');
   const [accessToken, setAccessToken] = useState(client.meta_access_token || '');
   const [open, setOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const updateClient = useUpdateClient();
 
   const duplicateWith = isDuplicate
     ? clients.filter(c => c.id !== client.id && c.meta_ad_account_id === client.meta_ad_account_id).map(c => c.name)
     : [];
+
+  const adsManagerUrl = client.business_manager_url || (client.meta_ad_account_id
+    ? `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${client.meta_ad_account_id}`
+    : null);
 
   const handleSave = async () => {
     try {
@@ -763,6 +768,29 @@ function MetaStatusCell({
       setOpen(false);
     } catch {
       toast.error('Failed to update Meta settings');
+    }
+  };
+
+  const handleQuickSync = async () => {
+    if (!client.meta_ad_account_id) {
+      toast.error('No Ad Account ID configured');
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-meta-ads', {
+        body: { clientId: client.id },
+      });
+      if (error) throw error;
+      toast.success(`Meta sync complete for ${client.name}`, {
+        description: data?.message || 'Ad spend & leads synced',
+      });
+    } catch (err: any) {
+      toast.error(`Meta sync failed for ${client.name}`, {
+        description: err.message || 'Check ad account settings',
+      });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -821,9 +849,23 @@ function MetaStatusCell({
           <Pencil className="h-2 w-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-3" side="left" align="start" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent className="w-80 p-3" side="left" align="start" onClick={(e) => e.stopPropagation()}>
         <div className="space-y-3">
-          <h4 className="font-medium text-xs">Meta Integration — {client.name}</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-xs">Meta Integration — {client.name}</h4>
+            {adsManagerUrl && (
+              <a
+                href={adsManagerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="h-3 w-3" />
+                Ads Manager
+              </a>
+            )}
+          </div>
           <div className="space-y-1.5">
             <label className="text-[11px] text-muted-foreground font-medium">Ad Account ID</label>
             <Input
@@ -843,16 +885,53 @@ function MetaStatusCell({
               type="password"
             />
           </div>
+          {adsManagerUrl && (
+            <div className="flex items-center gap-1.5 p-1.5 rounded bg-muted/50 border border-border/50">
+              <Link className="h-3 w-3 text-primary shrink-0" />
+              <a
+                href={adsManagerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-muted-foreground hover:text-foreground truncate flex-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {adsManagerUrl.length > 60 ? adsManagerUrl.slice(0, 60) + '…' : adsManagerUrl}
+              </a>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0 shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(adsManagerUrl);
+                  toast.success('URL copied');
+                }}
+              >
+                <Copy className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+          )}
           {isDuplicate && (
             <div className="text-[10px] text-destructive bg-destructive/10 rounded p-1.5">
               ⚠️ This ad account is shared with: {duplicateWith.join(', ')}
             </div>
           )}
-          <div className="flex justify-end gap-1.5">
-            <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button size="sm" className="h-6 text-[10px]" onClick={handleSave} disabled={updateClient.isPending}>
-              {updateClient.isPending ? 'Saving…' : 'Save'}
+          <div className="flex justify-between items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[10px] gap-1"
+              onClick={handleQuickSync}
+              disabled={isSyncing || !client.meta_ad_account_id}
+            >
+              <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
+              {isSyncing ? 'Syncing…' : 'Quick Sync'}
             </Button>
+            <div className="flex gap-1.5">
+              <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button size="sm" className="h-6 text-[10px]" onClick={handleSave} disabled={updateClient.isPending}>
+                {updateClient.isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
           </div>
         </div>
       </PopoverContent>
