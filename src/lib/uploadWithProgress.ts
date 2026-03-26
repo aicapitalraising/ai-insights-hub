@@ -63,7 +63,7 @@ export async function uploadWithProgress(
     }
     // Use apikey header for anon access (public uploads)
     const anonKey = (supabase as any).supabaseKey || 
-      import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
     if (anonKey) {
       xhr.setRequestHeader('apikey', anonKey);
     }
