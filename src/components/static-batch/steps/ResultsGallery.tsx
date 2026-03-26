@@ -17,6 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, ArrowRight, Download, RefreshCw, Loader2, CheckCircle, XCircle, Clock, Video, Sparkles, Pencil, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import type { GeneratedAd, AdStyle, AspectRatio } from '@/types';
@@ -98,7 +99,7 @@ export function ResultsGallery({
 
     setIsEditing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('edit-static-ad', {
+      const { data, error } = await invokeCloudFunction('edit-static-ad', {
         body: {
           imageUrl: editDialogAd.imageUrl,
           editPrompt: editPrompt.trim(),
@@ -174,7 +175,7 @@ export function ResultsGallery({
     setAnimatedVideoUrl(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('generate-video-from-image', {
+      const { data, error } = await invokeCloudFunction('generate-video-from-image', {
         body: {
           imageUrl: animateDialogAd.imageUrl,
           prompt: videoPrompt.trim(),

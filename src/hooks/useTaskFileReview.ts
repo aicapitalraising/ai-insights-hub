@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 import { useAddTaskComment, useAddTaskHistory, TaskFile } from './useTasks';
 
@@ -39,7 +40,7 @@ export function useTaskFileReview() {
       // For videos, first transcribe
       if (isVideo) {
         toast.info('Transcribing video...');
-        const { data: transcribeData, error: transcribeError } = await supabase.functions.invoke('creative-ai-audit', {
+        const { data: transcribeData, error: transcribeError } = await invokeCloudFunction('creative-ai-audit', {
           body: { action: 'transcribe', videoUrl: file.file_url }
         });
 
@@ -57,7 +58,7 @@ export function useTaskFileReview() {
 
       // Run spelling/grammar check
       toast.info('Running AI review...');
-      const { data: reviewData, error: reviewError } = await supabase.functions.invoke('creative-ai-audit', {
+      const { data: reviewData, error: reviewError } = await invokeCloudFunction('creative-ai-audit', {
         body: {
           action: 'spelling_check',
           creative: {

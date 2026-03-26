@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ArrowRight, Check, User, Palette, Type, Info, Link, ImagePlus, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, User, Palette, Type, Info, Link, ImagePlus, Sparkles, ExternalLink, Globe } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useAvatars } from '@/hooks/useAvatars';
+import { useAvatarLooks } from '@/hooks/useAvatarLooks';
 import type { StaticBatchConfig, Client, Avatar } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,8 @@ interface ProjectSetupProps {
 
 export function ProjectSetup({ config, updateConfig, client, projectOfferDescription, onOfferChange, onNext, onBack }: ProjectSetupProps) {
   const { data: avatars = [] } = useAvatars(client?.id);
+  const selectedAvatar = avatars.find(a => a.image_url === config.characterImageUrl);
+  const { data: avatarLooks = [] } = useAvatarLooks(selectedAvatar?.id);
   
   const [editableOffer, setEditableOffer] = useState(projectOfferDescription || client?.offer_description || '');
   const [editableDescription, setEditableDescription] = useState(config.productDescription || client?.description || '');
@@ -51,12 +54,12 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
   const brandFonts = client?.brand_fonts || [];
   const productUrl = client?.product_url || '';
   const productImages = client?.product_images || [];
+  const websiteUrl = client?.website_url || '';
 
   const handleSelectAvatar = (avatar: Avatar) => {
     updateConfig({ characterImageUrl: avatar.image_url });
   };
 
-  const selectedAvatar = avatars.find(a => a.image_url === config.characterImageUrl);
 
   return (
     <div className="space-y-6">
@@ -140,13 +143,37 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
                   href={productUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline truncate block"
+                  className="text-sm text-primary hover:underline truncate block flex items-center gap-1"
                 >
                   {productUrl}
+                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
                 </a>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   No product URL set. Add it in the client's Brand Guide.
+                </p>
+              )}
+            </div>
+
+            {/* Website URL */}
+            <div>
+              <Label className="flex items-center gap-2 mb-2">
+                <Globe className="h-4 w-4" />
+                Website
+              </Label>
+              {websiteUrl ? (
+                <a
+                  href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline truncate block flex items-center gap-1"
+                >
+                  {websiteUrl}
+                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                </a>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No website set. Add it in the client settings.
                 </p>
               )}
             </div>
@@ -289,8 +316,16 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
 
             {selectedAvatar && (
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium">{selectedAvatar.name}</p>
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <img src={selectedAvatar.image_url} alt={selectedAvatar.name} className="w-20 h-20 rounded-lg object-cover border" />
+                  <div>
+                    <p className="text-sm font-semibold">{selectedAvatar.name}</p>
+                    {selectedAvatar.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{selectedAvatar.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mb-2">
                   {selectedAvatar.gender && (
                     <Badge variant="outline" className="text-xs">{selectedAvatar.gender}</Badge>
                   )}
@@ -301,6 +336,28 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
                     <Badge variant="outline" className="text-xs">{selectedAvatar.style}</Badge>
                   )}
                 </div>
+                {avatarLooks.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Available Looks</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {avatarLooks.map((look) => (
+                        <button
+                          key={look.id}
+                          type="button"
+                          onClick={() => updateConfig({ characterImageUrl: look.image_url })}
+                          className={cn(
+                            'flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all',
+                            config.characterImageUrl === look.image_url
+                              ? 'border-primary ring-1 ring-primary'
+                              : 'border-muted hover:border-primary/40'
+                          )}
+                        >
+                          <img src={look.image_url} alt={look.outfit || 'Look'} className="w-14 h-14 object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

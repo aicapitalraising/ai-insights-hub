@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { 
@@ -54,8 +55,8 @@ export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
 
     setTranscribing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('creative-ai-audit', {
-        body: { 
+      const { data, error } = await invokeCloudFunction('creative-ai-audit', {
+        body: {
           action: 'transcribe',
           videoUrl: creative.file_url 
         }
@@ -81,8 +82,8 @@ export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
   const handleAudit = async () => {
     setAuditing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('creative-ai-audit', {
-        body: { 
+      const { data, error } = await invokeCloudFunction('creative-ai-audit', {
+        body: {
           action: 'audit',
           creative: {
             title: creative.title,
@@ -123,8 +124,8 @@ export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
     setEditing(true);
     setEditedImageUrl(null);
     try {
-      const { data, error } = await supabase.functions.invoke('creative-ai-audit', {
-        body: { 
+      const { data, error } = await invokeCloudFunction('creative-ai-audit', {
+        body: {
           action: 'ai_edit',
           creative: {
             client_id: creative.client_id,
@@ -158,8 +159,8 @@ export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
     setGeneratingVariations(true);
     setVariations([]);
     try {
-      const { data, error } = await supabase.functions.invoke('creative-ai-audit', {
-        body: { 
+      const { data, error } = await invokeCloudFunction('creative-ai-audit', {
+        body: {
           action: 'ai_variations',
           creative: {
             client_id: creative.client_id,

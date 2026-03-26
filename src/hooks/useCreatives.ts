@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 import { detectAspectRatio } from '@/lib/aspectRatioUtils';
@@ -81,7 +82,7 @@ async function runSpellingCheck(creative: {
     // For video content, first get transcript for review
     if (creative.type === 'video' && creative.file_url) {
       try {
-        const { data: transcriptData } = await supabase.functions.invoke('creative-ai-audit', {
+        const { data: transcriptData } = await invokeCloudFunction('creative-ai-audit', {
           body: { action: 'transcribe', videoUrl: creative.file_url }
         });
         if (transcriptData?.transcript) {
@@ -93,7 +94,7 @@ async function runSpellingCheck(creative: {
       }
     }
     
-    const { data, error } = await supabase.functions.invoke('creative-ai-audit', {
+    const { data, error } = await invokeCloudFunction('creative-ai-audit', {
       body: { action: 'spelling_check', creative, transcript }
     });
     

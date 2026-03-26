@@ -15,6 +15,7 @@ import { Download, Loader2, Image as ImageIcon, Check, Columns, Grid, CheckSquar
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { TemplateGallery, type AdTemplate, type TemplateCustomization } from '@/components/static-ads/TemplateGallery';
@@ -175,7 +176,7 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
     if (selectedClient?.description) variantPrompt += `\nProduct: ${selectedClient.description}`;
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-static-ad', {
+      const { data, error } = await invokeCloudFunction('generate-static-ad', {
         body: {
           prompt: variantPrompt,
           styleName: style.label,
@@ -263,7 +264,7 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('generate-static-ad', {
+        const { data, error } = await invokeCloudFunction('generate-static-ad', {
           body: {
             prompt: variantPrompt,
             styleName: style.label,
