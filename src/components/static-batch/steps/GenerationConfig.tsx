@@ -45,9 +45,16 @@ function AdImageUploader({ config, updateConfig }: { config: StaticBatchConfig; 
     const newUrls: string[] = [];
     for (const file of Array.from(files)) {
       const path = `ad-images/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from('assets').upload(path, file, { contentType: file.type });
-      if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
-      const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(path);
+      let publicUrl: string;
+      if (file.size > 5 * 1024 * 1024) {
+        const { uploadWithProgress } = await import('@/lib/uploadWithProgress');
+        publicUrl = await uploadWithProgress('assets', path, file);
+      } else {
+        const { error } = await supabase.storage.from('assets').upload(path, file, { contentType: file.type });
+        if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
+        const { data: { publicUrl: url } } = supabase.storage.from('assets').getPublicUrl(path);
+        publicUrl = url;
+      }
       newUrls.push(publicUrl);
     }
     updateConfig({ adImageUrls: [...adImages, ...newUrls] });

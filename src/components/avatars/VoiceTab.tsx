@@ -75,8 +75,8 @@ export function VoiceTab({ currentVoiceId, onVoiceChange, clientId }: VoiceTabPr
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('File too large. Max 10MB.');
+      if (file.size > 10 * 1024 * 1024 * 1024) {
+        toast.error('File too large. Max 10GB.');
         return;
       }
       setSelectedFile(file);
