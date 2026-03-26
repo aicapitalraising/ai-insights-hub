@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { getGeminiApiKey } from '../_shared/get-gemini-key.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,19 +28,6 @@ interface GenerateAdRequest {
   adImageUrls?: string[];
 }
 
-// Chunked base64 conversion to prevent stack overflow on large images
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const chunkSize = 0x8000; // 32KB chunks
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-    binary += String.fromCharCode.apply(null, Array.from(chunk));
-  }
-  return btoa(binary);
-}
-
-// Map aspect ratio to dimensions
 function getImageDimensions(aspectRatio: string): { width: number; height: number } {
   switch (aspectRatio) {
     case '1:1': return { width: 1024, height: 1024 };
@@ -62,10 +48,10 @@ function buildAdPrompt(params: GenerateAdRequest): string {
   const colorInstruction = hasBrandColors
     ? strictBrandAdherence
       ? `STRICT BRAND ADHERENCE: You MUST use ONLY these exact brand colors throughout the entire design — no deviations, no similar shades, no artistic liberties: ${brandColors.join(', ')}`
-      : `Use these brand colors as accent colors while keeping the overall look consistent with the reference layout: ${brandColors.join(', ')}.`
+      : `Use these brand colors as accent colors while keeping the overall look consistent: ${brandColors.join(', ')}.`
     : hasReferenceImages
-      ? `CRITICAL: Extract and replicate the EXACT color palette from the PRIMARY reference image. Match the same hues, gradients, tones, and overlay opacities precisely. Do NOT introduce new colors.`
-      : '';
+      ? `CRITICAL: Extract and replicate the EXACT color palette from the PRIMARY reference image.`
+      : `Use a premium, institutional color palette suited for capital-raising and investment marketing.`;
 
   const fontInstruction = brandFonts && brandFonts.length > 0
     ? strictBrandAdherence
@@ -80,27 +66,36 @@ function buildAdPrompt(params: GenerateAdRequest): string {
   const offerContext = offerDescription ? `Offer/Value Proposition: ${offerDescription}` : '';
 
   const primaryRefNote = primaryReferenceImage
-    ? `\n\nPRIMARY REFERENCE: The FIRST image provided is your PRIMARY template. You MUST replicate THIS specific image's layout, composition, colors (unless brand colors are specified), and visual style. Other reference images are supplementary context only — focus on cloning the PRIMARY reference.`
+    ? `\n\nPRIMARY REFERENCE: The FIRST image provided is your PRIMARY template. Replicate THIS specific image's layout, composition, colors (unless brand colors are specified), and visual style.`
     : '';
 
   const referenceInstruction = hasReferenceImages
     ? `CRITICAL — PIXEL-PERFECT REPLICATION FROM REFERENCE:
-You are given reference advertisement images. Your job is to CLONE the PRIMARY reference image as closely as possible — treat it as an EXACT TEMPLATE.${primaryRefNote}
+You are given reference advertisement images. Clone the PRIMARY reference image as closely as possible.${primaryRefNote}
 
 MANDATORY REPLICATION RULES:
-1. LAYOUT: Copy the exact same layout grid, element placement, margins, padding, and spatial arrangement.
+1. LAYOUT: Copy the exact same layout grid, element placement, margins, padding.
 2. COMPOSITION: Match the reference's composition pixel-for-pixel.
-3. COLORS & GRADIENTS: ${hasBrandColors ? 'Use the specified brand colors while maintaining the reference layout and composition.' : 'Extract and replicate the EXACT color palette from the reference.'}
-4. TYPOGRAPHY STYLE: Replicate the same font weight, size ratios, text alignment, letter-spacing, and text effects.
-5. VISUAL EFFECTS: Copy all overlays, shadows, glows, borders, rounded corners, badge/sticker placements.
+3. COLORS & GRADIENTS: ${hasBrandColors ? 'Use the specified brand colors while maintaining the reference layout.' : 'Extract and replicate the EXACT color palette from the reference.'}
+4. TYPOGRAPHY STYLE: Replicate the same font weight, size ratios, text alignment, letter-spacing.
+5. VISUAL EFFECTS: Copy all overlays, shadows, glows, borders, rounded corners.
 6. BACKGROUND & IMAGERY: Recreate the same type of background and imagery arrangement.
-7. ONLY CHANGE THE COPY: Replace ONLY the text content with the new product's messaging.
+7. ONLY CHANGE THE COPY: Replace ONLY the text content with the new product's messaging.`
+    : `AUTO-GENERATE AD DESIGN:
+Since no reference images are provided, create an original, high-converting advertisement design.
+${offerContext ? `Base the visual concept on this offer: ${offerDescription}` : ''}
+${hasBrandColors ? '' : 'Use a premium dark/sophisticated color palette with gold or green accents — suitable for financial/investment marketing.'}
 
-The output should look like a direct adaptation of the PRIMARY reference ad.`
-    : '';
+DESIGN REQUIREMENTS:
+1. Create a bold, eye-catching layout with strong visual hierarchy
+2. Use dramatic typography with clear headline placement
+3. Include compelling visual elements (gradients, overlays, geometric shapes)
+4. Design should feel premium, institutional, and trustworthy
+5. Add subtle texture or depth effects for a polished look
+6. Include a clear call-to-action area`;
 
   const disclaimerInstruction = includeDisclaimer && disclaimerText
-    ? `MANDATORY DISCLAIMER: You MUST include the following disclaimer text clearly legible at the bottom of the ad: "${disclaimerText}"`
+    ? `MANDATORY DISCLAIMER: Include the following disclaimer text clearly legible at the bottom: "${disclaimerText}"`
     : '';
 
   const safeZoneInstruction = aspectRatio === '9:16'
@@ -146,7 +141,6 @@ REQUIREMENTS:
 - Balanced composition
 - Modern, polished aesthetic
 - Ultra high resolution
-- If reference images are provided, clone their exact layout and design — only swap the text/copy.
 
 DO NOT include:
 - Watermarks
@@ -172,10 +166,10 @@ serve(async (req) => {
     const body: GenerateAdRequest = await req.json();
     const { styleName, aspectRatio, projectId, clientId, referenceImages = [], idempotency_key } = body;
 
-    const geminiApiKey = await getGeminiApiKey(undefined);
-    if (!geminiApiKey) {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: 'Gemini API key not configured. Add it in Agency Settings.' }),
+        JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -185,17 +179,27 @@ serve(async (req) => {
     const prompt = buildAdPrompt(body);
     console.log('Generated prompt:', prompt.slice(0, 300) + '...');
 
-    // Build parts array with prompt and optional reference images
-    const parts: any[] = [{ text: prompt }];
+    // Build message content with prompt and optional reference images
+    const contentParts: any[] = [{ type: 'text', text: prompt }];
 
-    async function addImageToParts(imageUrl: string, label: string) {
+    async function addImageToContent(imageUrl: string, label: string) {
       try {
         const imageResponse = await fetch(imageUrl);
         if (imageResponse.ok) {
           const imageBuffer = await imageResponse.arrayBuffer();
-          const base64Image = arrayBufferToBase64(imageBuffer);
+          const bytes = new Uint8Array(imageBuffer);
+          let binary = '';
+          const chunkSize = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+            binary += String.fromCharCode.apply(null, Array.from(chunk));
+          }
+          const base64Image = btoa(binary);
           const contentType = imageResponse.headers.get('content-type') || 'image/png';
-          parts.push({ inlineData: { mimeType: contentType, data: base64Image } });
+          contentParts.push({
+            type: 'image_url',
+            image_url: { url: `data:${contentType};base64,${base64Image}` }
+          });
           console.log(`Added ${label}:`, imageUrl.slice(0, 60));
           return true;
         }
@@ -207,69 +211,91 @@ serve(async (req) => {
 
     // PRIORITY 1: PRIMARY reference image
     if (body.primaryReferenceImage) {
-      await addImageToParts(body.primaryReferenceImage, 'PRIMARY reference');
+      await addImageToContent(body.primaryReferenceImage, 'PRIMARY reference');
     }
 
     // PRIORITY 2: Character/avatar image
     if (body.characterImageUrl) {
-      await addImageToParts(body.characterImageUrl, 'character reference');
+      await addImageToContent(body.characterImageUrl, 'character reference');
     }
 
     // PRIORITY 3: Remaining reference images
     const maxAdditionalRefs = (body.primaryReferenceImage ? 3 : 4) - (body.characterImageUrl ? 1 : 0);
     for (const imageUrl of referenceImages.slice(0, maxAdditionalRefs + 1)) {
       if (imageUrl === body.primaryReferenceImage || imageUrl === body.characterImageUrl) continue;
-      await addImageToParts(imageUrl, 'supplementary reference');
+      await addImageToContent(imageUrl, 'supplementary reference');
     }
 
     // PRIORITY 4: User-uploaded ad images
     for (const imageUrl of (body.adImageUrls || []).slice(0, 2)) {
-      await addImageToParts(imageUrl, 'ad asset image');
+      await addImageToContent(imageUrl, 'ad asset image');
     }
 
-    // Call Gemini
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-        })
-      }
-    );
+    // Call Lovable AI Gateway with image generation model
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-3-pro-image-preview',
+        messages: [
+          {
+            role: 'user',
+            content: contentParts,
+          },
+        ],
+        modalities: ['image', 'text'],
+      }),
+    });
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error('Gemini API error:', errorText);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('AI Gateway error:', aiResponse.status, errorText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please wait a moment and try again.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add funds in Settings > Workspace > Usage.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Failed to generate image', details: errorText }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const geminiData = await geminiResponse.json();
-    const candidates = geminiData.candidates || [];
-    if (candidates.length === 0) {
+    const aiData = await aiResponse.json();
+    const images = aiData.choices?.[0]?.message?.images;
+
+    if (!images || images.length === 0) {
+      console.error('No image in AI response:', JSON.stringify(aiData).slice(0, 500));
       return new Response(
-        JSON.stringify({ error: 'No image generated', response: geminiData }),
+        JSON.stringify({ error: 'No image generated by AI model' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const imageParts = candidates[0]?.content?.parts || [];
-    const imagePart = imageParts.find((part: any) => part.inlineData?.mimeType?.startsWith('image/'));
-
-    if (!imagePart?.inlineData?.data) {
+    // Extract base64 image data
+    const imageDataUrl = images[0].image_url.url;
+    const base64Match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!base64Match) {
       return new Response(
-        JSON.stringify({ error: 'No image data in response' }),
+        JSON.stringify({ error: 'Invalid image data format' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const base64Image = imagePart.inlineData.data;
-    const mimeType = imagePart.inlineData.mimeType || 'image/png';
+    const mimeType = base64Match[1];
+    const base64Image = base64Match[2];
 
     // Upload to PRODUCTION Supabase Storage
     const supabase = getProductionSupabase();
