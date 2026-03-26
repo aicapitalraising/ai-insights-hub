@@ -233,6 +233,7 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            <VoiceRecordButton clientId={client.id} clientName={client.name} isPublicView={false} />
             <ThemeToggle />
           </div>
         </div>
