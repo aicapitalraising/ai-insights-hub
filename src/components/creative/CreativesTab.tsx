@@ -1,8 +1,8 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAllCreatives } from '@/hooks/useAllCreatives';
 import { useClients, Client } from '@/hooks/useClients';
-import { Creative, useUpdateCreativeStatus, useDeleteCreative } from '@/hooks/useCreatives';
+import { Creative, useUpdateCreativeStatus, useDeleteCreative, useCreateCreative, uploadCreativeFile, detectAspectRatio } from '@/hooks/useCreatives';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -22,10 +24,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { CreativeHorizontalPreview } from './CreativeHorizontalPreview';
 import { CreativeAIActions } from './CreativeAIActions';
 import { CashBagLoader } from '@/components/ui/CashBagLoader';
+import { formatFileSize } from '@/lib/uploadWithProgress';
 import {
   Search,
   Image,
@@ -51,6 +55,7 @@ import {
   Scissors,
   History,
   Inbox,
+  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
