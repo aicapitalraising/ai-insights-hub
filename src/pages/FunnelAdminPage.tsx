@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/funnel-builder/admin/AdminSidebar';
 import { AnalyticsTab } from '@/components/funnel-builder/admin/AnalyticsTab';
@@ -7,6 +7,9 @@ import { GHLTab } from '@/components/funnel-builder/admin/GHLTab';
 import { ConversationsTab } from '@/components/funnel-builder/admin/ConversationsTab';
 import { TrackingTab } from '@/components/funnel-builder/admin/TrackingTab';
 import { SettingsTab } from '@/components/funnel-builder/admin/SettingsTab';
+import { Loader2 } from 'lucide-react';
+
+const FunnelClientPage = lazy(() => import('@/pages/FunnelClientPage'));
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('analytics');
@@ -20,7 +23,7 @@ export default function Admin() {
           {/* Header */}
           <header className="h-14 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-50 flex items-center px-4 gap-3">
             <SidebarTrigger />
-            <h1 className="font-display text-lg font-bold capitalize">{activeTab}</h1>
+            <h1 className="font-display text-lg font-bold capitalize">{activeTab === 'preview' ? 'Funnel Preview' : activeTab}</h1>
             <span className="ml-auto text-xs text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</span>
           </header>
 
@@ -30,6 +33,11 @@ export default function Admin() {
             {activeTab === 'leads' && <LeadsTab />}
             {activeTab === 'ghl' && <GHLTab />}
             {activeTab === 'conversations' && <ConversationsTab />}
+            {activeTab === 'preview' && (
+              <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+                <FunnelClientPage />
+              </Suspense>
+            )}
             {activeTab === 'tracking' && <TrackingTab />}
             {activeTab === 'settings' && <SettingsTab />}
           </main>
