@@ -233,11 +233,8 @@ const Index = () => {
           />
 
           <main className="flex-1 p-6 space-y-6 overflow-auto">
-            {/* Database utility page */}
-            {activeTab === 'database' && <DatabaseView embedded />}
 
-            {/* Spam utility page */}
-            {activeTab === 'spam' && <SpamBlacklist embedded />}
+
 
             {/* Briefs - now part of Creatives tab */}
 
