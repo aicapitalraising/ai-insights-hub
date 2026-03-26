@@ -30,6 +30,7 @@ import { CreateTaskModal } from './CreateTaskModal';
 import { TaskHistoryTab } from './TaskHistoryTab';
 import { NotificationsTab, useNotifications } from './NotificationsTab';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
+import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 
 interface TaskBoardViewProps {
   clientId?: string;
