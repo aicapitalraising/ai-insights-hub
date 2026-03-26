@@ -56,6 +56,7 @@ interface AgencySettingsModalProps {
 export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalProps) {
   const { data: settings } = useAgencySettings();
   const updateSettings = useUpdateAgencySettings();
+  const { data: clients = [] } = useClients();
   
   const [saving, setSaving] = useState(false);
   const [agencyPrompt, setAgencyPrompt] = useState('');

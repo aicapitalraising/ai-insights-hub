@@ -104,15 +104,6 @@ const navStructure = [
       { title: 'Funnel Analytics', value: 'funnel-analytics', icon: BarChart2 },
     ],
   },
-  {
-    title: 'Settings',
-    value: 'settings-group',
-    icon: Settings,
-    children: [
-      { title: 'Database', value: 'database', icon: Database },
-      { title: 'Spam List', value: 'spam', icon: Shield },
-    ],
-  },
 ];
 
 export function AppSidebar({
