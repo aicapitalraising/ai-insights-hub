@@ -1,7 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/db';
 import { calculateClientRevenue } from '@/hooks/useClientMRR';
 import { useDateFilter } from '@/contexts/DateFilterContext';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, subDays, format } from 'date-fns';
 import { Client, useUpdateClient } from '@/hooks/useClients';
 import { AggregatedMetrics } from '@/hooks/useMetrics';
 import { KPIThresholds, ClientSettings } from '@/hooks/useClientSettings';
