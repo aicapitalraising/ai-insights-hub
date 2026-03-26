@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Plus, Zap, Eye, Bot, RefreshCw, Loader2, MessageSquare } from 'lucide-react';
+import { Trash2, Plus, Zap, Eye, Bot, RefreshCw, Loader2, MessageSquare, RotateCcw } from 'lucide-react';
 import {
   useSlackChannelMappings,
   useAddSlackChannel,
@@ -15,7 +15,9 @@ import {
   useSyncSlackChannels,
 } from '@/hooks/useSlackIntegration';
 import { useSlackChannels } from '@/hooks/useSlackChannels';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface SlackChannelMappingSectionProps {
   clientId: string;
@@ -33,15 +35,24 @@ const CHANNEL_TYPES = [
 export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSectionProps) {
   const { data: mappings = [], isLoading } = useSlackChannelMappings(clientId);
   const { data: activityLog = [] } = useSlackActivityLog(clientId);
-  const { data: slackChannels = [], isLoading: loadingChannels } = useSlackChannels();
+  const { data: slackChannels = [], isLoading: loadingChannels, isFetching: fetchingChannels } = useSlackChannels();
   const addChannel = useAddSlackChannel();
   const updateChannel = useUpdateSlackChannel();
   const removeChannel = useRemoveSlackChannel();
   const syncChannels = useSyncSlackChannels();
+  const queryClient = useQueryClient();
 
   const [selectedChannelId, setSelectedChannelId] = useState('');
   const [newChannelType, setNewChannelType] = useState('general');
   const [showActivity, setShowActivity] = useState(false);
+  const [isResyncing, setIsResyncing] = useState(false);
+
+  const handleResyncChannels = async () => {
+    setIsResyncing(true);
+    await queryClient.invalidateQueries({ queryKey: ['slack-channels'] });
+    toast.success('Channel list refreshed from Slack');
+    setIsResyncing(false);
+  };
 
   // Filter out already-mapped channels
   const mappedIds = new Set(mappings.map(m => m.channel_id));
@@ -217,7 +228,23 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
         </p>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-xs">Slack Channel</Label>
+            <div className="flex items-center justify-between mb-0.5">
+              <Label className="text-xs">Slack Channel</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                onClick={handleResyncChannels}
+                disabled={isResyncing || fetchingChannels}
+              >
+                {isResyncing || fetchingChannels ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                )}
+                Resync
+              </Button>
+            </div>
             <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder={loadingChannels ? "Loading channels..." : "Select a channel"} />
