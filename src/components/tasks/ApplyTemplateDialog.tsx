@@ -205,51 +205,77 @@ export function ApplyTemplateDialog({
 
             <ScrollArea className="flex-1 max-h-[400px]">
               <div className="space-y-4 pr-4">
-                {Object.entries(categorizedTasks).map(([category, tasks]) => (
-                  <div key={category}>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      {category}
-                    </h4>
-                    <div className="space-y-1.5">
-                      {tasks.map((task, i) => {
-                        const matchedAssignees = task.assignees
-                          .map(a => ({ name: a, found: !!findMemberByName(a) }));
+                {Object.entries(categorizedTasks).map(([category, tasks]) => {
+                  const allAssignees = [...new Set(tasks.flatMap(t => t.assignees))];
+                  const matchedParentAssignees = allAssignees.map(a => ({
+                    name: a,
+                    found: !!findMemberByName(a),
+                  }));
 
-                        return (
-                          <div key={i} className="flex items-center justify-between py-1.5 px-3 rounded-md bg-muted/30">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span className="text-sm truncate">{task.title}</span>
+                  return (
+                    <div key={category} className="border rounded-lg overflow-hidden">
+                      {/* Parent task header */}
+                      <div className="bg-muted/60 px-3 py-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <span className="font-semibold text-sm">{category}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {tasks.length} subtasks
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {matchedParentAssignees.map((a, j) => (
+                            <Badge
+                              key={j}
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${a.found ? '' : 'border-amber-500/50 text-amber-600'}`}
+                            >
+                              {a.name.split(' ')[0]}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Subtasks */}
+                      <div className="divide-y">
+                        {tasks.map((task, i) => {
+                          const matchedAssignees = task.assignees
+                            .map(a => ({ name: a, found: !!findMemberByName(a) }));
+
+                          return (
+                            <div key={i} className="flex items-center justify-between py-1.5 px-3 pl-8">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <CheckCircle2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                                <span className="text-sm truncate">{task.title}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <Badge
+                                  variant={task.priority === 'high' ? 'destructive' : task.priority === 'low' ? 'secondary' : 'default'}
+                                  className="text-[10px] px-1.5 py-0"
+                                >
+                                  {task.priority}
+                                </Badge>
+                                {matchedAssignees.length > 0 && (
+                                  <div className="flex gap-1">
+                                    {matchedAssignees.map((a, j) => (
+                                      <Badge
+                                        key={j}
+                                        variant="outline"
+                                        className={`text-[10px] px-1.5 py-0 ${a.found ? '' : 'border-amber-500/50 text-amber-600'}`}
+                                      >
+                                        {a.name.split(' ')[0]}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0 ml-2">
-                              <Badge
-                                variant={task.priority === 'high' ? 'destructive' : task.priority === 'low' ? 'secondary' : 'default'}
-                                className="text-[10px] px-1.5 py-0"
-                              >
-                                {task.priority}
-                              </Badge>
-                              {matchedAssignees.length > 0 && (
-                                <div className="flex gap-1">
-                                  {matchedAssignees.map((a, j) => (
-                                    <Badge
-                                      key={j}
-                                      variant="outline"
-                                      className={`text-[10px] px-1.5 py-0 ${a.found ? '' : 'border-amber-500/50 text-amber-600'}`}
-                                      title={a.found ? `Will assign to ${a.name}` : `"${a.name}" not found in team`}
-                                    >
-                                      {a.name.split(' ')[0]}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                    <Separator className="mt-3" />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
 
