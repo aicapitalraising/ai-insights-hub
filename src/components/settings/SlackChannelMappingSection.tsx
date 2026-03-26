@@ -228,10 +228,27 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
         </p>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-xs">Slack Channel</Label>
+            <div className="flex items-center justify-between mb-0.5">
+              <Label className="text-xs">Slack Channel</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                onClick={handleResyncChannels}
+                disabled={isResyncing || fetchingChannels}
+              >
+                {isResyncing || fetchingChannels ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                )}
+                Resync
+              </Button>
+            </div>
             <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder={loadingChannels ? "Loading channels..." : "Select a channel"} />
+              </SelectTrigger>
               </SelectTrigger>
               <SelectContent className="max-h-[240px] overflow-y-auto">
                   {availableChannels.map(ch => (
