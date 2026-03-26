@@ -33,14 +33,22 @@ import {
 import { Plus, FileText, Image, File, Trash2, Download, ExternalLink, Upload, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { OfferAssetHub } from './OfferAssetHub';
 
 interface ClientOffersSectionProps {
   clientId: string;
   clientName: string;
   isPublicView?: boolean;
+  brandColors?: string[] | null;
+  brandFonts?: string[] | null;
+  clientDescription?: string | null;
+  offerDescription?: string | null;
+  websiteUrl?: string | null;
+  industry?: string | null;
+  clientType?: string | null;
 }
 
-export function ClientOffersSection({ clientId, clientName, isPublicView = false }: ClientOffersSectionProps) {
+export function ClientOffersSection({ clientId, clientName, isPublicView = false, brandColors, brandFonts, clientDescription, offerDescription, websiteUrl, industry, clientType }: ClientOffersSectionProps) {
   const { data: offers = [], isLoading } = useClientOffers(clientId);
   const createOffer = useCreateOffer();
   const updateOffer = useUpdateOffer();
@@ -222,6 +230,22 @@ export function ClientOffersSection({ clientId, clientName, isPublicView = false
                   {offer.uploaded_by && <span>• {offer.uploaded_by}</span>}
                 </div>
               </div>
+
+              {/* Generate All Assets button */}
+              {!isPublicView && (
+                <OfferAssetHub
+                  offer={offer}
+                  clientId={clientId}
+                  clientName={clientName}
+                  brandColors={brandColors}
+                  brandFonts={brandFonts}
+                  clientDescription={clientDescription}
+                  offerDescription={offerDescription}
+                  websiteUrl={websiteUrl}
+                  industry={industry}
+                  clientType={clientType}
+                />
+              )}
 
               <div className="flex items-center gap-2">
                 {offer.file_url && (

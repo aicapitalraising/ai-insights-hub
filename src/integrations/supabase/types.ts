@@ -477,6 +477,7 @@ export type Database = {
           content: Json | null
           created_at: string | null
           id: string
+          offer_id: string | null
           status: string | null
           title: string | null
           updated_at: string | null
@@ -488,6 +489,7 @@ export type Database = {
           content?: Json | null
           created_at?: string | null
           id?: string
+          offer_id?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
@@ -499,6 +501,7 @@ export type Database = {
           content?: Json | null
           created_at?: string | null
           id?: string
+          offer_id?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
@@ -510,6 +513,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assets_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "client_offers"
             referencedColumns: ["id"]
           },
         ]
@@ -628,6 +638,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "client_intake_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_offers: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          offer_type: string
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          offer_type?: string
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          offer_type?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_offers_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
