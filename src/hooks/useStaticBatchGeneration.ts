@@ -124,17 +124,34 @@ export function useStaticBatchGeneration({
         if (error) throw error;
 
         // Update with generated image
+        const completedAd = {
+          ...ad,
+          status: 'completed' as const,
+          imageUrl: data.imageUrl,
+        };
         setGeneratedAds((prev) =>
           prev.map((a, idx) =>
-            idx === i
-              ? {
-                  ...a,
-                  status: 'completed' as const,
-                  imageUrl: data.imageUrl,
-                }
-              : a
+            idx === i ? completedAd : a
           )
         );
+
+        // Save to creatives table for client history (agency-only)
+        try {
+          const { supabase } = await import('@/integrations/supabase/db');
+          await supabase.from('creatives').insert({
+            client_id: clientId,
+            title: `${style.name} - ${ad.aspectRatio}`,
+            type: 'image',
+            file_url: data.imageUrl,
+            status: 'draft',
+            platform: 'meta',
+            aspect_ratio: ad.aspectRatio,
+            source: 'ai_batch',
+          });
+        } catch (saveErr) {
+          console.warn('Failed to save creative to history:', saveErr);
+        }
+
         completedCount++;
       } catch (error) {
         console.error('Failed to generate ad:', error);
