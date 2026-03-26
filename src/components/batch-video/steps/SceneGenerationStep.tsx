@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 import { useSaveAssetFromUrl } from '@/hooks/useAssets';
 import type { ScriptSegment, BatchVideoScene, BatchVideoConfig, BackgroundStyle } from '@/types/batch-video';

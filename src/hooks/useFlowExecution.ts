@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { isGoogleApiUrl, fetchVideoViaProxy } from '@/lib/video-proxy';
 import { concatenateVideos } from '@/lib/video-concat';
 import type { 
@@ -49,7 +50,7 @@ async function generateVideoForModel(
   }
   // Default: Veo3
   const fnName = body.imageUrl ? 'generate-video-from-image' : 'generate-broll';
-  const { data, error } = await supabase.functions.invoke(fnName, { body });
+  const { data, error } = await invokeCloudFunction(fnName, { body });
   if (error) throw error;
   if (data.error) throw new Error(data.message || data.error);
   return data;

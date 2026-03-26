@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import type { ScrapedAd } from '@/hooks/useAdScraping';
 import { toast } from 'sonner';
 
@@ -62,7 +63,7 @@ export function useAdRegeneration() {
 
           const prompt = `${baseText}\n\nCreate a professional, high-converting advertisement image that captures the essence and style of the original ad.`;
 
-          const { data, error } = await supabase.functions.invoke('generate-static-ad', {
+          const { data, error } = await invokeCloudFunction('generate-static-ad', {
             body: {
               prompt,
               referenceImages: ad.image_url ? [ad.image_url] : [],
