@@ -231,6 +231,22 @@ export function ClientOffersSection({ clientId, clientName, isPublicView = false
                 </div>
               </div>
 
+              {/* Generate All Assets button */}
+              {!isPublicView && (
+                <OfferAssetHub
+                  offer={offer}
+                  clientId={clientId}
+                  clientName={clientName}
+                  brandColors={brandColors}
+                  brandFonts={brandFonts}
+                  clientDescription={clientDescription}
+                  offerDescription={offerDescription}
+                  websiteUrl={websiteUrl}
+                  industry={industry}
+                  clientType={clientType}
+                />
+              )}
+
               <div className="flex items-center gap-2">
                 {offer.file_url && (
                   <Button
