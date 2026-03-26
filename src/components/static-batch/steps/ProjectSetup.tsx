@@ -316,8 +316,16 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
 
             {selectedAvatar && (
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium">{selectedAvatar.name}</p>
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <img src={selectedAvatar.image_url} alt={selectedAvatar.name} className="w-20 h-20 rounded-lg object-cover border" />
+                  <div>
+                    <p className="text-sm font-semibold">{selectedAvatar.name}</p>
+                    {selectedAvatar.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{selectedAvatar.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mb-2">
                   {selectedAvatar.gender && (
                     <Badge variant="outline" className="text-xs">{selectedAvatar.gender}</Badge>
                   )}
@@ -328,6 +336,28 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
                     <Badge variant="outline" className="text-xs">{selectedAvatar.style}</Badge>
                   )}
                 </div>
+                {avatarLooks.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-muted-foreground mb-1.5">Available Looks</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {avatarLooks.map((look) => (
+                        <button
+                          key={look.id}
+                          type="button"
+                          onClick={() => updateConfig({ characterImageUrl: look.image_url })}
+                          className={cn(
+                            'flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all',
+                            config.characterImageUrl === look.image_url
+                              ? 'border-primary ring-1 ring-primary'
+                              : 'border-muted hover:border-primary/40'
+                          )}
+                        >
+                          <img src={look.image_url} alt={look.outfit || 'Look'} className="w-14 h-14 object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
