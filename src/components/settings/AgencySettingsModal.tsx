@@ -169,7 +169,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
               API
             </TabsTrigger>
             <TabsTrigger value="database" className="flex items-center gap-2">
-              <DatabaseIcon className="h-4 w-4" />
+              <Database className="h-4 w-4" />
               Database
             </TabsTrigger>
             <TabsTrigger value="spam" className="flex items-center gap-2">
