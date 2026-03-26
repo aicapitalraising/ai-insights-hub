@@ -44,6 +44,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_styles: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          description: string
+          display_order: number
+          example_image_url: string | null
+          id: string
+          is_default: boolean
+          name: string
+          prompt_template: string
+          reference_images: string[] | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          description?: string
+          display_order?: number
+          example_image_url?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          prompt_template?: string
+          reference_images?: string[] | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          description?: string
+          display_order?: number
+          example_image_url?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          prompt_template?: string
+          reference_images?: string[] | null
+        }
+        Relationships: []
+      }
       ad_templates: {
         Row: {
           category: string | null

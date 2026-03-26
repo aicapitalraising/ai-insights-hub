@@ -20,7 +20,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { useAdStyles, useCreateAdStyle, useUpdateAdStyle, useDeleteAdStyle } from '@/hooks/useAdStyles';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { AdStyle } from '@/types';
 import {
