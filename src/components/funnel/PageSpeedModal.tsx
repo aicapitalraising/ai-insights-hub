@@ -4,8 +4,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface PageSpeedResults {
   performanceScore: number;
@@ -17,6 +19,8 @@ interface PageSpeedResults {
     totalBlockingTime: string;
     cumulativeLayoutShift: string;
   };
+  cached?: boolean;
+  fetchedAt?: string;
 }
 
 interface PageSpeedModalProps {
@@ -25,6 +29,8 @@ interface PageSpeedModalProps {
   results: PageSpeedResults | null;
   url: string;
   strategy: 'mobile' | 'desktop';
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export function PageSpeedModal({
@@ -33,6 +39,8 @@ export function PageSpeedModal({
   results,
   url,
   strategy,
+  onRefresh,
+  refreshing,
 }: PageSpeedModalProps) {
   if (!results) return null;
 
@@ -40,12 +48,6 @@ export function PageSpeedModal({
     if (score >= 90) return 'text-green-600';
     if (score >= 50) return 'text-yellow-600';
     return 'text-red-600';
-  };
-
-  const getScoreBg = (score: number) => {
-    if (score >= 90) return 'bg-green-600';
-    if (score >= 50) return 'bg-yellow-600';
-    return 'bg-red-600';
   };
 
   const getDomain = (urlStr: string) => {
@@ -136,6 +138,28 @@ export function PageSpeedModal({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Cache info + refresh */}
+          <div className="flex items-center justify-between border-t pt-3">
+            <span className="text-[10px] text-muted-foreground">
+              {results.fetchedAt
+                ? `Tested ${formatDistanceToNow(new Date(results.fetchedAt), { addSuffix: true })}`
+                : 'Just tested'}
+              {results.cached && ' (cached)'}
+            </span>
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={onRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={cn('h-3 w-3 mr-1', refreshing && 'animate-spin')} />
+                Re-test
+              </Button>
+            )}
           </div>
 
           {/* Legend */}

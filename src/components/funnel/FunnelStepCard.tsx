@@ -50,6 +50,8 @@ interface PageSpeedResults {
     totalBlockingTime: string;
     cumulativeLayoutShift: string;
   };
+  cached?: boolean;
+  fetchedAt?: string;
 }
 
 export function FunnelStepCard({
