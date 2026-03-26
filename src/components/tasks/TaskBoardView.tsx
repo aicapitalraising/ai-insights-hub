@@ -199,6 +199,15 @@ export function TaskBoardView({ clientId, onClose, isPublicView = false }: TaskB
         defaultClientId={clientId}
         isPublicView={isPublicView}
       />
+
+      {clientId && (
+        <ApplyTemplateDialog
+          open={showTemplate}
+          onOpenChange={setShowTemplate}
+          clientId={clientId}
+          clientName={filteredClients.find(c => c.id === clientId)?.name || 'Client'}
+        />
+      )}
     </Card>
   );
 }
