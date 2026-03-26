@@ -206,36 +206,6 @@ export function GenerationConfig({
               </div>
             </div>
 
-            {/* Per-style overrides */}
-            {config.selectedStyles.length > 0 && (
-              <div className="border-t pt-4 space-y-3">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Per-style overrides</Label>
-                {config.selectedStyles.map((styleId) => {
-                  const style = allStyles.find(s => s.id === styleId);
-                  if (!style) return null;
-                  const count = styleVariations[styleId] ?? config.variationsPerStyle;
-                  return (
-                    <div key={styleId} className="flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{style.name}</p>
-                      </div>
-                      <div className="flex items-center gap-2 w-40">
-                        <Slider
-                          value={[count]}
-                          onValueChange={([v]) => setStyleVariation(styleId, v)}
-                          min={1}
-                          max={10}
-                          step={1}
-                          className="flex-1"
-                        />
-                        <span className="text-sm font-mono w-6 text-right">{count}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
             {/* Calculation */}
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground mb-2">Total Calculation</p>
