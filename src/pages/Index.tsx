@@ -4,6 +4,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
+import { DataAccuracyAuditPanel } from '@/components/dashboard/DataAccuracyAuditPanel';
 import { KPIGrid } from '@/components/dashboard/KPIGrid';
 import { DraggableClientTable } from '@/components/dashboard/DraggableClientTable';
 import { AgencyStatsBar } from '@/components/dashboard/AgencyStatsBar';
@@ -25,6 +26,7 @@ import { CreativesTab } from '@/components/creative/CreativesTab';
 import { PendingTasksReview } from '@/components/meetings/PendingTasksReview';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
+import { AgencyBillingTab } from '@/components/billing/AgencyBillingTab';
 import { DealPipelineBoard } from '@/components/deals/DealPipelineBoard';
 import { DataHealthCard } from '@/components/dashboard/DataHealthCard';
 import { IntegrationStatusCards } from '@/components/dashboard/IntegrationStatusCards';
@@ -50,6 +52,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useUpdateClientOrder } from '@/hooks/useClientOrder';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { toast } from 'sonner';
+
+// Inline page components for Database, Spam, Briefs (rendered inside sidebar layout)
+import DatabaseView from './DatabaseView';
+import SpamBlacklist from './SpamBlacklist';
+import CreativeBriefs from './CreativeBriefs';
 import { AdminAdsManagerTab } from '@/components/ads-manager/AdminAdsManagerTab';
 import { AdminOffersTab } from '@/components/offers/AdminOffersTab';
 import { QuizBuilderTab } from '@/components/quiz/QuizBuilderTab';
@@ -226,8 +233,11 @@ const Index = () => {
           />
 
           <main className="flex-1 p-6 space-y-6 overflow-auto">
+            {/* Database utility page */}
+            {activeTab === 'database' && <DatabaseView embedded />}
 
-
+            {/* Spam utility page */}
+            {activeTab === 'spam' && <SpamBlacklist embedded />}
 
             {/* Briefs - now part of Creatives tab */}
 
@@ -472,8 +482,19 @@ const Index = () => {
               </SectionErrorBoundary>
             )}
 
+            {/* Billing */}
+            {activeTab === 'billing' && currentMember?.role === 'admin' && (
+              <SectionErrorBoundary sectionName="Billing">
+                <AgencyBillingTab clients={clients} />
+              </SectionErrorBoundary>
+            )}
 
-
+            {/* Data Accuracy Audit */}
+            {activeTab === 'data-audit' && currentMember?.role === 'admin' && (
+              <SectionErrorBoundary sectionName="DataAccuracyAudit">
+                <DataAccuracyAuditPanel />
+              </SectionErrorBoundary>
+            )}
           </main>
         </div>
       </div>

@@ -7,6 +7,11 @@ import {
   MessageSquare,
   Handshake,
   Smartphone,
+  Settings,
+  Database,
+  Shield,
+  ShieldAlert,
+  Receipt,
   Palette,
   ChevronDown,
   Globe,
@@ -97,6 +102,15 @@ const navStructure = [
       { title: 'Fulfillment', value: 'funnel-fulfillment', icon: CheckCircle2 },
       { title: 'Kickoff', value: 'funnel-kickoff', icon: Zap },
       { title: 'Funnel Analytics', value: 'funnel-analytics', icon: BarChart2 },
+    ],
+  },
+  {
+    title: 'Settings',
+    value: 'settings-group',
+    icon: Settings,
+    children: [
+      { title: 'Database', value: 'database', icon: Database },
+      { title: 'Spam List', value: 'spam', icon: Shield },
     ],
   },
 ];
@@ -199,6 +213,30 @@ export function AppSidebar({
                               </SidebarMenuSubItem>
                             );
                           })}
+                          {/* Add Billing under Settings for admins */}
+                          {item.value === 'settings-group' && isAdmin && (
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton
+                                isActive={activeTab === 'billing'}
+                                onClick={() => onTabChange('billing')}
+                              >
+                                <Receipt className="h-3.5 w-3.5" />
+                                <span>Billing</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          )}
+                          {/* Add Data Accuracy Audit under Settings for admins */}
+                          {item.value === 'settings-group' && isAdmin && (
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton
+                                isActive={activeTab === 'data-audit'}
+                                onClick={() => onTabChange('data-audit')}
+                              >
+                                <ShieldAlert className="h-3.5 w-3.5" />
+                                <span>Data Audit</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          )}
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </SidebarMenuItem>

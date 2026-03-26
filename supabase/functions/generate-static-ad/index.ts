@@ -156,10 +156,10 @@ DO NOT include:
 `.trim();
 }
 
-/** Create a Supabase client pointing at the current Supabase project */
-function getSupabaseClient() {
-  const url = Deno.env.get('SUPABASE_URL')!;
-  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+/** Create a Supabase client pointing at the PRODUCTION database */
+function getProductionSupabase() {
+  const url = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
+  const key = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   return createClient(url, key);
 }
 
@@ -271,8 +271,8 @@ serve(async (req) => {
     const base64Image = imagePart.inlineData.data;
     const mimeType = imagePart.inlineData.mimeType || 'image/png';
 
-    // Upload to Supabase Storage
-    const supabase = getSupabaseClient();
+    // Upload to PRODUCTION Supabase Storage
+    const supabase = getProductionSupabase();
 
     const imageBytes = Uint8Array.from(atob(base64Image), c => c.charCodeAt(0));
     const timestamp = Date.now();
@@ -294,7 +294,7 @@ serve(async (req) => {
 
     const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(filePath);
 
-    // Save asset record to database
+    // Save asset record to PRODUCTION database
     const { data: asset, error: assetError } = await supabase
       .from('assets')
       .insert({

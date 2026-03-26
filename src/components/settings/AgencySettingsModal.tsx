@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,14 +17,8 @@ import { useAgencySettings, useUpdateAgencySettings } from '@/hooks/useAgencySet
 import { useSyncMeetings } from '@/hooks/useMeetings';
 import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
-import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Shield, Receipt, ShieldAlert } from 'lucide-react';
+import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2 } from 'lucide-react';
 import { ApiReferenceTab } from './ApiReferenceTab';
-import { useClients } from '@/hooks/useClients';
-
-const DatabaseView = lazy(() => import('@/pages/DatabaseView'));
-const SpamBlacklist = lazy(() => import('@/pages/SpamBlacklist'));
-const AgencyBillingTab = lazy(() => import('@/components/billing/AgencyBillingTab').then((module) => ({ default: module.AgencyBillingTab })));
-const DataAccuracyAuditPanel = lazy(() => import('@/components/dashboard/DataAccuracyAuditPanel').then((module) => ({ default: module.DataAccuracyAuditPanel })));
 
 const OPENAI_MODELS = [
   { value: 'gpt-5', label: 'GPT-5' },
@@ -56,7 +50,6 @@ interface AgencySettingsModalProps {
 export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalProps) {
   const { data: settings } = useAgencySettings();
   const updateSettings = useUpdateAgencySettings();
-  const { data: clients = [] } = useClients();
   
   const [saving, setSaving] = useState(false);
   const [agencyPrompt, setAgencyPrompt] = useState('');
@@ -81,7 +74,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
   const [showMeetgeekKey, setShowMeetgeekKey] = useState(false);
   const syncMeetings = useSyncMeetings();
   
-  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meetgeek-webhook`;
+  const webhookUrl = `https://jgwwmtuvjlmzapwqiabu.supabase.co/functions/v1/meetgeek-webhook`;
 
   useEffect(() => {
     if (settings) {
@@ -143,7 +136,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         </DialogHeader>
 
         <Tabs defaultValue="team" className="mt-4">
-          <TabsList className="flex flex-wrap w-full h-auto gap-1">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="team" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Team
@@ -167,22 +160,6 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
             <TabsTrigger value="api-reference" className="flex items-center gap-2">
               <Code2 className="h-4 w-4" />
               API
-            </TabsTrigger>
-            <TabsTrigger value="database" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              Database
-            </TabsTrigger>
-            <TabsTrigger value="spam" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Spam List
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Billing
-            </TabsTrigger>
-            <TabsTrigger value="data-audit" className="flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4" />
-              Data Audit
             </TabsTrigger>
           </TabsList>
           
@@ -530,30 +507,6 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
 
           <TabsContent value="api-reference" className="mt-4">
             <ApiReferenceTab />
-          </TabsContent>
-
-          <TabsContent value="database" className="mt-4">
-            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading database settings...</div>}>
-              <DatabaseView embedded />
-            </Suspense>
-          </TabsContent>
-
-          <TabsContent value="spam" className="mt-4">
-            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading spam settings...</div>}>
-              <SpamBlacklist embedded />
-            </Suspense>
-          </TabsContent>
-
-          <TabsContent value="billing" className="mt-4">
-            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading billing...</div>}>
-              <AgencyBillingTab clients={clients} />
-            </Suspense>
-          </TabsContent>
-
-          <TabsContent value="data-audit" className="mt-4">
-            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading data audit...</div>}>
-              <DataAccuracyAuditPanel />
-            </Suspense>
           </TabsContent>
         </Tabs>
 
