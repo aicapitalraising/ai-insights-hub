@@ -423,15 +423,20 @@ export function DraggableClientTable({
               const t = thresholds[client.id] || {};
               const syncInfo = getClientSyncStatus(client);
               const syncBorderStyle = getSyncBorderStyle(syncInfo.status);
+              const isInactive = inactiveClientIds.has(client.id);
 
               return (
                 <TooltipProvider key={client.id}>
                   <TableRow
                     className={cn(
-                      "cursor-pointer hover:bg-muted/50 border-b h-7",
+                      "cursor-pointer hover:bg-muted/50 border-b h-7 relative",
                       draggedId === client.id && "opacity-50",
-                      syncBorderStyle
+                      syncBorderStyle,
+                      isInactive && "opacity-60"
                     )}
+                    style={isInactive ? {
+                      backgroundImage: 'linear-gradient(transparent calc(50% - 0.5px), hsl(var(--destructive) / 0.35) calc(50% - 0.5px), hsl(var(--destructive) / 0.35) calc(50% + 0.5px), transparent calc(50% + 0.5px))',
+                    } : undefined}
                     draggable
                     onDragStart={(e) => handleDragStart(e, client.id)}
                     onDragOver={handleDragOver}
