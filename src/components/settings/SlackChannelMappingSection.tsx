@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Plus, Zap, Eye, Bot, RefreshCw, Loader2, MessageSquare } from 'lucide-react';
+import { Trash2, Plus, Zap, Eye, Bot, RefreshCw, Loader2, MessageSquare, RotateCcw } from 'lucide-react';
 import {
   useSlackChannelMappings,
   useAddSlackChannel,
@@ -15,7 +15,9 @@ import {
   useSyncSlackChannels,
 } from '@/hooks/useSlackIntegration';
 import { useSlackChannels } from '@/hooks/useSlackChannels';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface SlackChannelMappingSectionProps {
   clientId: string;
