@@ -679,15 +679,20 @@ async function handleAIQuery(
       ? `You are HPA, an expert agency performance analyst and task manager for ${agencyMember?.name || userName}. You have COMPLETE access to ${scopeLabel} data.`
       : `You are HPA, a performance assistant. You have access to ${scopeLabel} data.`;
 
+    const scopeRule = scopedClientId
+      ? `CRITICAL SCOPE RULE: This is a CLIENT-SPECIFIC channel. You MUST ONLY discuss this client's data, tasks, and metrics. Do NOT reference, compare, or mention any other client. If the user asks about other clients, politely redirect them to the agency channel.`
+      : `This is an AGENCY channel. You may reference and compare all clients' data.`;
+
     const systemPrompt = `${roleDesc}
 
 ${context}
 
 ---
 RULES:
+- ${scopeRule}
 - Use Slack markdown: *bold*, _italic_, \`code\`
 - Be concise but thorough. Reference exact numbers.
-- Compare clients when relevant (agency users only).
+${!scopedClientId ? "- Compare clients when relevant." : "- Do NOT compare with or mention other clients."}
 - Flag concerning trends proactively.
 - If asked about creating tasks, tell them to say "@HPA create task: [description]"
 - If asked about summarizing, tell them to say "@HPA summarize"
