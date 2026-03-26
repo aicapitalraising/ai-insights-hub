@@ -249,7 +249,6 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder={loadingChannels ? "Loading channels..." : "Select a channel"} />
               </SelectTrigger>
-              </SelectTrigger>
               <SelectContent className="max-h-[240px] overflow-y-auto">
                   {availableChannels.map(ch => (
                     <SelectItem key={ch.id} value={ch.id}>
