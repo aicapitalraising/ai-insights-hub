@@ -88,6 +88,31 @@ export function CreativesTab() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedCreative, setSelectedCreative] = useState<CreativeWithClient | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Upload state
+  const createCreative = useCreateCreative();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadCurrentFile, setUploadCurrentFile] = useState('');
+  const [uploadFileIndex, setUploadFileIndex] = useState(0);
+  const [uploadTotalFiles, setUploadTotalFiles] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkClientId, setBulkClientId] = useState<string>('');
+  const [bulkPlatform, setBulkPlatform] = useState<'meta' | 'tiktok' | 'youtube' | 'google'>('meta');
+  const [newCreative, setNewCreative] = useState({
+    title: '',
+    type: 'image' as 'image' | 'video' | 'copy',
+    platform: 'meta' as 'meta' | 'tiktok' | 'youtube' | 'google',
+    headline: '',
+    body_copy: '',
+    cta_text: '',
+    file: null as File | null,
+    client_id: '',
+  });
 
   // Map client names to creatives
   const clientMap = clients.reduce((acc, client) => {
