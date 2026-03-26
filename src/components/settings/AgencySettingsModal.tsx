@@ -533,19 +533,27 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
           </TabsContent>
 
           <TabsContent value="database" className="mt-4">
-            <DatabaseView embedded />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading database settings...</div>}>
+              <DatabaseView embedded />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="spam" className="mt-4">
-            <SpamBlacklist embedded />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading spam settings...</div>}>
+              <SpamBlacklist embedded />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="billing" className="mt-4">
-            <AgencyBillingTab clients={clients} />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading billing...</div>}>
+              <AgencyBillingTab clients={clients} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="data-audit" className="mt-4">
-            <DataAccuracyAuditPanel />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading data audit...</div>}>
+              <DataAccuracyAuditPanel />
+            </Suspense>
           </TabsContent>
         </Tabs>
 
