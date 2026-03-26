@@ -26,12 +26,25 @@ serve(async (req) => {
     console.log(`Running PageSpeed test for: ${url} (strategy: ${strategy})`);
 
     const apiUrl = `${PAGESPEED_API}?url=${encodeURIComponent(url)}&strategy=${strategy}&category=performance`;
-    const response = await fetch(apiUrl);
     
-    if (!response.ok) {
-      const errorText = await response.text();
+    let response: Response | null = null;
+    const maxRetries = 4;
+    let delay = 2000;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      response = await fetch(apiUrl);
+      if (response.status === 429 && attempt < maxRetries) {
+        console.warn(`Rate limited (429). Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+        continue;
+      }
+      break;
+    }
+    
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : 'No response';
       console.error('PageSpeed API error:', errorText);
-      throw new Error(`PageSpeed API returned ${response.status}`);
+      throw new Error(`PageSpeed API returned ${response?.status || 'unknown'}`);
     }
 
     const data = await response.json();
