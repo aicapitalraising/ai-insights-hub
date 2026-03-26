@@ -287,7 +287,7 @@ export function ApplyTemplateDialog({
                 ) : (
                   <FileText className="h-4 w-4" />
                 )}
-                Apply {selectedTemplate.tasks.length} Tasks
+                Apply {Object.keys(categorizedTasks).length} Groups ({selectedTemplate.tasks.length} Tasks)
               </Button>
             </div>
           </div>
