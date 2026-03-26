@@ -46,57 +46,97 @@ export function ApplyTemplateDialog({
     try {
       const dueDate = addDays(new Date(), 7).toISOString();
 
-      // Create all tasks
-      const taskRows = selectedTemplate.tasks.map(t => ({
-        client_id: clientId,
-        title: t.title,
-        description: `[${t.category}] — Auto-created from "${selectedTemplate.name}" template`,
-        priority: t.priority,
-        status: 'todo',
-        due_date: dueDate,
-      }));
+      // Group tasks by category
+      const categorized = selectedTemplate.tasks.reduce<Record<string, typeof selectedTemplate.tasks>>((acc, t) => {
+        if (!acc[t.category]) acc[t.category] = [];
+        acc[t.category].push(t);
+        return acc;
+      }, {});
 
-      const { data: createdTasks, error } = await supabase
-        .from('tasks')
-        .insert(taskRows)
-        .select('id, title');
+      let totalCreated = 0;
 
-      if (error) throw error;
+      for (const [category, tasks] of Object.entries(categorized)) {
+        // 1. Create the parent task for this category
+        const { data: parentTask, error: parentError } = await supabase
+          .from('tasks')
+          .insert({
+            client_id: clientId,
+            title: category,
+            description: `[${selectedTemplate.name}] — ${tasks.length} subtasks`,
+            priority: tasks.some(t => t.priority === 'high') ? 'high' : 'medium',
+            status: 'todo',
+            due_date: dueDate,
+          })
+          .select('id')
+          .single();
 
-      // Now assign members to each task based on template assignees
-      if (createdTasks && createdTasks.length > 0) {
-        const assigneeRows: { task_id: string; member_id: string | null; pod_id: string | null }[] = [];
+        if (parentError || !parentTask) {
+          console.error('Failed to create parent task:', parentError);
+          continue;
+        }
 
-        createdTasks.forEach((createdTask, index) => {
-          const templateTask = selectedTemplate.tasks[index];
-          if (templateTask?.assignees) {
-            templateTask.assignees.forEach(assigneeName => {
-              const member = findMemberByName(assigneeName);
-              if (member) {
-                assigneeRows.push({
-                  task_id: createdTask.id,
-                  member_id: member.id,
-                  pod_id: null,
-                });
-              }
-            });
-          }
-        });
+        // Assign parent task to all unique assignees from its subtasks
+        const parentAssigneeNames = [...new Set(tasks.flatMap(t => t.assignees))];
+        const parentAssigneeRows = parentAssigneeNames
+          .map(name => {
+            const member = findMemberByName(name);
+            return member ? { task_id: parentTask.id, member_id: member.id, pod_id: null } : null;
+          })
+          .filter(Boolean) as { task_id: string; member_id: string; pod_id: null }[];
 
-        if (assigneeRows.length > 0) {
-          const { error: assignError } = await supabase
-            .from('task_assignees')
-            .insert(assigneeRows);
+        if (parentAssigneeRows.length > 0) {
+          await supabase.from('task_assignees').insert(parentAssigneeRows);
+        }
 
-          if (assignError) {
-            console.error('Failed to assign some members:', assignError);
+        // 2. Create subtasks under this parent
+        const subtaskRows = tasks.map(t => ({
+          client_id: clientId,
+          title: t.title,
+          description: `Auto-created from "${selectedTemplate.name}" template`,
+          priority: t.priority,
+          status: 'todo',
+          due_date: dueDate,
+          parent_task_id: parentTask.id,
+        }));
+
+        const { data: createdSubtasks, error: subError } = await supabase
+          .from('tasks')
+          .insert(subtaskRows)
+          .select('id, title');
+
+        if (subError) {
+          console.error('Failed to create subtasks for', category, subError);
+          continue;
+        }
+
+        totalCreated += (createdSubtasks?.length || 0) + 1; // +1 for parent
+
+        // 3. Assign members to each subtask
+        if (createdSubtasks && createdSubtasks.length > 0) {
+          const assigneeRows: { task_id: string; member_id: string; pod_id: null }[] = [];
+
+          createdSubtasks.forEach((sub, index) => {
+            const templateTask = tasks[index];
+            if (templateTask?.assignees) {
+              templateTask.assignees.forEach(assigneeName => {
+                const member = findMemberByName(assigneeName);
+                if (member) {
+                  assigneeRows.push({ task_id: sub.id, member_id: member.id, pod_id: null });
+                }
+              });
+            }
+          });
+
+          if (assigneeRows.length > 0) {
+            await supabase.from('task_assignees').insert(assigneeRows);
           }
         }
       }
 
-      toast.success(`Applied "${selectedTemplate.name}" — ${createdTasks?.length || 0} tasks created for ${clientName}`);
+      toast.success(`Applied "${selectedTemplate.name}" — ${totalCreated} tasks created for ${clientName}`);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['subtasks'] });
       onOpenChange(false);
       setSelectedTemplate(null);
     } catch (err) {
