@@ -35,7 +35,7 @@ async function generateVideoForModel(
   body: { prompt: string; imageUrl?: string; aspectRatio: string; duration: number; apiKey?: string }
 ): Promise<{ operationId?: string; videoUrl?: string; status: string; error?: string }> {
   if (model === 'grok') {
-    const { data, error } = await supabase.functions.invoke('generate-video-grok', {
+    const { data, error } = await invokeCloudFunction('generate-video-grok', {
       body: {
         prompt: body.prompt,
         imageUrl: body.imageUrl,
@@ -159,9 +159,7 @@ export function useFlowExecution({ nodes, edges, updateNodeData }: UseFlowExecut
         if (data.referenceImageUrl) {
           body.referenceImageUrl = data.referenceImageUrl;
         }
-        const { data: result, error } = await supabase.functions.invoke('generate-avatar', {
-          body,
-        });
+        const { data: result, error } = await invokeCloudFunction('generate-avatar', { body });
 
         if (error) throw error;
         variations.push(result.imageUrl);
@@ -200,7 +198,7 @@ export function useFlowExecution({ nodes, edges, updateNodeData }: UseFlowExecut
     updateNodeData(node.id, { status: 'generating', error: undefined, inputImageUrl });
 
     try {
-      const { data: result, error } = await supabase.functions.invoke('generate-broll', {
+      const { data: result, error } = await invokeCloudFunction('generate-broll', {
         body: {
           prompt: data.prompt,
           aspectRatio: data.aspectRatio,
@@ -242,7 +240,7 @@ export function useFlowExecution({ nodes, edges, updateNodeData }: UseFlowExecut
     updateNodeData(node.id, { status: 'generating', error: undefined, inputImageUrl });
 
     try {
-      const { data: result, error } = await supabase.functions.invoke('generate-prompt', {
+      const { data: result, error } = await invokeCloudFunction('generate-prompt', {
         body: {
           model: data.model,
           context: data.context,
@@ -354,7 +352,7 @@ export function useFlowExecution({ nodes, edges, updateNodeData }: UseFlowExecut
         updateNodeData(node.id, { scenes: updatedScenes });
 
         try {
-          const { data: result, error } = await supabase.functions.invoke('generate-avatar', {
+          const { data: result, error } = await invokeCloudFunction('generate-avatar', {
             body: {
               gender: avatarGender,
               ageRange: avatarAge,
@@ -611,7 +609,7 @@ export function useFlowExecution({ nodes, edges, updateNodeData }: UseFlowExecut
         'Maintain exact identity and features from the primary image.',
       ].filter(Boolean).join(' ');
 
-      const { data: result, error } = await supabase.functions.invoke('generate-static-ad', {
+      const { data: result, error } = await invokeCloudFunction('generate-static-ad', {
         body: {
           prompt: combinePrompt,
           aspectRatio: data.aspectRatio,
@@ -727,7 +725,7 @@ export function useFlowExecution({ nodes, edges, updateNodeData }: UseFlowExecut
             
             const imagePrompt = `${identityPrefix} Action: ${scene.action}. Camera: ${scene.cameraAngle}. The person is saying: "${scene.lipSyncLine}"`;
 
-            const { data: imgResult, error: imgError } = await supabase.functions.invoke('generate-avatar', {
+            const { data: imgResult, error: imgError } = await invokeCloudFunction('generate-avatar', {
               body: {
                 prompt: imagePrompt,
                 aspectRatio: data.aspectRatio,
@@ -906,7 +904,7 @@ export function useFlowExecution({ nodes, edges, updateNodeData }: UseFlowExecut
 
       // Only regenerate image if missing
       if (!scene.generatedImageUrl) {
-        const { data: imgResult, error: imgError } = await supabase.functions.invoke('generate-avatar', {
+        const { data: imgResult, error: imgError } = await invokeCloudFunction('generate-avatar', {
           body: { prompt: imagePrompt, aspectRatio: data.aspectRatio, apiKey: geminiKey, referenceImageUrl: track.avatarImageUrl, gender: avatarGender, ageRange: avatarAge, ethnicity: avatarEthnicity, style: 'ugc', background: 'studio' },
         });
         if (imgError) throw imgError;
