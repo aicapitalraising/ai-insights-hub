@@ -169,6 +169,36 @@ export function DraggableClientTable({
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: '', direction: null });
   const updateClient = useUpdateClient();
 
+  // Fetch yesterday's metrics to flag inactive clients
+  const yesterday = useMemo(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'), []);
+  const { data: yesterdayMetrics = [] } = useQuery({
+    queryKey: ['yesterday-metrics', yesterday],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('daily_metrics')
+        .select('client_id, ad_spend, leads')
+        .eq('date', yesterday);
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const inactiveClientIds = useMemo(() => {
+    const set = new Set<string>();
+    const clientIdsInTable = new Set(clients.map(c => c.id));
+    // Clients with no row at all for yesterday are also inactive
+    const clientsWithData = new Set(yesterdayMetrics.map(m => m.client_id));
+    clientIdsInTable.forEach(id => {
+      if (!clientsWithData.has(id)) set.add(id);
+    });
+    yesterdayMetrics.forEach(m => {
+      if ((m.ad_spend ?? 0) === 0 && (m.leads ?? 0) === 0) {
+        set.add(m.client_id);
+      }
+    });
+    return set;
+  }, [yesterdayMetrics, clients]);
+
   // Detect duplicate Meta ad account IDs
   const duplicateMetaAccounts = useMemo(() => {
     const counts: Record<string, number> = {};
