@@ -160,6 +160,12 @@ export function TaskBoardView({ clientId, onClose, isPublicView = false }: TaskB
             >
               {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
+            {!isPublicView && clientId && (
+              <Button size="sm" variant="outline" onClick={() => setShowTemplate(true)}>
+                <FileText className="h-4 w-4 mr-1" />
+                Apply Template
+              </Button>
+            )}
             <Button size="sm" onClick={() => setShowCreateTask(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add Task
