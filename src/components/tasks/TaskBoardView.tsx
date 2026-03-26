@@ -16,6 +16,7 @@ import {
   Bell,
   Maximize2,
   Minimize2,
+  FileText,
 } from 'lucide-react';
 import { useAllTasks, Task } from '@/hooks/useTasks';
 import { useClients, Client } from '@/hooks/useClients';
