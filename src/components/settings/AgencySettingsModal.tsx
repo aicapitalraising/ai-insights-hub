@@ -143,7 +143,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         </DialogHeader>
 
         <Tabs defaultValue="team" className="mt-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="flex flex-wrap w-full h-auto gap-1">
             <TabsTrigger value="team" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Team
@@ -167,6 +167,22 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
             <TabsTrigger value="api-reference" className="flex items-center gap-2">
               <Code2 className="h-4 w-4" />
               API
+            </TabsTrigger>
+            <TabsTrigger value="database" className="flex items-center gap-2">
+              <DatabaseIcon className="h-4 w-4" />
+              Database
+            </TabsTrigger>
+            <TabsTrigger value="spam" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Spam List
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Billing
+            </TabsTrigger>
+            <TabsTrigger value="data-audit" className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Data Audit
             </TabsTrigger>
           </TabsList>
           
