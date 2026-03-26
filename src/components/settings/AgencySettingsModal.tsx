@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,14 +17,14 @@ import { useAgencySettings, useUpdateAgencySettings } from '@/hooks/useAgencySet
 import { useSyncMeetings } from '@/hooks/useMeetings';
 import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
-import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2 } from 'lucide-react';
+import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Shield, Receipt, ShieldAlert } from 'lucide-react';
 import { ApiReferenceTab } from './ApiReferenceTab';
-import DatabaseView from '@/pages/DatabaseView';
-import SpamBlacklist from '@/pages/SpamBlacklist';
-import { AgencyBillingTab } from '@/components/billing/AgencyBillingTab';
-import { DataAccuracyAuditPanel } from '@/components/dashboard/DataAccuracyAuditPanel';
-import { Shield, Receipt, ShieldAlert, Database as DatabaseIcon } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
+
+const DatabaseView = lazy(() => import('@/pages/DatabaseView'));
+const SpamBlacklist = lazy(() => import('@/pages/SpamBlacklist'));
+const AgencyBillingTab = lazy(() => import('@/components/billing/AgencyBillingTab').then((module) => ({ default: module.AgencyBillingTab })));
+const DataAccuracyAuditPanel = lazy(() => import('@/components/dashboard/DataAccuracyAuditPanel').then((module) => ({ default: module.DataAccuracyAuditPanel })));
 
 const OPENAI_MODELS = [
   { value: 'gpt-5', label: 'GPT-5' },
@@ -169,7 +169,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
               API
             </TabsTrigger>
             <TabsTrigger value="database" className="flex items-center gap-2">
-              <DatabaseIcon className="h-4 w-4" />
+              <Database className="h-4 w-4" />
               Database
             </TabsTrigger>
             <TabsTrigger value="spam" className="flex items-center gap-2">
@@ -533,19 +533,27 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
           </TabsContent>
 
           <TabsContent value="database" className="mt-4">
-            <DatabaseView embedded />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading database settings...</div>}>
+              <DatabaseView embedded />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="spam" className="mt-4">
-            <SpamBlacklist embedded />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading spam settings...</div>}>
+              <SpamBlacklist embedded />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="billing" className="mt-4">
-            <AgencyBillingTab clients={clients} />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading billing...</div>}>
+              <AgencyBillingTab clients={clients} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="data-audit" className="mt-4">
-            <DataAccuracyAuditPanel />
+            <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading data audit...</div>}>
+              <DataAccuracyAuditPanel />
+            </Suspense>
           </TabsContent>
         </Tabs>
 
