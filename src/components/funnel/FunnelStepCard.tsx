@@ -263,6 +263,8 @@ export function FunnelStepCard({
         results={speedResults}
         url={step.url}
         strategy={deviceType === 'desktop' ? 'desktop' : 'mobile'}
+        onRefresh={() => runSpeedTest(true)}
+        refreshing={speedTestLoading}
       />
 
       <PixelVerificationModal
