@@ -570,13 +570,17 @@ ${tasksSummary || "No open tasks"}`,
 // -------------------------------------------------------------------
 // BUILD FULL CONTEXT
 // -------------------------------------------------------------------
-async function buildFullContext(supabase: any, scopedClientId: string | null, isAgencyUser: boolean): Promise<string> {
+// RULE: If scopedClientId is set (channel is mapped to a specific client),
+// ALWAYS scope to that client's data only — even for agency team members.
+// Only show all-client data when the channel is NOT mapped to any client.
+async function buildFullContext(supabase: any, scopedClientId: string | null, _isAgencyUser: boolean): Promise<string> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
 
   const clientQuery = supabase.from("clients").select("id, name, status, industry, slug");
-  if (!isAgencyUser && scopedClientId) {
+  // CRITICAL: Always scope to the mapped client when in a client channel
+  if (scopedClientId) {
     clientQuery.eq("id", scopedClientId);
   }
 
@@ -647,10 +651,15 @@ async function buildFullContext(supabase: any, scopedClientId: string | null, is
     clientDataBlocks.push(block);
   }
 
+  const scopeNote = scopedClientId
+    ? `⚠️ SCOPED TO CLIENT CHANNEL — Only ${clientList[0]?.name || "this client"}'s data is available.`
+    : `Agency-wide view — all client data available.`;
+
   return `Today: ${new Date().toISOString().split("T")[0]}
+${scopeNote}
 Total Clients: ${clientList.length} (${clientList.filter((c: any) => c.status === "active").length} active)
 
-# Full Portfolio Data (Last 30 Days)
+# ${scopedClientId ? "Client" : "Full Portfolio"} Data (Last 30 Days)
 ${clientDataBlocks.join("\n")}`;
 }
 
@@ -670,15 +679,20 @@ async function handleAIQuery(
       ? `You are HPA, an expert agency performance analyst and task manager for ${agencyMember?.name || userName}. You have COMPLETE access to ${scopeLabel} data.`
       : `You are HPA, a performance assistant. You have access to ${scopeLabel} data.`;
 
+    const scopeRule = scopedClientId
+      ? `CRITICAL SCOPE RULE: This is a CLIENT-SPECIFIC channel. You MUST ONLY discuss this client's data, tasks, and metrics. Do NOT reference, compare, or mention any other client. If the user asks about other clients, politely redirect them to the agency channel.`
+      : `This is an AGENCY channel. You may reference and compare all clients' data.`;
+
     const systemPrompt = `${roleDesc}
 
 ${context}
 
 ---
 RULES:
+- ${scopeRule}
 - Use Slack markdown: *bold*, _italic_, \`code\`
 - Be concise but thorough. Reference exact numbers.
-- Compare clients when relevant (agency users only).
+${!scopedClientId ? "- Compare clients when relevant." : "- Do NOT compare with or mention other clients."}
 - Flag concerning trends proactively.
 - If asked about creating tasks, tell them to say "@HPA create task: [description]"
 - If asked about summarizing, tell them to say "@HPA summarize"
