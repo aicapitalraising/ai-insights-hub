@@ -204,30 +204,6 @@ export function AppSidebar({
                               </SidebarMenuSubItem>
                             );
                           })}
-                          {/* Add Billing under Settings for admins */}
-                          {item.value === 'settings-group' && isAdmin && (
-                            <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
-                                isActive={activeTab === 'billing'}
-                                onClick={() => onTabChange('billing')}
-                              >
-                                <Receipt className="h-3.5 w-3.5" />
-                                <span>Billing</span>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          )}
-                          {/* Add Data Accuracy Audit under Settings for admins */}
-                          {item.value === 'settings-group' && isAdmin && (
-                            <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
-                                isActive={activeTab === 'data-audit'}
-                                onClick={() => onTabChange('data-audit')}
-                              >
-                                <ShieldAlert className="h-3.5 w-3.5" />
-                                <span>Data Audit</span>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          )}
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </SidebarMenuItem>

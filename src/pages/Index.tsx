@@ -479,19 +479,8 @@ const Index = () => {
               </SectionErrorBoundary>
             )}
 
-            {/* Billing */}
-            {activeTab === 'billing' && currentMember?.role === 'admin' && (
-              <SectionErrorBoundary sectionName="Billing">
-                <AgencyBillingTab clients={clients} />
-              </SectionErrorBoundary>
-            )}
 
-            {/* Data Accuracy Audit */}
-            {activeTab === 'data-audit' && currentMember?.role === 'admin' && (
-              <SectionErrorBoundary sectionName="DataAccuracyAudit">
-                <DataAccuracyAuditPanel />
-              </SectionErrorBoundary>
-            )}
+
           </main>
         </div>
       </div>
