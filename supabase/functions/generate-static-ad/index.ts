@@ -294,7 +294,7 @@ serve(async (req) => {
 
     const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(filePath);
 
-    // Save asset record to PRODUCTION database
+    // Save asset record to database
     const { data: asset, error: assetError } = await supabase
       .from('assets')
       .insert({
