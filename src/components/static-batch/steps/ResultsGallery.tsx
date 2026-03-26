@@ -99,7 +99,7 @@ export function ResultsGallery({
 
     setIsEditing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('edit-static-ad', {
+      const { data, error } = await invokeCloudFunction('edit-static-ad', {
         body: {
           imageUrl: editDialogAd.imageUrl,
           editPrompt: editPrompt.trim(),
@@ -175,7 +175,7 @@ export function ResultsGallery({
     setAnimatedVideoUrl(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('generate-video-from-image', {
+      const { data, error } = await invokeCloudFunction('generate-video-from-image', {
         body: {
           imageUrl: animateDialogAd.imageUrl,
           prompt: videoPrompt.trim(),

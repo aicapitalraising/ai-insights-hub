@@ -79,7 +79,7 @@ export function SceneGenerationStep({
         ? `Photorealistic scene featuring this EXACT ${genderTerm} from the reference image. CRITICAL: Match face, skin tone, hair, outfit exactly. Eye contact with camera. Scene: ${prompt}. ${scene.segment.sceneDescription || ''} Camera: ${scene.segment.cameraAngle || 'medium'} shot. ${config.offerDescription ? `Context: ${config.offerDescription}` : ''}`
         : `Cinematic B-roll (NO people): ${prompt}. ${scene.segment.sceneDescription || ''}. ${config.offerDescription ? `Context: ${config.offerDescription}` : ''}`;
 
-      const { data, error } = await supabase.functions.invoke('generate-static-ad', {
+      const { data, error } = await invokeCloudFunction('generate-static-ad', {
         body: {
           prompt: enhancedPrompt,
           aspectRatio: config.aspectRatio || '16:9',

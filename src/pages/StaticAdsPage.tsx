@@ -176,7 +176,7 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
     if (selectedClient?.description) variantPrompt += `\nProduct: ${selectedClient.description}`;
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-static-ad', {
+      const { data, error } = await invokeCloudFunction('generate-static-ad', {
         body: {
           prompt: variantPrompt,
           styleName: style.label,
@@ -264,7 +264,7 @@ export default function StaticAdsPage({ embedded = false }: { embedded?: boolean
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('generate-static-ad', {
+        const { data, error } = await invokeCloudFunction('generate-static-ad', {
           body: {
             prompt: variantPrompt,
             styleName: style.label,
