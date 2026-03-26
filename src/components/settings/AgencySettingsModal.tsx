@@ -19,6 +19,12 @@ import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
 import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2 } from 'lucide-react';
 import { ApiReferenceTab } from './ApiReferenceTab';
+import DatabaseView from '@/pages/DatabaseView';
+import SpamBlacklist from '@/pages/SpamBlacklist';
+import { AgencyBillingTab } from '@/components/billing/AgencyBillingTab';
+import { DataAccuracyAuditPanel } from '@/components/dashboard/DataAccuracyAuditPanel';
+import { Shield, Receipt, ShieldAlert, Database as DatabaseIcon } from 'lucide-react';
+import { useClients } from '@/hooks/useClients';
 
 const OPENAI_MODELS = [
   { value: 'gpt-5', label: 'GPT-5' },
@@ -50,6 +56,7 @@ interface AgencySettingsModalProps {
 export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalProps) {
   const { data: settings } = useAgencySettings();
   const updateSettings = useUpdateAgencySettings();
+  const { data: clients = [] } = useClients();
   
   const [saving, setSaving] = useState(false);
   const [agencyPrompt, setAgencyPrompt] = useState('');
@@ -136,7 +143,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         </DialogHeader>
 
         <Tabs defaultValue="team" className="mt-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="flex flex-wrap w-full h-auto gap-1">
             <TabsTrigger value="team" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Team
@@ -160,6 +167,22 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
             <TabsTrigger value="api-reference" className="flex items-center gap-2">
               <Code2 className="h-4 w-4" />
               API
+            </TabsTrigger>
+            <TabsTrigger value="database" className="flex items-center gap-2">
+              <DatabaseIcon className="h-4 w-4" />
+              Database
+            </TabsTrigger>
+            <TabsTrigger value="spam" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Spam List
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Billing
+            </TabsTrigger>
+            <TabsTrigger value="data-audit" className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Data Audit
             </TabsTrigger>
           </TabsList>
           
@@ -507,6 +530,22 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
 
           <TabsContent value="api-reference" className="mt-4">
             <ApiReferenceTab />
+          </TabsContent>
+
+          <TabsContent value="database" className="mt-4">
+            <DatabaseView embedded />
+          </TabsContent>
+
+          <TabsContent value="spam" className="mt-4">
+            <SpamBlacklist embedded />
+          </TabsContent>
+
+          <TabsContent value="billing" className="mt-4">
+            <AgencyBillingTab clients={clients} />
+          </TabsContent>
+
+          <TabsContent value="data-audit" className="mt-4">
+            <DataAccuracyAuditPanel />
           </TabsContent>
         </Tabs>
 
