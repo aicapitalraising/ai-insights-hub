@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/db';
 
-const API_ENDPOINT = 'https://jgwwmtuvjlmzapwqiabu.supabase.co/functions/v1/external-data-api';
+const API_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/external-data-api`;
 const PASSWORD = 'HPA1234$';
 
 interface ApiCall {

@@ -12,8 +12,8 @@ export async function getGeminiApiKey(requestApiKey?: string): Promise<string | 
 
   // Priority 2: Agency settings from PRODUCTION database
   try {
-    const supabaseUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const sb = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data } = await sb

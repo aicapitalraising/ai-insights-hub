@@ -74,7 +74,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
   const [showMeetgeekKey, setShowMeetgeekKey] = useState(false);
   const syncMeetings = useSyncMeetings();
   
-  const webhookUrl = `https://jgwwmtuvjlmzapwqiabu.supabase.co/functions/v1/meetgeek-webhook`;
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meetgeek-webhook`;
 
   useEffect(() => {
     if (settings) {
