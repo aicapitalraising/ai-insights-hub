@@ -570,13 +570,17 @@ ${tasksSummary || "No open tasks"}`,
 // -------------------------------------------------------------------
 // BUILD FULL CONTEXT
 // -------------------------------------------------------------------
-async function buildFullContext(supabase: any, scopedClientId: string | null, isAgencyUser: boolean): Promise<string> {
+// RULE: If scopedClientId is set (channel is mapped to a specific client),
+// ALWAYS scope to that client's data only — even for agency team members.
+// Only show all-client data when the channel is NOT mapped to any client.
+async function buildFullContext(supabase: any, scopedClientId: string | null, _isAgencyUser: boolean): Promise<string> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
 
   const clientQuery = supabase.from("clients").select("id, name, status, industry, slug");
-  if (!isAgencyUser && scopedClientId) {
+  // CRITICAL: Always scope to the mapped client when in a client channel
+  if (scopedClientId) {
     clientQuery.eq("id", scopedClientId);
   }
 
@@ -647,10 +651,15 @@ async function buildFullContext(supabase: any, scopedClientId: string | null, is
     clientDataBlocks.push(block);
   }
 
+  const scopeNote = scopedClientId
+    ? `⚠️ SCOPED TO CLIENT CHANNEL — Only ${clientList[0]?.name || "this client"}'s data is available.`
+    : `Agency-wide view — all client data available.`;
+
   return `Today: ${new Date().toISOString().split("T")[0]}
+${scopeNote}
 Total Clients: ${clientList.length} (${clientList.filter((c: any) => c.status === "active").length} active)
 
-# Full Portfolio Data (Last 30 Days)
+# ${scopedClientId ? "Client" : "Full Portfolio"} Data (Last 30 Days)
 ${clientDataBlocks.join("\n")}`;
 }
 
