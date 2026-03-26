@@ -187,15 +187,18 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: asset, error: dbError } = await supabase
-      .from("client_assets")
-      .insert({
+    const insertData: any = {
         client_id,
         asset_type,
         title: `${asset_type.charAt(0).toUpperCase() + asset_type.slice(1)} - Generated`,
         content: parsed,
         status: "draft",
-      })
+      };
+    if (offer_id) insertData.offer_id = offer_id;
+
+    const { data: asset, error: dbError } = await supabase
+      .from("client_assets")
+      .insert(insertData)
       .select()
       .single();
 
