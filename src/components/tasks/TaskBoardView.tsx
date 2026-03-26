@@ -46,6 +46,7 @@ export function TaskBoardView({ clientId, onClose, isPublicView = false }: TaskB
   const { data: notifications = [] } = useNotifications(currentMember?.id);
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.is_read).length : 0;
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   // Deep-link: if ?task= is present, ensure we're on kanban view so KanbanBoard picks it up
