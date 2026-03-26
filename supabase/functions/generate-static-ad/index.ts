@@ -271,8 +271,8 @@ serve(async (req) => {
     const base64Image = imagePart.inlineData.data;
     const mimeType = imagePart.inlineData.mimeType || 'image/png';
 
-    // Upload to PRODUCTION Supabase Storage
-    const supabase = getProductionSupabase();
+    // Upload to Supabase Storage
+    const supabase = getSupabaseClient();
 
     const imageBytes = Uint8Array.from(atob(base64Image), c => c.charCodeAt(0));
     const timestamp = Date.now();
