@@ -685,7 +685,7 @@ export function CreativesTab() {
                 <Upload className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">No creatives found</p>
                 <p className="text-sm text-muted-foreground">
-                  Upload creatives from individual client dashboards
+                  Click "Upload Creative" above to get started
                 </p>
               </CardContent>
             </Card>
