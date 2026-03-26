@@ -1020,6 +1020,8 @@ export type Database = {
       }
       creatives: {
         Row: {
+          ai_performance_score: number | null
+          aspect_ratio: string | null
           body_copy: string | null
           client_id: string
           comments: Json | null
@@ -1028,12 +1030,17 @@ export type Database = {
           file_url: string | null
           headline: string | null
           id: string
+          platform: string | null
+          source: string | null
           status: string
           title: string
+          trigger_campaign_id: string | null
           type: string
           updated_at: string
         }
         Insert: {
+          ai_performance_score?: number | null
+          aspect_ratio?: string | null
           body_copy?: string | null
           client_id: string
           comments?: Json | null
@@ -1042,12 +1049,17 @@ export type Database = {
           file_url?: string | null
           headline?: string | null
           id?: string
+          platform?: string | null
+          source?: string | null
           status?: string
           title: string
+          trigger_campaign_id?: string | null
           type?: string
           updated_at?: string
         }
         Update: {
+          ai_performance_score?: number | null
+          aspect_ratio?: string | null
           body_copy?: string | null
           client_id?: string
           comments?: Json | null
@@ -1056,8 +1068,11 @@ export type Database = {
           file_url?: string | null
           headline?: string | null
           id?: string
+          platform?: string | null
+          source?: string | null
           status?: string
           title?: string
+          trigger_campaign_id?: string | null
           type?: string
           updated_at?: string
         }

@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/db';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 
-  (supabase as any).supabaseUrl || '';
+const SUPABASE_URL = (supabase as any).supabaseUrl || 
+  import.meta.env.VITE_SUPABASE_URL || '';
 
 /**
  * Upload a file to Supabase Storage with progress tracking via XMLHttpRequest.
@@ -63,7 +63,7 @@ export async function uploadWithProgress(
     }
     // Use apikey header for anon access (public uploads)
     const anonKey = (supabase as any).supabaseKey || 
-      import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
     if (anonKey) {
       xhr.setRequestHeader('apikey', anonKey);
     }
