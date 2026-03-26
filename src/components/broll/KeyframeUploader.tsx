@@ -32,7 +32,7 @@ function FrameDropZone({
 
   const handleFileSelect = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error('Image must be under 10MB'); return; }
+    if (file.size > 10 * 1024 * 1024 * 1024) { toast.error('File must be under 10GB'); return; }
     setIsUploading(true);
     try {
       const ext = file.name.split('.').pop() || 'png';

@@ -5,7 +5,7 @@ const SUPABASE_URL = (supabase as any).supabaseUrl ||
 
 /**
  * Upload a file to Supabase Storage with progress tracking via XMLHttpRequest.
- * Supports files up to 10 GB.
+ * Supports files up to 10 GB+.
  */
 export async function uploadWithProgress(
   bucket: string,

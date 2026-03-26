@@ -26,12 +26,19 @@ export function CustomAdsUploadSection() {
     mutationFn: async (file: File) => {
       const ext = file.name.split('.').pop();
       const path = `custom-ads/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('assets').upload(path, file);
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('assets').getPublicUrl(path);
+      let publicUrl: string;
+      if (file.size > 5 * 1024 * 1024) {
+        const { uploadWithProgress } = await import('@/lib/uploadWithProgress');
+        publicUrl = await uploadWithProgress('assets', path, file);
+      } else {
+        const { error: uploadError } = await supabase.storage.from('assets').upload(path, file);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('assets').getPublicUrl(path);
+        publicUrl = urlData.publicUrl;
+      }
       const { error: insertError } = await supabase.from('custom_ads').insert({
         name: file.name,
-        file_url: urlData.publicUrl,
+        file_url: publicUrl,
         file_type: file.type.startsWith('video') ? 'video' : 'image',
       });
       if (insertError) throw insertError;
