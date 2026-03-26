@@ -48,7 +48,7 @@ interface ClientOffersSectionProps {
   clientType?: string | null;
 }
 
-export function ClientOffersSection({ clientId, clientName, isPublicView = false }: ClientOffersSectionProps) {
+export function ClientOffersSection({ clientId, clientName, isPublicView = false, brandColors, brandFonts, clientDescription, offerDescription, websiteUrl, industry, clientType }: ClientOffersSectionProps) {
   const { data: offers = [], isLoading } = useClientOffers(clientId);
   const createOffer = useCreateOffer();
   const updateOffer = useUpdateOffer();
