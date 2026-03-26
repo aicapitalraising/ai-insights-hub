@@ -434,6 +434,176 @@ export function CreativesTab() {
             <SelectItem value="rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Upload Buttons */}
+        <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Upload
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Bulk Upload Creatives</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium">Client *</label>
+                <Select value={bulkClientId} onValueChange={setBulkClientId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Platform</label>
+                <div className="flex gap-2 mt-1">
+                  {(['meta', 'tiktok', 'youtube', 'google'] as const).map((p) => (
+                    <Button key={p} type="button" variant={bulkPlatform === p ? 'default' : 'outline'} size="sm" onClick={() => setBulkPlatform(p)}>
+                      {p === 'meta' ? 'Meta/IG' : p === 'tiktok' ? 'TikTok' : p === 'youtube' ? 'YouTube' : 'Google PPC'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div
+                className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => bulkFileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); setBulkFiles(Array.from(e.dataTransfer.files)); }}
+              >
+                {bulkFiles.length > 0 ? (
+                  <p className="text-sm font-medium">{bulkFiles.length} file{bulkFiles.length !== 1 ? 's' : ''} selected</p>
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                    <p className="text-xs text-muted-foreground">Drag & drop or click to select • Up to 10 GB per file</p>
+                  </>
+                )}
+              </div>
+              <input ref={bulkFileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => setBulkFiles(Array.from(e.target.files || []))} />
+              {uploading && (
+                <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium truncate max-w-[200px]">File {uploadFileIndex}/{uploadTotalFiles}: {uploadCurrentFile}</span>
+                    <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
+              <Button onClick={handleBulkUpload} className="w-full" disabled={uploading || bulkFiles.length === 0 || !bulkClientId}>
+                {uploading ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading {uploadFileIndex}/{uploadTotalFiles}...</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" />Upload {bulkFiles.length} Creative{bulkFiles.length !== 1 ? 's' : ''}</>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Upload Creative
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Upload New Creative</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium">Client *</label>
+                <Select value={newCreative.client_id} onValueChange={(v) => setNewCreative({ ...newCreative, client_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Title *</label>
+                <Input value={newCreative.title} onChange={(e) => setNewCreative({ ...newCreative, title: e.target.value })} placeholder="Creative title" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Type</label>
+                <div className="flex gap-2 mt-1">
+                  {(['image', 'video', 'copy'] as const).map((type) => (
+                    <Button key={type} type="button" variant={newCreative.type === type ? 'default' : 'outline'} size="sm" onClick={() => setNewCreative({ ...newCreative, type })}>
+                      {type === 'image' ? <Image className="h-4 w-4 mr-1" /> : type === 'video' ? <Video className="h-4 w-4 mr-1" /> : <FileText className="h-4 w-4 mr-1" />}
+                      <span className="capitalize">{type}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Platform</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {(['meta', 'tiktok', 'youtube', 'google'] as const).map((p) => (
+                    <Button key={p} type="button" variant={newCreative.platform === p ? 'default' : 'outline'} size="sm" onClick={() => setNewCreative({ ...newCreative, platform: p })}>
+                      {p === 'meta' ? 'Meta/IG' : p === 'tiktok' ? 'TikTok' : p === 'youtube' ? 'YouTube' : 'Google PPC'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {(newCreative.type === 'image' || newCreative.type === 'video') && (
+                <div>
+                  <label className="text-sm font-medium">File</label>
+                  <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => fileInputRef.current?.click()}>
+                    {newCreative.file ? (
+                      <div className="flex items-center justify-center gap-2">
+                        {newCreative.type === 'video' ? <Video className="h-4 w-4" /> : <Image className="h-4 w-4" />}
+                        <span className="text-sm truncate max-w-[200px]">{newCreative.file.name}</span>
+                        <span className="text-xs text-muted-foreground">({formatFileSize(newCreative.file.size)})</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                        <p className="text-xs text-muted-foreground">Click to select • Up to 10 GB • 4K supported</p>
+                      </>
+                    )}
+                  </div>
+                  <input ref={fileInputRef} type="file" accept={newCreative.type === 'image' ? 'image/*' : 'video/*'} onChange={(e) => setNewCreative({ ...newCreative, file: e.target.files?.[0] || null })} className="hidden" />
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium">Headline</label>
+                <Input value={newCreative.headline} onChange={(e) => setNewCreative({ ...newCreative, headline: e.target.value })} placeholder="Ad headline" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Body Copy</label>
+                <Textarea value={newCreative.body_copy} onChange={(e) => setNewCreative({ ...newCreative, body_copy: e.target.value })} placeholder="Ad body text" rows={3} />
+              </div>
+              {uploading && (
+                <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium">Uploading...</span>
+                    <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
+              <Button onClick={handleSingleUpload} className="w-full" disabled={uploading || !newCreative.client_id}>
+                {uploading ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading... {uploadProgress}%</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" />Upload Creative</>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Bulk Action Bar */}
