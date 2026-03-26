@@ -531,6 +531,22 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
           <TabsContent value="api-reference" className="mt-4">
             <ApiReferenceTab />
           </TabsContent>
+
+          <TabsContent value="database" className="mt-4">
+            <DatabaseView embedded />
+          </TabsContent>
+
+          <TabsContent value="spam" className="mt-4">
+            <SpamBlacklist embedded />
+          </TabsContent>
+
+          <TabsContent value="billing" className="mt-4">
+            <AgencyBillingTab clients={clients} />
+          </TabsContent>
+
+          <TabsContent value="data-audit" className="mt-4">
+            <DataAccuracyAuditPanel />
+          </TabsContent>
         </Tabs>
 
         <div className="flex justify-end gap-2 mt-6">
