@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+
 import { FileText, Loader2, CheckCircle2, Users, Clock } from 'lucide-react';
 import { ALL_TASK_TEMPLATES, TaskTemplate, TaskTemplateItem } from '@/lib/taskTemplates';
 import { supabase } from '@/integrations/supabase/db';
