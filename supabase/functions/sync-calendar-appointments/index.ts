@@ -370,10 +370,20 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    // Use production DB as primary, with cloud dual-write
+    const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
+    const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(prodUrl, prodKey);
+    
+    const cloudUrl = Deno.env.get('SUPABASE_URL')!;
+    const cloudKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const isDistinct = prodUrl !== cloudUrl;
+    const cloudDb = isDistinct ? createClient(cloudUrl, cloudKey) : null;
+    const mirror = async (label: string, fn: (db: any) => Promise<any>) => {
+      if (!cloudDb) return;
+      try { const r = await fn(cloudDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
+      catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+    };
 
     // Fetch client and settings
     const { data: client, error: clientError } = await supabase
