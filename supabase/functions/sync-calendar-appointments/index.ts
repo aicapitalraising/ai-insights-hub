@@ -523,9 +523,12 @@ serve(async (req) => {
 
         for (const appt of appointments) {
           const syncResult = await syncAppointmentToCall(supabase, clientId, appt, leadsByContactId, true, client.ghl_api_key);
-          if (syncResult.action === 'created') result.created++;
-          else if (syncResult.action === 'updated') result.updated++;
-          else result.skipped++;
+          if (syncResult.action === 'created') {
+            result.created++;
+            if (syncResult.callData) {
+              await mirror("reconnect_call_insert", (db) => db.from('calls').upsert(syncResult.callData, { onConflict: 'client_id,ghl_appointment_id' }));
+            }
+          }
           
           if (syncResult.statusChanged && appt.startTime) {
             result.statusChanges++;
