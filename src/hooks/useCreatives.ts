@@ -276,6 +276,14 @@ export function useUpdateCreativeStatus() {
       
       if (error) throw error;
 
+      // Dual-write status to Cloud
+      cloudClient.from('creatives')
+        .update({ status })
+        .eq('id', id)
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud status dual-write failed:', cloudErr.message);
+        });
+
       // Auto-create task for media buyer team when creative is approved
       if (status === 'approved' && clientId) {
         const title = creativeTitle
