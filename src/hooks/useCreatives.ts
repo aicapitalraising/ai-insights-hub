@@ -431,13 +431,13 @@ export async function uploadCreativeFile(
     return uploadWithProgress('creatives', fileName, file, onProgress);
   }
 
-  const { data, error } = await storageClient.storage
+  const { data, error } = await cloudClient.storage
     .from('creatives')
     .upload(fileName, file);
   
   if (error) throw error;
   
-  const { data: { publicUrl } } = storageClient.storage
+  const { data: { publicUrl } } = cloudClient.storage
     .from('creatives')
     .getPublicUrl(data.path);
   
