@@ -200,6 +200,7 @@ export function useCreateCreative() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success('Creative uploaded successfully');
     },
     onError: (error: Error) => {
