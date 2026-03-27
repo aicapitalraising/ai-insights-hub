@@ -1,11 +1,12 @@
-import { supabase } from '@/integrations/supabase/db';
+import { supabase as storageClient } from '@/integrations/supabase/client';
 
-const SUPABASE_URL = (supabase as any).supabaseUrl || 
-  import.meta.env.VITE_SUPABASE_URL || '';
+const STORAGE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const STORAGE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
 /**
- * Upload a file to Supabase Storage with progress tracking via XMLHttpRequest.
- * Supports files up to 10 GB+.
+ * Upload a file to Storage with progress tracking via XMLHttpRequest.
+ * Uses the Lovable Cloud storage client so uploads work consistently
+ * even when app data is read from a separate database client.
  */
 export async function uploadWithProgress(
   bucket: string,
@@ -13,61 +14,50 @@ export async function uploadWithProgress(
   file: File,
   onProgress?: (percent: number) => void
 ): Promise<string> {
-  // Get the current session for auth
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await storageClient.auth.getSession();
   const token = session?.access_token;
-
-  // Build the upload URL
-  const supabaseUrl = SUPABASE_URL.replace(/\/$/, '');
-  const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${path}`;
+  const uploadUrl = `${STORAGE_URL.replace(/\/$/, '')}/storage/v1/object/${bucket}/${path}`;
 
   return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    
+
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable && onProgress) {
-        const percent = Math.round((e.loaded / e.total) * 100);
-        onProgress(percent);
+        onProgress(Math.round((e.loaded / e.total) * 100));
       }
     });
 
     xhr.addEventListener('load', () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(path);
+        const { data: { publicUrl } } = storageClient.storage.from(bucket).getPublicUrl(path);
         resolve(publicUrl);
-      } else {
-        try {
-          const err = JSON.parse(xhr.responseText);
-          reject(new Error(err.message || err.error || `Upload failed (${xhr.status})`));
-        } catch {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
-        }
+        return;
+      }
+
+      try {
+        const err = JSON.parse(xhr.responseText);
+        reject(new Error(err.message || err.error || `Upload failed (${xhr.status})`));
+      } catch {
+        reject(new Error(`Upload failed with status ${xhr.status}`));
       }
     });
 
-    xhr.addEventListener('error', () => {
-      reject(new Error('Network error during upload'));
-    });
-
-    xhr.addEventListener('abort', () => {
-      reject(new Error('Upload cancelled'));
-    });
+    xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+    xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
     xhr.open('POST', uploadUrl, true);
-    
-    if (token) {
+
+    if (STORAGE_ANON_KEY) {
+      xhr.setRequestHeader('apikey', STORAGE_ANON_KEY);
+      xhr.setRequestHeader('Authorization', `Bearer ${token || STORAGE_ANON_KEY}`);
+    } else if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     }
-    // Use apikey header for anon access (public uploads)
-    const anonKey = (supabase as any).supabaseKey || 
-      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
-    if (anonKey) {
-      xhr.setRequestHeader('apikey', anonKey);
+
+    if (file.type) {
+      xhr.setRequestHeader('Content-Type', file.type);
     }
-    
+
     xhr.setRequestHeader('x-upsert', 'true');
     xhr.send(file);
   });
