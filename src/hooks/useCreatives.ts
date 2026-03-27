@@ -155,25 +155,34 @@ export function useCreateCreative() {
       aspect_ratio?: string | null;
       isAgencyUpload?: boolean;
     }) => {
+      const insertPayload = {
+        client_id: creative.client_id,
+        title: creative.title,
+        type: creative.type || 'image',
+        platform: creative.platform || 'meta',
+        file_url: creative.file_url || null,
+        headline: creative.headline || null,
+        body_copy: creative.body_copy || null,
+        cta_text: creative.cta_text || null,
+        status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
+        comments: creative.comments || [],
+        aspect_ratio: creative.aspect_ratio || null,
+      };
+
       const { data, error } = await supabase
         .from('creatives')
-        .insert({
-          client_id: creative.client_id,
-          title: creative.title,
-          type: creative.type || 'image',
-          platform: creative.platform || 'meta',
-          file_url: creative.file_url || null,
-          headline: creative.headline || null,
-          body_copy: creative.body_copy || null,
-          cta_text: creative.cta_text || null,
-          status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
-          comments: creative.comments || [],
-          aspect_ratio: creative.aspect_ratio || null,
-        })
+        .insert(insertPayload)
         .select()
         .single();
       
       if (error) throw error;
+
+      // Dual-write to Cloud database
+      cloudClient.from('creatives')
+        .insert({ ...insertPayload, id: data.id, created_at: data.created_at, updated_at: data.updated_at })
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud dual-write failed:', cloudErr.message);
+        });
       
       // Run AI spelling/grammar check for agency uploads
       // Check text content OR video/image creatives (which may have text overlays or spoken content)
