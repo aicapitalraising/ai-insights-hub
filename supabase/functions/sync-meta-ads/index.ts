@@ -496,6 +496,17 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Cloud DB for dual-write (fire-and-forget mirrors)
+    const _cloudUrl = Deno.env.get("SUPABASE_URL")!;
+    const _cloudKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const _isDistinct = supabaseUrl !== _cloudUrl;
+    const cloudDb = _isDistinct ? createClient(_cloudUrl, _cloudKey) : null;
+    const mirror = async (label: string, fn: (db: any) => Promise<any>) => {
+      if (!cloudDb) return;
+      try { const r = await fn(cloudDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
+      catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+    };
+
     // Get client's Meta credentials
     const { data: client, error: clientErr } = await supabase
       .from("clients")
