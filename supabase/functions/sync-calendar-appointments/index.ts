@@ -483,9 +483,13 @@ serve(async (req) => {
 
         for (const appt of appointments) {
           const syncResult = await syncAppointmentToCall(supabase, clientId, appt, leadsByContactId, false, client.ghl_api_key);
-          if (syncResult.action === 'created') result.created++;
-          else if (syncResult.action === 'updated') result.updated++;
-          else result.skipped++;
+          if (syncResult.action === 'created') {
+            result.created++;
+            // Dual-write new call to cloud
+            if (syncResult.callData) {
+              await mirror("call_insert", (db) => db.from('calls').upsert(syncResult.callData, { onConflict: 'client_id,ghl_appointment_id' }));
+            }
+          }
           
           if (syncResult.statusChanged && appt.startTime) {
             result.statusChanges++;
