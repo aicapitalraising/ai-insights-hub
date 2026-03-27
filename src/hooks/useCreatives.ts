@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
-import { supabase as storageClient } from '@/integrations/supabase/client';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
@@ -34,30 +34,58 @@ export interface Creative {
   updated_at: string;
 }
 
+function mapCreativeRow(item: any): Creative {
+  return {
+    ...item,
+    type: item.type as 'image' | 'video' | 'copy',
+    platform: (item.platform as 'meta' | 'tiktok' | 'youtube' | 'google') || 'meta',
+    status: item.status as 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched',
+    comments: (item.comments as unknown as CreativeComment[]) || [],
+    aspect_ratio: (item as any).aspect_ratio || null,
+    source: (item as any).source || 'manual',
+    trigger_campaign_id: (item as any).trigger_campaign_id || null,
+    ai_performance_score: (item as any).ai_performance_score || null,
+  };
+}
+
+function deduplicateById(items: Creative[]): Creative[] {
+  const seen = new Set<string>();
+  return items.filter(item => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
 export function useCreatives(clientId?: string) {
   return useQuery({
     queryKey: ['creatives', clientId],
     queryFn: async () => {
       if (!clientId) return [];
       
-      const data = await fetchAllRows((sb) =>
-        sb.from('creatives')
-          .select('*')
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
-      );
+      // Fetch from both databases in parallel
+      const [prodData, cloudData] = await Promise.all([
+        Promise.resolve(fetchAllRows((sb) =>
+          sb.from('creatives')
+            .select('*')
+            .eq('client_id', clientId)
+            .order('created_at', { ascending: false })
+        )).catch(() => [] as any[]),
+        (async () => {
+          try {
+            const { data } = await cloudClient.from('creatives')
+              .select('*')
+              .eq('client_id', clientId)
+              .order('created_at', { ascending: false });
+            return data || [];
+          } catch { return [] as any[]; }
+        })(),
+      ]);
       
-      return data.map((item) => ({
-        ...item,
-        type: item.type as 'image' | 'video' | 'copy',
-        platform: (item.platform as 'meta' | 'tiktok' | 'youtube' | 'google') || 'meta',
-        status: item.status as 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched',
-        comments: (item.comments as unknown as CreativeComment[]) || [],
-        aspect_ratio: (item as any).aspect_ratio || null,
-        source: (item as any).source || 'manual',
-        trigger_campaign_id: (item as any).trigger_campaign_id || null,
-        ai_performance_score: (item as any).ai_performance_score || null,
-      })) as Creative[];
+      const allMapped = [...prodData, ...cloudData].map(mapCreativeRow);
+      return deduplicateById(allMapped).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
     enabled: !!clientId,
   });
@@ -130,25 +158,34 @@ export function useCreateCreative() {
       aspect_ratio?: string | null;
       isAgencyUpload?: boolean;
     }) => {
+      const insertPayload = {
+        client_id: creative.client_id,
+        title: creative.title,
+        type: creative.type || 'image',
+        platform: creative.platform || 'meta',
+        file_url: creative.file_url || null,
+        headline: creative.headline || null,
+        body_copy: creative.body_copy || null,
+        cta_text: creative.cta_text || null,
+        status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
+        comments: creative.comments || [],
+        aspect_ratio: creative.aspect_ratio || null,
+      };
+
       const { data, error } = await supabase
         .from('creatives')
-        .insert({
-          client_id: creative.client_id,
-          title: creative.title,
-          type: creative.type || 'image',
-          platform: creative.platform || 'meta',
-          file_url: creative.file_url || null,
-          headline: creative.headline || null,
-          body_copy: creative.body_copy || null,
-          cta_text: creative.cta_text || null,
-          status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
-          comments: creative.comments || [],
-          aspect_ratio: creative.aspect_ratio || null,
-        })
+        .insert(insertPayload)
         .select()
         .single();
       
       if (error) throw error;
+
+      // Dual-write to Cloud database
+      cloudClient.from('creatives')
+        .insert({ ...insertPayload, id: data.id, created_at: data.created_at, updated_at: data.updated_at })
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud dual-write failed:', cloudErr.message);
+        });
       
       // Run AI spelling/grammar check for agency uploads
       // Check text content OR video/image creatives (which may have text overlays or spoken content)
@@ -188,6 +225,14 @@ export function useCreateCreative() {
               status: newStatus,
             })
             .eq('id', data.id);
+          
+          // Dual-write AI review to Cloud
+          cloudClient.from('creatives')
+            .update({ comments: [aiComment] as unknown as Json, status: newStatus })
+            .eq('id', data.id)
+            .then(({ error: cloudErr }) => {
+              if (cloudErr) console.warn('Cloud AI review dual-write failed:', cloudErr.message);
+            });
           
           if (spellCheckResult.severity === 'critical') {
             toast.warning('AI found spelling/grammar issues - creative needs revisions');
@@ -233,6 +278,14 @@ export function useUpdateCreativeStatus() {
         .single();
       
       if (error) throw error;
+
+      // Dual-write status to Cloud
+      cloudClient.from('creatives')
+        .update({ status })
+        .eq('id', id)
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud status dual-write failed:', cloudErr.message);
+        });
 
       // Auto-create task for media buyer team when creative is approved
       if (status === 'approved' && clientId) {
@@ -314,6 +367,15 @@ export function useAddCreativeComment() {
         .single();
       
       if (error) throw error;
+
+      // Dual-write comments to Cloud
+      cloudClient.from('creatives')
+        .update({ comments: updatedComments as unknown as Json })
+        .eq('id', id)
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud comment dual-write failed:', cloudErr.message);
+        });
+
       return data;
     },
     onSuccess: (_, variables) => {
@@ -338,6 +400,14 @@ export function useDeleteCreative() {
         .eq('id', id);
       
       if (error) throw error;
+
+      // Dual-delete from Cloud
+      cloudClient.from('creatives')
+        .delete()
+        .eq('id', id)
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud delete dual-write failed:', cloudErr.message);
+        });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
@@ -364,13 +434,13 @@ export async function uploadCreativeFile(
     return uploadWithProgress('creatives', fileName, file, onProgress);
   }
 
-  const { data, error } = await storageClient.storage
+  const { data, error } = await cloudClient.storage
     .from('creatives')
     .upload(fileName, file);
   
   if (error) throw error;
   
-  const { data: { publicUrl } } = storageClient.storage
+  const { data: { publicUrl } } = cloudClient.storage
     .from('creatives')
     .getPublicUrl(data.path);
   
