@@ -262,7 +262,7 @@ async function syncAppointmentToCall(
     return { action: 'skipped' };
   }
   
-  return { action: 'created' };
+  return { action: 'created', callData: { ...callData, created_at: ghlCreatedAt } };
 }
 
 // Recalculate daily_metrics for a client based on actual calls data
