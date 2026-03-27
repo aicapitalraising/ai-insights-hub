@@ -23,6 +23,17 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // Production DB for dual-write
+  const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || supabaseUrl;
+  const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || supabaseKey;
+  const isDistinct = prodUrl !== supabaseUrl;
+  const prodDb = isDistinct ? createClient(prodUrl, prodKey) : null;
+  const mirrorToProd = async (label: string, fn: (db: any) => Promise<any>) => {
+    if (!prodDb) return;
+    try { const r = await fn(prodDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
+    catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+  };
+
   try {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(Boolean);
