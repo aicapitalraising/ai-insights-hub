@@ -317,6 +317,7 @@ export function useAddCreativeComment() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success('Comment added');
     },
     onError: (error: Error) => {
