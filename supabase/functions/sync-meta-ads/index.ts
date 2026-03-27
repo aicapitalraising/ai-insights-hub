@@ -610,22 +610,19 @@ Deno.serve(async (req) => {
           .eq("date", dateStr)
           .maybeSingle();
 
+        const metricsPayload = {
+            ad_spend: Number(day.spend) || 0,
+            impressions: Number(day.impressions) || 0,
+            clicks: Number(day.clicks) || 0,
+            ctr: Number(day.inline_link_click_ctr) || 0,
+        };
         if (existing) {
-          await supabase.from("daily_metrics").update({
-            ad_spend: Number(day.spend) || 0,
-            impressions: Number(day.impressions) || 0,
-            clicks: Number(day.clicks) || 0,
-            ctr: Number(day.inline_link_click_ctr) || 0,
-          }).eq("id", existing.id);
+          await supabase.from("daily_metrics").update(metricsPayload).eq("id", existing.id);
+          await mirror("daily_metrics_update", (db) => db.from("daily_metrics").update(metricsPayload).eq("client_id", clientId).eq("date", dateStr));
         } else {
-          await supabase.from("daily_metrics").insert({
-            client_id: clientId,
-            date: dateStr,
-            ad_spend: Number(day.spend) || 0,
-            impressions: Number(day.impressions) || 0,
-            clicks: Number(day.clicks) || 0,
-            ctr: Number(day.inline_link_click_ctr) || 0,
-          });
+          const insertPayload = { client_id: clientId, date: dateStr, ...metricsPayload };
+          await supabase.from("daily_metrics").insert(insertPayload);
+          await mirror("daily_metrics_insert", (db) => db.from("daily_metrics").upsert(insertPayload, { onConflict: "client_id,date" }));
         }
         dailyRows++;
       }
