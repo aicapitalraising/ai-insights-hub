@@ -200,6 +200,7 @@ export function useCreateCreative() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.client_id] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success('Creative uploaded successfully');
     },
     onError: (error: Error) => {
@@ -270,6 +271,7 @@ export function useUpdateCreativeStatus() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success(`Creative ${variables.status}`);
     },
     onError: (error: Error) => {
@@ -315,6 +317,7 @@ export function useAddCreativeComment() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success('Comment added');
     },
     onError: (error: Error) => {
@@ -337,6 +340,7 @@ export function useDeleteCreative() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success('Creative deleted');
     },
     onError: (error: Error) => {
