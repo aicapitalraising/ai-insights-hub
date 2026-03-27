@@ -65,12 +65,12 @@ export function useCreatives(clientId?: string) {
       
       // Fetch from both databases in parallel
       const [prodData, cloudData] = await Promise.all([
-        fetchAllRows((sb) =>
+        Promise.resolve(fetchAllRows((sb) =>
           sb.from('creatives')
             .select('*')
             .eq('client_id', clientId)
             .order('created_at', { ascending: false })
-        ).catch(() => [] as any[]),
+        )).catch(() => [] as any[]),
         cloudClient.from('creatives')
           .select('*')
           .eq('client_id', clientId)
