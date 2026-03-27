@@ -584,6 +584,26 @@ async function buildFullContext(supabase: any, scopedClientId: string | null, _i
     clientQuery.eq("id", scopedClientId);
   }
 
+  // CRITICAL: When scoped to a client channel, filter ALL queries at the DB level
+  // to prevent data leakage across clients
+  const metricsQuery = supabase.from("daily_metrics").select("client_id, date, ad_spend, leads, calls, showed_calls, funded_investors, funded_dollars, spam_leads, commitment_dollars, commitments, reconnect_calls, reconnect_showed, clicks, impressions").gte("date", thirtyDaysAgoStr);
+  const leadsQuery = supabase.from("leads").select("id, client_id, source, status, is_spam, created_at, name, utm_source, utm_campaign").gte("created_at", thirtyDaysAgo.toISOString()).order("created_at", { ascending: false }).limit(500);
+  const callsQuery = supabase.from("calls").select("id, client_id, showed, outcome, scheduled_at, contact_name, is_reconnect, appointment_status").gte("created_at", thirtyDaysAgo.toISOString()).limit(500);
+  const fundedQuery = supabase.from("funded_investors").select("id, client_id, name, funded_amount, funded_at, commitment_amount, time_to_fund_days, calls_to_fund").order("funded_at", { ascending: false }).limit(300);
+  const tasksQuery = supabase.from("tasks").select("id, client_id, title, status, priority, due_date, stage").in("status", ["todo", "in_progress"]);
+  const meetingsQuery = supabase.from("agency_meetings").select("id, client_id, title, meeting_date, summary, action_items").gte("meeting_date", thirtyDaysAgo.toISOString()).order("meeting_date", { ascending: false }).limit(50);
+  const briefsQuery = supabase.from("creative_briefs").select("id, client_id, client_name, status, hook_patterns, offer_angles, created_at").order("created_at", { ascending: false }).limit(20);
+
+  if (scopedClientId) {
+    metricsQuery.eq("client_id", scopedClientId);
+    leadsQuery.eq("client_id", scopedClientId);
+    callsQuery.eq("client_id", scopedClientId);
+    fundedQuery.eq("client_id", scopedClientId);
+    tasksQuery.eq("client_id", scopedClientId);
+    meetingsQuery.eq("client_id", scopedClientId);
+    briefsQuery.eq("client_id", scopedClientId);
+  }
+
   const [
     { data: clients },
     { data: dailyMetrics },
@@ -595,13 +615,13 @@ async function buildFullContext(supabase: any, scopedClientId: string | null, _i
     { data: briefs },
   ] = await Promise.all([
     clientQuery,
-    supabase.from("daily_metrics").select("client_id, date, ad_spend, leads, calls, showed_calls, funded_investors, funded_dollars, spam_leads, commitment_dollars, commitments, reconnect_calls, reconnect_showed, clicks, impressions").gte("date", thirtyDaysAgoStr),
-    supabase.from("leads").select("id, client_id, source, status, is_spam, created_at, name, utm_source, utm_campaign").gte("created_at", thirtyDaysAgo.toISOString()).order("created_at", { ascending: false }).limit(500),
-    supabase.from("calls").select("id, client_id, showed, outcome, scheduled_at, contact_name, is_reconnect, appointment_status").gte("created_at", thirtyDaysAgo.toISOString()).limit(500),
-    supabase.from("funded_investors").select("id, client_id, name, funded_amount, funded_at, commitment_amount, time_to_fund_days, calls_to_fund").order("funded_at", { ascending: false }).limit(300),
-    supabase.from("tasks").select("id, client_id, title, status, priority, due_date, stage").in("status", ["todo", "in_progress"]),
-    supabase.from("agency_meetings").select("id, client_id, title, meeting_date, summary, action_items").gte("meeting_date", thirtyDaysAgo.toISOString()).order("meeting_date", { ascending: false }).limit(50),
-    supabase.from("creative_briefs").select("id, client_id, client_name, status, hook_patterns, offer_angles, created_at").order("created_at", { ascending: false }).limit(20),
+    metricsQuery,
+    leadsQuery,
+    callsQuery,
+    fundedQuery,
+    tasksQuery,
+    meetingsQuery,
+    briefsQuery,
   ]);
 
   const clientList = clients || [];
