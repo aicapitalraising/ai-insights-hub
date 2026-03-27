@@ -10,6 +10,44 @@ const corsHeaders = {
 const SLACK_GATEWAY_URL = "https://connector-gateway.lovable.dev/slack/api";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+async function slackGet(
+  path: string,
+  params: Record<string, string>,
+  LOVABLE_API_KEY: string,
+  SLACK_API_KEY: string,
+) {
+  const response = await fetch(`${SLACK_GATEWAY_URL}/${path}?${new URLSearchParams(params).toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": SLACK_API_KEY,
+    },
+  });
+
+  const data = await response.json();
+  return { response, data };
+}
+
+async function slackPost(
+  path: string,
+  body: Record<string, unknown>,
+  LOVABLE_API_KEY: string,
+  SLACK_API_KEY: string,
+) {
+  const response = await fetch(`${SLACK_GATEWAY_URL}/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": SLACK_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  return { response, data };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -86,23 +124,41 @@ serve(async (req) => {
           params.oldest = latestLog.message_ts;
         }
 
-        const queryStr = new URLSearchParams(params).toString();
-        const historyRes = await fetch(`${SLACK_GATEWAY_URL}/conversations.history?${queryStr}`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "X-Connection-Api-Key": SLACK_API_KEY,
-          },
-        });
+        let { response: historyRes, data: historyData } = await slackGet(
+          "conversations.history",
+          params,
+          LOVABLE_API_KEY,
+          SLACK_API_KEY,
+        );
 
-        if (!historyRes.ok) {
-          const errText = await historyRes.text();
-          console.error(`Failed to fetch history for ${ch.channel_id}:`, historyRes.status, errText);
-          results.push({ channel_id: ch.channel_id, error: `HTTP ${historyRes.status}` });
-          continue;
+        if (historyData?.error === "not_in_channel" || historyData?.error === "channel_not_found") {
+          const { data: joinData } = await slackPost(
+            "conversations.join",
+            { channel: ch.channel_id },
+            LOVABLE_API_KEY,
+            SLACK_API_KEY,
+          );
+
+          if (joinData?.ok) {
+            ({ response: historyRes, data: historyData } = await slackGet(
+              "conversations.history",
+              params,
+              LOVABLE_API_KEY,
+              SLACK_API_KEY,
+            ));
+          } else {
+            console.error(`Failed to join channel ${ch.channel_id}:`, joinData);
+          }
         }
 
-        const historyData = await historyRes.json();
+        if (!historyRes.ok || !historyData?.ok) {
+          console.error(`Failed to fetch history for ${ch.channel_id}:`, historyRes.status, historyData);
+          results.push({
+            channel_id: ch.channel_id,
+            error: historyData?.error || `HTTP ${historyRes.status}`,
+          });
+          continue;
+        }
         const messages = (historyData.messages || []).filter(
           (m: any) => !m.bot_id && !m.subtype && m.text?.trim().length >= 3
         );
