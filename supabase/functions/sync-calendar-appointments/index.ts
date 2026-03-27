@@ -17,7 +17,7 @@ const GHL_STATUS_MAP: Record<string, { outcome: string; showed: boolean }> = {
   'no_show': { outcome: 'no_show', showed: false },
   'cancelled': { outcome: 'cancelled', showed: false },
   'canceled': { outcome: 'cancelled', showed: false },
-  'confirmed': { outcome: 'booked', showed: false },
+  'confirmed': { outcome: 'showed', showed: true },
   'booked': { outcome: 'booked', showed: false },
   'new': { outcome: 'booked', showed: false },
   'pending': { outcome: 'booked', showed: false },
