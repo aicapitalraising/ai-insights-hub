@@ -867,7 +867,7 @@ async function handleCreateTask(
     comment_type: "text",
   });
 
-  const appUrl = Deno.env.get("APP_URL") || "https://funding-sonar.lovable.app";
+  const appUrl = Deno.env.get("APP_URL") || "https://reporting.highperformanceads.com";
   const taskLink = `${appUrl}/client/${clientId}?task=${newTask.id}`;
 
   await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
