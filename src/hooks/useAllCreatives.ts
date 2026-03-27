@@ -23,11 +23,11 @@ export function useAllCreatives() {
     queryFn: async () => {
       // Fetch from both databases in parallel
       const [prodData, cloudData] = await Promise.all([
-        fetchAllRows((sb) =>
+        Promise.resolve(fetchAllRows((sb) =>
           sb.from('creatives')
             .select('*')
             .order('created_at', { ascending: false })
-        ).catch(() => [] as any[]),
+        )).catch(() => [] as any[]),
         cloudClient.from('creatives')
           .select('*')
           .order('created_at', { ascending: false })
