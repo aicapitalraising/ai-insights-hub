@@ -223,6 +223,14 @@ export function useCreateCreative() {
             })
             .eq('id', data.id);
           
+          // Dual-write AI review to Cloud
+          cloudClient.from('creatives')
+            .update({ comments: [aiComment] as unknown as Json, status: newStatus })
+            .eq('id', data.id)
+            .then(({ error: cloudErr }) => {
+              if (cloudErr) console.warn('Cloud AI review dual-write failed:', cloudErr.message);
+            });
+          
           if (spellCheckResult.severity === 'critical') {
             toast.warning('AI found spelling/grammar issues - creative needs revisions');
           } else if (spellCheckResult.severity === 'minor') {
