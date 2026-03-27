@@ -364,6 +364,15 @@ export function useAddCreativeComment() {
         .single();
       
       if (error) throw error;
+
+      // Dual-write comments to Cloud
+      cloudClient.from('creatives')
+        .update({ comments: updatedComments as unknown as Json })
+        .eq('id', id)
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud comment dual-write failed:', cloudErr.message);
+        });
+
       return data;
     },
     onSuccess: (_, variables) => {
