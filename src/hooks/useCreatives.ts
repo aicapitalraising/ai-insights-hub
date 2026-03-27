@@ -340,6 +340,7 @@ export function useDeleteCreative() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success('Creative deleted');
     },
     onError: (error: Error) => {
