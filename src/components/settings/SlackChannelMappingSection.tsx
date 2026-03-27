@@ -5,7 +5,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Plus, Zap, Eye, Bot, RefreshCw, Loader2, MessageSquare, RotateCcw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Trash2, Plus, Zap, Eye, Bot, RefreshCw, Loader2, MessageSquare, RotateCcw, Search } from 'lucide-react';
 import {
   useSlackChannelMappings,
   useAddSlackChannel,
@@ -46,6 +47,7 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
   const [newChannelType, setNewChannelType] = useState('general');
   const [showActivity, setShowActivity] = useState(false);
   const [isResyncing, setIsResyncing] = useState(false);
+  const [channelSearch, setChannelSearch] = useState('');
 
   const handleResyncChannels = async () => {
     setIsResyncing(true);
@@ -54,9 +56,13 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
     setIsResyncing(false);
   };
 
-  // Filter out already-mapped channels
   const mappedIds = new Set(mappings.map(m => m.channel_id));
   const availableChannels = slackChannels.filter(ch => !mappedIds.has(ch.id));
+  const filteredChannels = availableChannels.filter((channel) => {
+    const query = channelSearch.trim().toLowerCase();
+    if (!query) return true;
+    return channel.name.toLowerCase().includes(query) || channel.id.toLowerCase().includes(query);
+  });
 
   const handleAdd = () => {
     if (!selectedChannelId) return;
@@ -71,6 +77,7 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
     });
     setSelectedChannelId('');
     setNewChannelType('general');
+    setChannelSearch('');
   };
 
   return (
@@ -109,7 +116,6 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
         </div>
       </div>
 
-      {/* Existing mappings */}
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading channels...</p>
       ) : mappings.length > 0 ? (
@@ -187,7 +193,6 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
         </div>
       )}
 
-      {/* Activity Log */}
       {showActivity && activityLog.length > 0 && (
         <div className="border border-border rounded-lg p-3 space-y-2">
           <h5 className="text-sm font-medium flex items-center gap-2">
@@ -220,14 +225,13 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
         </div>
       )}
 
-      {/* Add new channel */}
       <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/30">
         <p className="text-sm font-medium flex items-center gap-2">
           <Plus className="h-3.5 w-3.5" />
           Add Channel
         </p>
         <div className="grid grid-cols-2 gap-2">
-          <div>
+          <div className="space-y-2">
             <div className="flex items-center justify-between mb-0.5">
               <Label className="text-xs">Slack Channel</Label>
               <Button
@@ -245,26 +249,37 @@ export function SlackChannelMappingSection({ clientId }: SlackChannelMappingSect
                 Resync
               </Button>
             </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={channelSearch}
+                onChange={(e) => setChannelSearch(e.target.value)}
+                placeholder="Search channels by name"
+                className="h-8 pl-9 text-sm"
+              />
+            </div>
+
             <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder={loadingChannels ? "Loading channels..." : "Select a channel"} />
+                <SelectValue placeholder={loadingChannels ? 'Loading channels...' : `Select a channel (${filteredChannels.length})`} />
               </SelectTrigger>
               <SelectContent className="max-h-[240px] overflow-y-auto">
-                  {availableChannels.map(ch => (
-                    <SelectItem key={ch.id} value={ch.id}>
-                      <span className="flex items-center gap-1.5">
-                        {ch.is_private ? '🔒' : '#'} {ch.name}
-                        <span className="text-muted-foreground text-[10px] ml-1">
-                          ({ch.num_members} members)
-                        </span>
+                {filteredChannels.map(ch => (
+                  <SelectItem key={ch.id} value={ch.id}>
+                    <span className="flex items-center gap-1.5">
+                      {ch.is_private ? '🔒' : '#'} {ch.name}
+                      <span className="text-muted-foreground text-[10px] ml-1">
+                        ({ch.num_members} members)
                       </span>
-                    </SelectItem>
-                  ))}
-                  {availableChannels.length === 0 && !loadingChannels && (
-                    <div className="px-2 py-3 text-sm text-muted-foreground text-center">
-                      No channels available
-                    </div>
-                  )}
+                    </span>
+                  </SelectItem>
+                ))}
+                {filteredChannels.length === 0 && !loadingChannels && (
+                  <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                    No channels match "{channelSearch || 'your search'}"
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
