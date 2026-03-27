@@ -558,9 +558,19 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
+    const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(prodUrl, prodKey);
+
+    const cloudUrl = Deno.env.get('SUPABASE_URL')!;
+    const cloudKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const isDistinct = prodUrl !== cloudUrl;
+    const cloudDb = isDistinct ? createClient(cloudUrl, cloudKey) : null;
+    const mirror = async (label: string, fn: (db: any) => Promise<any>) => {
+      if (!cloudDb) return;
+      try { const r = await fn(cloudDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
+      catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+    };
 
     const { client_id, mode = 'list', pipeline_id, sync_contacts = false } = await req.json();
 
@@ -793,6 +803,8 @@ serve(async (req) => {
                 console.error('Batch insert error:', batchError);
               } else {
                 totalSynced += opportunityRecords.length;
+                // Dual-write pipeline opportunities to cloud
+                await mirror("pipeline_opps", (db) => db.from('pipeline_opportunities').upsert(opportunityRecords, { onConflict: 'pipeline_id,ghl_opportunity_id' }));
               }
             }
 

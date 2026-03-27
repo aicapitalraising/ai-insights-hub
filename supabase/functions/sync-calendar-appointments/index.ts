@@ -17,7 +17,7 @@ const GHL_STATUS_MAP: Record<string, { outcome: string; showed: boolean }> = {
   'no_show': { outcome: 'no_show', showed: false },
   'cancelled': { outcome: 'cancelled', showed: false },
   'canceled': { outcome: 'cancelled', showed: false },
-  'confirmed': { outcome: 'booked', showed: false },
+  'confirmed': { outcome: 'showed', showed: true },
   'booked': { outcome: 'booked', showed: false },
   'new': { outcome: 'booked', showed: false },
   'pending': { outcome: 'booked', showed: false },
@@ -262,7 +262,7 @@ async function syncAppointmentToCall(
     return { action: 'skipped' };
   }
   
-  return { action: 'created' };
+  return { action: 'created', callData: { ...callData, created_at: ghlCreatedAt } };
 }
 
 // Recalculate daily_metrics for a client based on actual calls data
@@ -370,10 +370,20 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    // Use production DB as primary, with cloud dual-write
+    const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
+    const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(prodUrl, prodKey);
+    
+    const cloudUrl = Deno.env.get('SUPABASE_URL')!;
+    const cloudKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const isDistinct = prodUrl !== cloudUrl;
+    const cloudDb = isDistinct ? createClient(cloudUrl, cloudKey) : null;
+    const mirror = async (label: string, fn: (db: any) => Promise<any>) => {
+      if (!cloudDb) return;
+      try { const r = await fn(cloudDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
+      catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+    };
 
     // Fetch client and settings
     const { data: client, error: clientError } = await supabase
@@ -473,9 +483,13 @@ serve(async (req) => {
 
         for (const appt of appointments) {
           const syncResult = await syncAppointmentToCall(supabase, clientId, appt, leadsByContactId, false, client.ghl_api_key);
-          if (syncResult.action === 'created') result.created++;
-          else if (syncResult.action === 'updated') result.updated++;
-          else result.skipped++;
+          if (syncResult.action === 'created') {
+            result.created++;
+            // Dual-write new call to cloud
+            if (syncResult.callData) {
+              await mirror("call_insert", (db) => db.from('calls').upsert(syncResult.callData, { onConflict: 'client_id,ghl_appointment_id' }));
+            }
+          }
           
           if (syncResult.statusChanged && appt.startTime) {
             result.statusChanges++;
@@ -509,9 +523,12 @@ serve(async (req) => {
 
         for (const appt of appointments) {
           const syncResult = await syncAppointmentToCall(supabase, clientId, appt, leadsByContactId, true, client.ghl_api_key);
-          if (syncResult.action === 'created') result.created++;
-          else if (syncResult.action === 'updated') result.updated++;
-          else result.skipped++;
+          if (syncResult.action === 'created') {
+            result.created++;
+            if (syncResult.callData) {
+              await mirror("reconnect_call_insert", (db) => db.from('calls').upsert(syncResult.callData, { onConflict: 'client_id,ghl_appointment_id' }));
+            }
+          }
           
           if (syncResult.statusChanged && appt.startTime) {
             result.statusChanges++;
@@ -539,6 +556,19 @@ serve(async (req) => {
       .from('client_settings')
       .update({ ghl_last_calls_sync: new Date().toISOString() })
       .eq('client_id', clientId);
+    await mirror("client_settings_sync", (db) => db.from('client_settings').update({ ghl_last_calls_sync: new Date().toISOString() }).eq('client_id', clientId));
+
+    // Update integration health
+    const integRow = {
+      integration_name: "calendar_sync",
+      status: "healthy",
+      last_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      config: { records_synced: result.created + result.updated, client_id: clientId },
+      error_message: result.errors.length > 0 ? result.errors[0] : null,
+    };
+    await supabase.from("integration_status").upsert(integRow, { onConflict: "integration_name" }).catch(() => {});
+    await mirror("integration_status", (db) => db.from("integration_status").upsert(integRow, { onConflict: "integration_name" }));
 
     console.log(`Calendar sync complete for ${client.name}: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}, statusChanges=${result.statusChanges}`);
 

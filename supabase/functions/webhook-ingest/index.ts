@@ -23,6 +23,17 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // Production DB for dual-write
+  const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || supabaseUrl;
+  const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || supabaseKey;
+  const isDistinct = prodUrl !== supabaseUrl;
+  const prodDb = isDistinct ? createClient(prodUrl, prodKey) : null;
+  const mirrorToProd = async (label: string, fn: (db: any) => Promise<any>) => {
+    if (!prodDb) return;
+    try { const r = await fn(prodDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
+    catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+  };
+
   try {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(Boolean);
@@ -95,6 +106,11 @@ serve(async (req) => {
           console.error('Error inserting ad spend:', insertError);
         } else {
           insertedCount++;
+          // Dual-write ad spend to production
+          await mirrorToProd("ad_spend", (db) => db.from('ad_spend_reports').upsert(adSpendRecord, {
+            onConflict: 'client_id,reported_at,platform,campaign_name',
+            ignoreDuplicates: false
+          }));
         }
       }
 
@@ -154,15 +170,18 @@ serve(async (req) => {
 
       // Log webhook to webhook_logs table
       const logStatus = (contactId && client.ghl_api_key && client.ghl_location_id) ? 'success' : 'acknowledged';
-      await supabase.from('webhook_logs').insert({
+      const webhookLogData = {
         client_id: clientId,
         webhook_type: webhookType,
         status: logStatus,
         payload: payload,
         error_message: !contactId ? 'No contact ID extracted' : (!client.ghl_api_key ? 'No GHL credentials' : null),
-      }).then(({ error: logErr }) => {
+      };
+      await supabase.from('webhook_logs').insert(webhookLogData).then(({ error: logErr }) => {
         if (logErr) console.error('[WEBHOOK-LOG] Failed to log:', logErr);
       });
+      // Dual-write webhook log to production
+      await mirrorToProd("webhook_log", (db) => db.from('webhook_logs').insert(webhookLogData));
       
       if (contactId && client.ghl_api_key && client.ghl_location_id) {
         // Full lead pipeline: 5s delay → sync contact → enrich → 5s delay → sync notes back
