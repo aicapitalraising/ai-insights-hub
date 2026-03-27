@@ -730,9 +730,11 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Batch upsert ads
+    // Batch upsert ads — dual-write
     for (let i = 0; i < adRecords.length; i += 50) {
-      await supabase.from("meta_ads").upsert(adRecords.slice(i, i + 50), { onConflict: "client_id,meta_ad_id" });
+      const chunk = adRecords.slice(i, i + 50);
+      await supabase.from("meta_ads").upsert(chunk, { onConflict: "client_id,meta_ad_id" });
+      await mirror("ads", (db) => db.from("meta_ads").upsert(chunk, { onConflict: "client_id,meta_ad_id" }));
     }
 
     // ── Fetch HD video source URLs for video ads ──
