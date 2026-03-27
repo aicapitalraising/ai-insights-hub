@@ -397,6 +397,14 @@ export function useDeleteCreative() {
         .eq('id', id);
       
       if (error) throw error;
+
+      // Dual-delete from Cloud
+      cloudClient.from('creatives')
+        .delete()
+        .eq('id', id)
+        .then(({ error: cloudErr }) => {
+          if (cloudErr) console.warn('Cloud delete dual-write failed:', cloudErr.message);
+        });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
