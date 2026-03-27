@@ -71,12 +71,15 @@ export function useCreatives(clientId?: string) {
             .eq('client_id', clientId)
             .order('created_at', { ascending: false })
         )).catch(() => [] as any[]),
-        cloudClient.from('creatives')
-          .select('*')
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
-          .then(({ data }) => data || [])
-          .catch(() => [] as any[]),
+        (async () => {
+          try {
+            const { data } = await cloudClient.from('creatives')
+              .select('*')
+              .eq('client_id', clientId)
+              .order('created_at', { ascending: false });
+            return data || [];
+          } catch { return [] as any[]; }
+        })(),
       ]);
       
       const allMapped = [...prodData, ...cloudData].map(mapCreativeRow);
