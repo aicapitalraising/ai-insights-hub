@@ -803,6 +803,8 @@ serve(async (req) => {
                 console.error('Batch insert error:', batchError);
               } else {
                 totalSynced += opportunityRecords.length;
+                // Dual-write pipeline opportunities to cloud
+                await mirror("pipeline_opps", (db) => db.from('pipeline_opportunities').upsert(opportunityRecords, { onConflict: 'pipeline_id,ghl_opportunity_id' }));
               }
             }
 

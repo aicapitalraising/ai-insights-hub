@@ -556,6 +556,19 @@ serve(async (req) => {
       .from('client_settings')
       .update({ ghl_last_calls_sync: new Date().toISOString() })
       .eq('client_id', clientId);
+    await mirror("client_settings_sync", (db) => db.from('client_settings').update({ ghl_last_calls_sync: new Date().toISOString() }).eq('client_id', clientId));
+
+    // Update integration health
+    const integRow = {
+      integration_name: "calendar_sync",
+      status: "healthy",
+      last_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      config: { records_synced: result.created + result.updated, client_id: clientId },
+      error_message: result.errors.length > 0 ? result.errors[0] : null,
+    };
+    await supabase.from("integration_status").upsert(integRow, { onConflict: "integration_name" }).catch(() => {});
+    await mirror("integration_status", (db) => db.from("integration_status").upsert(integRow, { onConflict: "integration_name" }));
 
     console.log(`Calendar sync complete for ${client.name}: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}, statusChanges=${result.statusChanges}`);
 
