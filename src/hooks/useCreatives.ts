@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
+import { supabase as storageClient } from '@/integrations/supabase/client';
 import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
@@ -363,13 +364,13 @@ export async function uploadCreativeFile(
     return uploadWithProgress('creatives', fileName, file, onProgress);
   }
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await storageClient.storage
     .from('creatives')
     .upload(fileName, file);
   
   if (error) throw error;
   
-  const { data: { publicUrl } } = supabase.storage
+  const { data: { publicUrl } } = storageClient.storage
     .from('creatives')
     .getPublicUrl(data.path);
   
