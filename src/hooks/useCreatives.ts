@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
-import { supabase as storageClient } from '@/integrations/supabase/client';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
