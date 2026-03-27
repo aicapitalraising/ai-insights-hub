@@ -170,15 +170,18 @@ serve(async (req) => {
 
       // Log webhook to webhook_logs table
       const logStatus = (contactId && client.ghl_api_key && client.ghl_location_id) ? 'success' : 'acknowledged';
-      await supabase.from('webhook_logs').insert({
+      const webhookLogData = {
         client_id: clientId,
         webhook_type: webhookType,
         status: logStatus,
         payload: payload,
         error_message: !contactId ? 'No contact ID extracted' : (!client.ghl_api_key ? 'No GHL credentials' : null),
-      }).then(({ error: logErr }) => {
+      };
+      await supabase.from('webhook_logs').insert(webhookLogData).then(({ error: logErr }) => {
         if (logErr) console.error('[WEBHOOK-LOG] Failed to log:', logErr);
       });
+      // Dual-write webhook log to production
+      await mirrorToProd("webhook_log", (db) => db.from('webhook_logs').insert(webhookLogData));
       
       if (contactId && client.ghl_api_key && client.ghl_location_id) {
         // Full lead pipeline: 5s delay → sync contact → enrich → 5s delay → sync notes back
