@@ -572,9 +572,11 @@ Deno.serve(async (req) => {
       synced_at: new Date().toISOString(),
     }));
 
-    // Batch upsert campaigns (chunks of 50)
+    // Batch upsert campaigns (chunks of 50) — dual-write
     for (let i = 0; i < campaignRecords.length; i += 50) {
-      await supabase.from("meta_campaigns").upsert(campaignRecords.slice(i, i + 50), { onConflict: "client_id,meta_campaign_id" });
+      const chunk = campaignRecords.slice(i, i + 50);
+      await supabase.from("meta_campaigns").upsert(chunk, { onConflict: "client_id,meta_campaign_id" });
+      await mirror("campaigns", (db) => db.from("meta_campaigns").upsert(chunk, { onConflict: "client_id,meta_campaign_id" }));
     }
 
     const { data: dbCampaigns } = await supabase
