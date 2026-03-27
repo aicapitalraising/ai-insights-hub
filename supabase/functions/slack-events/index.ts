@@ -908,7 +908,7 @@ async function handleListTasks(
     }
   }
 
-  const appUrl = Deno.env.get("APP_URL") || "https://funding-sonar.lovable.app";
+  const appUrl = Deno.env.get("APP_URL") || "https://reporting.highperformanceads.com";
   const stageEmoji: Record<string, string> = {
     client_tasks: "📥", todo: "📝", in_progress: "🔧", stuck: "🚨", review: "👀", revisions: "🔄",
   };

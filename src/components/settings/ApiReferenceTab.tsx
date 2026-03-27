@@ -850,7 +850,7 @@ function buildClientDirectoryText(entries: ClientDirectoryEntry[]): string {
     if (c.quizFunnels?.length) {
       c.quizFunnels.forEach((q, i) => {
         const status = q.is_active ? '✅' : '⏸️';
-        const link = q.slug ? `https://report-bloom-magic.lovable.app/quiz/${q.slug}` : 'no slug';
+        const link = q.slug ? `https://reporting.highperformanceads.com/quiz/${q.slug}` : 'no slug';
         dirLines.push(`- **Funnel Campaign #${i + 1}**: ${status} ${q.name}`);
         dirLines.push(`  - Link: ${link}`);
       });
