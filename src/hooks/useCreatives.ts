@@ -271,6 +271,7 @@ export function useUpdateCreativeStatus() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
       toast.success(`Creative ${variables.status}`);
     },
     onError: (error: Error) => {
