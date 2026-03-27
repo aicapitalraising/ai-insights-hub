@@ -34,30 +34,55 @@ export interface Creative {
   updated_at: string;
 }
 
+function mapCreativeRow(item: any): Creative {
+  return {
+    ...item,
+    type: item.type as 'image' | 'video' | 'copy',
+    platform: (item.platform as 'meta' | 'tiktok' | 'youtube' | 'google') || 'meta',
+    status: item.status as 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched',
+    comments: (item.comments as unknown as CreativeComment[]) || [],
+    aspect_ratio: (item as any).aspect_ratio || null,
+    source: (item as any).source || 'manual',
+    trigger_campaign_id: (item as any).trigger_campaign_id || null,
+    ai_performance_score: (item as any).ai_performance_score || null,
+  };
+}
+
+function deduplicateById(items: Creative[]): Creative[] {
+  const seen = new Set<string>();
+  return items.filter(item => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
 export function useCreatives(clientId?: string) {
   return useQuery({
     queryKey: ['creatives', clientId],
     queryFn: async () => {
       if (!clientId) return [];
       
-      const data = await fetchAllRows((sb) =>
-        sb.from('creatives')
+      // Fetch from both databases in parallel
+      const [prodData, cloudData] = await Promise.all([
+        fetchAllRows((sb) =>
+          sb.from('creatives')
+            .select('*')
+            .eq('client_id', clientId)
+            .order('created_at', { ascending: false })
+        ).catch(() => [] as any[]),
+        cloudClient.from('creatives')
           .select('*')
           .eq('client_id', clientId)
           .order('created_at', { ascending: false })
-      );
+          .then(({ data }) => data || [])
+          .catch(() => [] as any[]),
+      ]);
       
-      return data.map((item) => ({
-        ...item,
-        type: item.type as 'image' | 'video' | 'copy',
-        platform: (item.platform as 'meta' | 'tiktok' | 'youtube' | 'google') || 'meta',
-        status: item.status as 'draft' | 'pending' | 'approved' | 'revisions' | 'rejected' | 'launched',
-        comments: (item.comments as unknown as CreativeComment[]) || [],
-        aspect_ratio: (item as any).aspect_ratio || null,
-        source: (item as any).source || 'manual',
-        trigger_campaign_id: (item as any).trigger_campaign_id || null,
-        ai_performance_score: (item as any).ai_performance_score || null,
-      })) as Creative[];
+      const allMapped = [...prodData, ...cloudData].map(mapCreativeRow);
+      return deduplicateById(allMapped).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
     enabled: !!clientId,
   });
