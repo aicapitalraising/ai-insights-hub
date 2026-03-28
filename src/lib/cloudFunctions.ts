@@ -48,8 +48,9 @@ export async function invokeCloudFunction<T = any>(
     }
 
     if (!res.ok) {
-      const msg = (data as any)?.error || `Edge function error (${res.status})`;
-      return { data: null, error: new Error(msg) };
+      const errorMsg = (data as any)?.error || `Edge function error (${res.status})`;
+      const details = (data as any)?.details ? ` — ${(data as any).details}` : '';
+      return { data: null, error: new Error(`${errorMsg}${details}`) };
     }
 
     return { data, error: null };

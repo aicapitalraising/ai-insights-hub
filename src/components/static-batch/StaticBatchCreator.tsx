@@ -139,6 +139,7 @@ export function StaticBatchCreator({ projectId, clientId, projectOfferDescriptio
             onBack={prevStep}
             isGenerating={isGenerating}
             clientId={clientId}
+            client={client}
           />
         )}
         {currentStep === 3 && (

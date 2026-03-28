@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Sparkles, User, ShieldCheck, Palette, ImagePlus, X, Upload, UserCheck } from 'lucide-react';
-import type { StaticBatchConfig, AspectRatio } from '@/types';
+import type { StaticBatchConfig, AspectRatio, Client } from '@/types';
 import { useAvatars } from '@/hooks/useAvatars';
 import { useAvatarLooks } from '@/hooks/useAvatarLooks';
 import { useAdStyles } from '@/hooks/useAdStyles';
@@ -23,6 +24,7 @@ interface GenerationConfigProps {
   onBack: () => void;
   isGenerating: boolean;
   clientId?: string;
+  client?: Client | null;
   onAvatarConfig?: (config: { enabled: boolean; avatarId?: string; lookUrl?: string; avatarDescription?: string }) => void;
 }
 
@@ -108,6 +110,7 @@ export function GenerationConfig({
   onBack,
   isGenerating,
   clientId,
+  client,
   onAvatarConfig,
 }: GenerationConfigProps) {
   const { data: stylesForCount = [] } = useAdStyles(clientId);
@@ -115,6 +118,18 @@ export function GenerationConfig({
   const [includeAvatar, setIncludeAvatar] = useState(false);
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
   const [selectedLookUrl, setSelectedLookUrl] = useState<string>('');
+
+  // Resolve active brand colors and fonts
+  const activeBrandColors = config.brandColors.length > 0 ? config.brandColors : client?.brand_colors || [];
+  const activeBrandFonts = config.brandFonts.length > 0 ? config.brandFonts : client?.brand_fonts || [];
+  const hasBrandData = activeBrandColors.length > 0 || activeBrandFonts.length > 0;
+
+  // Auto-enable strict brand adherence when client has brand colors/fonts
+  useEffect(() => {
+    if (hasBrandData && config.strictBrandAdherence === undefined) {
+      updateConfig({ strictBrandAdherence: true });
+    }
+  }, [hasBrandData]);
 
   const { data: avatars = [] } = useAvatars(clientId);
   const { data: looks = [] } = useAvatarLooks(selectedAvatarId || null);
@@ -266,10 +281,43 @@ export function GenerationConfig({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Show active brand context */}
+            {activeBrandColors.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Active Brand Colors</Label>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {activeBrandColors.map((color, i) => (
+                    <div key={i} className="flex items-center gap-1 bg-muted/50 rounded px-1.5 py-0.5">
+                      <div className="w-4 h-4 rounded border border-border" style={{ backgroundColor: color }} />
+                      <span className="text-[10px] font-mono text-muted-foreground">{color}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activeBrandFonts.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Active Brand Fonts</Label>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {activeBrandFonts.map((font, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px]">{font}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!hasBrandData && (
+              <p className="text-xs text-muted-foreground italic">
+                No brand colors or fonts set for this client. AI will use the style's default palette.
+              </p>
+            )}
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-sm">Strict Brand Color & Font Adherence</Label>
-                <p className="text-[11px] text-muted-foreground mt-0.5">AI will not deviate from brand colors/fonts</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {hasBrandData
+                    ? 'AI will only use the exact brand colors and fonts shown above'
+                    : 'Enable to lock AI to brand colors/fonts (set them in client settings)'}
+                </p>
               </div>
               <Switch
                 checked={config.strictBrandAdherence || false}
