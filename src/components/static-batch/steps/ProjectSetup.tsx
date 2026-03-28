@@ -157,10 +157,12 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
     setIsAnalyzingUrl(true);
     try {
       const { data, error } = await invokeCloudFunction('ai-agent-full-context', {
-        password: 'HPA1234$',
-        action: 'analyze_url',
-        url: newOfferUrl.trim(),
-        context: `Extract the offer/investment opportunity details from this URL. Return a JSON with "title" and "description" fields. The title should be a short offer name. The description should summarize the key value proposition, returns, terms, and investment details.`,
+        body: {
+          password: 'HPA1234$',
+          action: 'analyze_url',
+          url: newOfferUrl.trim(),
+          context: `Extract the offer/investment opportunity details from this URL. Return a JSON with "title" and "description" fields. The title should be a short offer name. The description should summarize the key value proposition, returns, terms, and investment details.`,
+        },
       });
       if (error) throw error;
       const result = data as any;
