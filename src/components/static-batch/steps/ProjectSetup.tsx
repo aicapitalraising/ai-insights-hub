@@ -151,6 +151,62 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
     }
   };
 
+  // URL analysis for new offers
+  const handleAnalyzeUrl = async () => {
+    if (!newOfferUrl.trim()) return;
+    setIsAnalyzingUrl(true);
+    try {
+      const { data, error } = await invokeCloudFunction('ai-agent-full-context', {
+        password: 'HPA1234$',
+        action: 'analyze_url',
+        url: newOfferUrl.trim(),
+        context: `Extract the offer/investment opportunity details from this URL. Return a JSON with "title" and "description" fields. The title should be a short offer name. The description should summarize the key value proposition, returns, terms, and investment details.`,
+      });
+      if (error) throw error;
+      const result = data as any;
+      if (result?.title) setNewOfferTitle(result.title);
+      if (result?.description) setNewOfferDescription(result.description);
+      if (result?.analysis) {
+        // If we got a raw analysis string, try to parse it
+        try {
+          const parsed = JSON.parse(result.analysis);
+          if (parsed.title) setNewOfferTitle(parsed.title);
+          if (parsed.description) setNewOfferDescription(parsed.description);
+        } catch {
+          setNewOfferDescription(result.analysis);
+        }
+      }
+      toast.success('URL analyzed — review and edit the details below');
+    } catch (err: any) {
+      toast.error(`URL analysis failed: ${err.message}`);
+    } finally {
+      setIsAnalyzingUrl(false);
+    }
+  };
+
+  const handleCreateOffer = async () => {
+    if (!client?.id || !newOfferTitle.trim()) return;
+    try {
+      const result = await createOffer.mutateAsync({
+        client_id: client.id,
+        title: newOfferTitle.trim(),
+        description: newOfferDescription.trim() || undefined,
+        offer_type: 'Offer',
+      });
+      const offerId = (result as any)?.id;
+      if (offerId) setSelectedOfferId(offerId);
+      const offerText = [newOfferTitle.trim(), newOfferDescription.trim()].filter(Boolean).join('\n\n');
+      setEditableOffer(offerText);
+      onOfferChange?.(offerText);
+      setShowNewOffer(false);
+      setNewOfferTitle('');
+      setNewOfferDescription('');
+      setNewOfferUrl('');
+    } catch {
+      toast.error('Failed to create offer');
+    }
+  };
+
   // Filter to static batch projects
   const staticProjects = clientProjects.filter(p => p.type === 'static_batch');
 
