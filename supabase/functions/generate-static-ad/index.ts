@@ -154,7 +154,13 @@ DO NOT include:
 function getProductionSupabase() {
   const url = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
   const key = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  console.log('Storage target URL:', url?.slice(0, 30) + '...');
+  return createClient(url, key);
+}
+
+/** Create a Supabase client for STORAGE operations (must use local Lovable Cloud URL) */
+function getStorageSupabase() {
+  const url = Deno.env.get('SUPABASE_URL')!;
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   return createClient(url, key);
 }
 
