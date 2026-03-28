@@ -72,6 +72,10 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
   // MeetGeek Integration
   const [meetgeekApiKey, setMeetgeekApiKey] = useState('');
   const [showMeetgeekKey, setShowMeetgeekKey] = useState(false);
+  
+  // Composio Integration
+  const [composioApiKey, setComposioApiKey] = useState('');
+  const [showComposioKey, setShowComposioKey] = useState(false);
   const syncMeetings = useSyncMeetings();
   
   const webhookUrl = `https://jgwwmtuvjlmzapwqiabu.supabase.co/functions/v1/meetgeek-webhook`;
