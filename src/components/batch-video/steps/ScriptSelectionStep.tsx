@@ -10,6 +10,7 @@ import { Loader2, ArrowRight, FileText, Wand2, Check } from 'lucide-react';
 import { useClients, useClient } from '@/hooks/useClients';
 import { useProjects, useProject } from '@/hooks/useProjects';
 import { supabase } from '@/integrations/supabase/db';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { IgImportSection } from '../IgImportSection';
@@ -62,6 +63,22 @@ export function ScriptSelectionStep({ onComplete, isProcessing }: ScriptSelectio
   const { data: selectedProject } = useProject(selectedProjectId);
   const offerDescription = selectedProject?.offer_description || selectedClient?.offer_description || selectedClient?.description || '';
 
+  // Fetch intake & offers for auto-populating script generation
+  const [clientIntake, setClientIntake] = useState<any>(null);
+  const [clientOffers, setClientOffers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!selectedClientId) { setClientIntake(null); setClientOffers([]); return; }
+    (async () => {
+      const [intakeRes, offersRes] = await Promise.all([
+        supabase.from('client_intake').select('fund_type, raise_amount, target_investor, min_investment, brand_notes').eq('client_id', selectedClientId).maybeSingle(),
+        supabase.from('client_offers').select('title, description, offer_type').eq('client_id', selectedClientId).order('created_at', { ascending: false }).limit(5),
+      ]);
+      setClientIntake(intakeRes.data);
+      setClientOffers(offersRes.data || []);
+    })();
+  }, [selectedClientId]);
+
   useEffect(() => {
     if (selectedProjectId) {
       loadScripts(selectedProjectId);
@@ -88,15 +105,28 @@ export function ScriptSelectionStep({ onComplete, isProcessing }: ScriptSelectio
   const handleGenerateScripts = async () => {
     if (!selectedClientId) { toast.error('Select a client first'); return; }
     setIsGeneratingScript(true);
+
+    // Build rich product info from offer/ICP data
+    const targetAudience = clientIntake?.target_investor || 'Potential customers';
+    const painPoints = clientIntake?.fund_type
+      ? [`Need ${clientIntake.fund_type} investment opportunities`, `Looking for min ${clientIntake.min_investment || '$50K'} investments`, 'Seeking alternative investments']
+      : ['Problem to solve'];
+    const benefits = clientOffers.length > 0
+      ? clientOffers.map(o => o.title + (o.description ? `: ${o.description}` : ''))
+      : ['Key benefit'];
+    const usp = offerDescription || clientOffers[0]?.description || 'Unique value proposition';
+
     try {
       const { data, error } = await supabase.functions.invoke('generate-scripts', {
         body: {
           productInfo: {
             productService: offerDescription || selectedClient?.name || 'Product',
-            targetAudience: 'Potential customers',
-            painPoints: ['Problem to solve'],
-            benefits: ['Key benefit'],
-            usp: offerDescription || 'Unique value proposition',
+            targetAudience,
+            painPoints,
+            benefits,
+            usp,
+            raiseAmount: clientIntake?.raise_amount || undefined,
+            brandNotes: clientIntake?.brand_notes || undefined,
           },
           frameworks: ['hormozi', 'pas'],
         },

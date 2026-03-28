@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Eye, FileText, Video, Type, Edit2, Trash2, Check, Copy, RefreshCw, Sparkles } from 'lucide-react';
+import { ArrowLeft, Search, Eye, FileText, Video, Type, Edit2, Trash2, Check, Copy, RefreshCw, Sparkles, Settings2, Pause, Play, X as XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { useCreativeBriefs, useUpdateBriefStatus, CreativeBrief } from '@/hooks/useCreativeBriefs';
 import { useAllAdScripts, useUpdateAdScript, useDeleteAdScript, AdScript } from '@/hooks/useAdScripts';
+import { useClients } from '@/hooks/useClients';
 import { BriefDetailDialog } from '@/components/briefs/BriefDetailDialog';
 import { supabase } from '@/integrations/supabase/db';
 import { format, startOfWeek, isAfter, isBefore, addDays } from 'date-fns';
@@ -28,6 +31,98 @@ const STATUS_LABELS: Record<string, string> = {
   in_production: 'In Production',
   completed: 'Completed',
 };
+
+function BriefAutomationSettings({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { data: clients = [] } = useClients();
+  const [autoGenEnabled, setAutoGenEnabled] = useState(true);
+  const [autoApprove, setAutoApprove] = useState(false);
+  const [pausedClients, setPausedClients] = useState<Set<string>>(new Set());
+
+  const toggleClientPause = (clientId: string) => {
+    setPausedClients(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  };
+
+  const activeClients = clients.filter(c => c.status === 'active' || c.status === 'onboarding');
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5" />
+            Brief Automation Settings
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-2">
+          {/* Global Toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <p className="text-sm font-medium">Weekly Auto-Generation</p>
+              <p className="text-xs text-muted-foreground">Generate briefs & scripts every Monday 5 AM</p>
+            </div>
+            <Switch checked={autoGenEnabled} onCheckedChange={setAutoGenEnabled} />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <p className="text-sm font-medium">Auto-Approve Briefs</p>
+              <p className="text-xs text-muted-foreground">Skip manual review — auto-set briefs to "In Production"</p>
+            </div>
+            <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
+          </div>
+
+          <Separator />
+
+          {/* Per-Client Controls */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3">Client Brief Controls</h3>
+            <p className="text-xs text-muted-foreground mb-3">Pause brief generation for specific clients</p>
+            <div className="space-y-2 max-h-[300px] overflow-auto">
+              {activeClients.map(client => {
+                const isPaused = pausedClients.has(client.id);
+                return (
+                  <div key={client.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      {isPaused ? (
+                        <Pause className="h-3.5 w-3.5 text-amber-500" />
+                      ) : (
+                        <Play className="h-3.5 w-3.5 text-green-500" />
+                      )}
+                      <span className="text-sm">{client.name}</span>
+                    </div>
+                    <Button
+                      variant={isPaused ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => toggleClientPause(client.id)}
+                    >
+                      {isPaused ? 'Resume' : 'Pause'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Info */}
+          <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+            <p>• Briefs are generated from client <strong>offers</strong>, <strong>intake data</strong>, and <strong>ad performance</strong></p>
+            <p>• Scripts auto-populate with <strong>target ICP</strong> and <strong>offer details</strong></p>
+            <p>• Paused clients won't receive auto-generated briefs</p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ScriptEditDialog({ script, open, onOpenChange }: { script: AdScript | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const updateScript = useUpdateAdScript();
@@ -115,6 +210,7 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
   const [editScript, setEditScript] = useState<AdScript | null>(null);
   const [scriptTypeFilter, setScriptTypeFilter] = useState<string>('all');
   const [regenerating, setRegenerating] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return briefs.filter((b) => {
@@ -199,6 +295,9 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
                 <RefreshCw className={`h-4 w-4 mr-1 ${regenerating ? 'animate-spin' : ''}`} />
                 Regenerate All
               </Button>
+              <Button onClick={() => setSettingsOpen(true)} variant="ghost" size="sm">
+                <Settings2 className="h-4 w-4" />
+              </Button>
             </div>
           </header>
         )}
@@ -211,6 +310,9 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
             <Button onClick={handleRegenerateAll} disabled={regenerating} variant="outline" size="sm">
               <RefreshCw className={`h-4 w-4 mr-1 ${regenerating ? 'animate-spin' : ''}`} />
               Regenerate All
+            </Button>
+            <Button onClick={() => setSettingsOpen(true)} variant="ghost" size="sm">
+              <Settings2 className="h-4 w-4" />
             </Button>
           </div>
         )}
@@ -484,6 +586,10 @@ export default function CreativeBriefs({ embedded = false }: { embedded?: boolea
         script={editScript}
         open={!!editScript}
         onOpenChange={(open) => !open && setEditScript(null)}
+      />
+      <BriefAutomationSettings
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
       />
     </>
   );

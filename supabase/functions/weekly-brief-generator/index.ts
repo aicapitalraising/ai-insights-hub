@@ -85,6 +85,19 @@ serve(async (req) => {
       .order("scraped_at", { ascending: false })
       .limit(100);
 
+    // Get client offers for all clients
+    const { data: allOffers } = await supabase
+      .from("client_offers")
+      .select("client_id, title, description, offer_type")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    // Get client intake data for all clients
+    const { data: allIntake } = await supabase
+      .from("client_intake")
+      .select("client_id, fund_type, raise_amount, timeline, min_investment, target_investor, brand_notes");
+    const intakeMap = new Map((allIntake || []).map(i => [i.client_id, i]));
+
     const results: any[] = [];
 
     for (const client of clients || []) {
@@ -102,11 +115,21 @@ serve(async (req) => {
 
         const clientCreatives = (allCreatives || []).filter(c => c.client_id === client.id).slice(0, 3);
         const clientAds = (liveAds || []).filter(a => a.client_id === client.id).slice(0, 3);
+        const clientOffers = (allOffers || []).filter(o => o.client_id === client.id).slice(0, 5);
+        const intake = intakeMap.get(client.id);
 
         // Build context for AI
         const contextData = {
           clientName: client.name,
           industry: client.industry || "Unknown",
+          offers: clientOffers.map(o => ({ title: o.title, description: o.description, type: o.offer_type })),
+          icp: intake ? {
+            fundType: intake.fund_type,
+            raiseAmount: intake.raise_amount,
+            targetInvestor: intake.target_investor,
+            minInvestment: intake.min_investment,
+            brandNotes: intake.brand_notes,
+          } : null,
           thisWeek: { spend: thisWeek.spend, leads: thisWeek.leads, cpl: currentCpl, ctr },
           lastWeek: { spend: lastWeek.spend, leads: lastWeek.leads, cpl: prevCpl },
           cplTrend,
@@ -128,6 +151,8 @@ serve(async (req) => {
               {
                 role: "system",
                 content: `You are a senior performance media strategist. Generate a weekly creative brief AND ad scripts. Return ONLY valid JSON:
+
+IMPORTANT: Base all briefs and scripts on the client's specific OFFERS and ICP data when provided. Each script should promote a specific offer and speak directly to the target investor profile.
 
 {
   "brief_summary": "2-3 sentence overview of this week's performance",
