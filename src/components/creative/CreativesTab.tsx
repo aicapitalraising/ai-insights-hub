@@ -56,8 +56,13 @@ import {
   History,
   Inbox,
   Plus,
+  Calendar,
+  BarChart3,
+  FolderArchive,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 // Lazy-load sub-section page components
 const CreativeBriefs = lazy(() => import('@/pages/CreativeBriefs'));
