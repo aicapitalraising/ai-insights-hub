@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Check, User, Palette, Type, Info, Link, ImagePlus, Sparkles, ExternalLink, Globe, Plus, FolderOpen, Pencil } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, User, Palette, Type, Info, Link, ImagePlus, Sparkles, ExternalLink, Globe, Plus, FolderOpen, Pencil, FileText, Loader2, Search, Package } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useAvatars } from '@/hooks/useAvatars';
 import { useAvatarLooks } from '@/hooks/useAvatarLooks';
 import { useProjects, useCreateProject } from '@/hooks/useProjects';
+import { useClientOffers, useCreateOffer, type ClientOffer } from '@/hooks/useClientOffers';
 import type { StaticBatchConfig, Client, Avatar } from '@/types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 
 interface ProjectSetupProps {
