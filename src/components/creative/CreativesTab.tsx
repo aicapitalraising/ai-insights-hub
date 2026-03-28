@@ -1237,6 +1237,20 @@ export function CreativesTab() {
             <ExportHubPage embedded />
           </Suspense>
         </TabsContent>
+
+        {/* Creative Calendar */}
+        <TabsContent value="calendar" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading calendar..." />}>
+            <CreativeCalendarLazy embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Creative Analytics */}
+        <TabsContent value="analytics" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading analytics..." />}>
+            <CreativeAnalyticsLazy embedded />
+          </Suspense>
+        </TabsContent>
       </Tabs>
     </div>
   );
