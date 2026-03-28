@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Sparkles, User, ShieldCheck, Palette, ImagePlus, X, Upload, UserCheck } from 'lucide-react';
-import type { StaticBatchConfig, AspectRatio } from '@/types';
+import type { StaticBatchConfig, AspectRatio, Client } from '@/types';
 import { useAvatars } from '@/hooks/useAvatars';
 import { useAvatarLooks } from '@/hooks/useAvatarLooks';
 import { useAdStyles } from '@/hooks/useAdStyles';
