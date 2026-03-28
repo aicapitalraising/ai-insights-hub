@@ -47,13 +47,7 @@ export function useStaticBatch() {
   const getTotalAdsCount = useCallback((allStyles?: { id: string; reference_images?: string[]; example_image_url?: string }[]) => {
     const styleVariations = config.styleVariations || {};
     return config.selectedStyles.reduce((total, styleId) => {
-      const manualVariations = styleVariations[styleId] ?? config.variationsPerStyle;
-      const matchedStyle = allStyles?.find(s => s.id === styleId);
-      const refCount = [
-        ...(matchedStyle?.reference_images || []),
-        ...(matchedStyle?.example_image_url ? [matchedStyle.example_image_url] : []),
-      ].filter(Boolean).length;
-      const variations = refCount > 0 ? Math.max(manualVariations, refCount) : manualVariations;
+      const variations = styleVariations[styleId] ?? config.variationsPerStyle;
       return total + config.aspectRatios.length * variations;
     }, 0);
   }, [config]);
