@@ -89,6 +89,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
       setXaiKey((settings as any).xai_api_key || '');
       setApiUsageLimit(String(settings.api_usage_limit || 100));
       setMeetgeekApiKey((settings as any).meetgeek_api_key || '');
+      setComposioApiKey((settings as any).composio_api_key || '');
       setSelectedOpenaiModel((settings as any).selected_openai_model || 'gpt-5');
       setSelectedGeminiModel((settings as any).selected_gemini_model || 'gemini-2.5-pro');
       setSelectedGrokModel((settings as any).selected_grok_model || 'grok-3');
