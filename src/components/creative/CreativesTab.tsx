@@ -418,6 +418,14 @@ export function CreativesTab() {
             <Download className="h-4 w-4" />
             Export
           </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Calendar
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="approvals" className="mt-4 space-y-6">
