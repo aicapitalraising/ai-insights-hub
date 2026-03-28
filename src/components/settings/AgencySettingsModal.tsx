@@ -17,7 +17,7 @@ import { useAgencySettings, useUpdateAgencySettings } from '@/hooks/useAgencySet
 import { useSyncMeetings } from '@/hooks/useMeetings';
 import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
-import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2 } from 'lucide-react';
+import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Puzzle } from 'lucide-react';
 import { ApiReferenceTab } from './ApiReferenceTab';
 
 const OPENAI_MODELS = [
@@ -72,6 +72,10 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
   // MeetGeek Integration
   const [meetgeekApiKey, setMeetgeekApiKey] = useState('');
   const [showMeetgeekKey, setShowMeetgeekKey] = useState(false);
+  
+  // Composio Integration
+  const [composioApiKey, setComposioApiKey] = useState('');
+  const [showComposioKey, setShowComposioKey] = useState(false);
   const syncMeetings = useSyncMeetings();
   
   const webhookUrl = `https://jgwwmtuvjlmzapwqiabu.supabase.co/functions/v1/meetgeek-webhook`;
@@ -85,6 +89,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
       setXaiKey((settings as any).xai_api_key || '');
       setApiUsageLimit(String(settings.api_usage_limit || 100));
       setMeetgeekApiKey((settings as any).meetgeek_api_key || '');
+      setComposioApiKey((settings as any).composio_api_key || '');
       setSelectedOpenaiModel((settings as any).selected_openai_model || 'gpt-5');
       setSelectedGeminiModel((settings as any).selected_gemini_model || 'gemini-2.5-pro');
       setSelectedGrokModel((settings as any).selected_grok_model || 'grok-3');
@@ -102,6 +107,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         xai_api_key: xaiKey || null,
         api_usage_limit: parseFloat(apiUsageLimit) || 100,
         meetgeek_api_key: meetgeekApiKey || null,
+        composio_api_key: composioApiKey || null,
         selected_openai_model: selectedOpenaiModel,
         selected_gemini_model: selectedGeminiModel,
         selected_grok_model: selectedGrokModel,
@@ -501,6 +507,67 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
                     Enter your API key and save settings first
                   </p>
                 )}
+              </div>
+            </div>
+            {/* Composio Integration */}
+            <div className="border-2 border-border p-4 space-y-4">
+              <div>
+                <h4 className="font-medium mb-1 flex items-center gap-2">
+                  <Puzzle className="h-4 w-4" />
+                  Composio Integration
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Connect 1000+ app toolkits for AI agents — GitHub, Gmail, Slack, Notion, CRMs, and more.
+                  Composio handles authentication, tool search, and execution for your AI workflows.
+                  Get your API key from{' '}
+                  <a 
+                    href="https://app.composio.dev/settings" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="text-primary underline"
+                  >
+                    Composio Dashboard → Settings
+                  </a>
+                </p>
+                
+                <Label htmlFor="composioKey">API Key</Label>
+                <div className="relative mt-1">
+                  <Input
+                    id="composioKey"
+                    type={showComposioKey ? 'text' : 'password'}
+                    value={composioApiKey}
+                    onChange={(e) => setComposioApiKey(e.target.value)}
+                    placeholder="Your Composio API key..."
+                    className="font-mono pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => setShowComposioKey(!showComposioKey)}
+                  >
+                    {showComposioKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="bg-muted/50 border border-border p-3 text-sm space-y-2">
+                <p className="font-medium">What Composio enables:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  <li>AI agent tool calling across 1000+ apps (Slack, Gmail, HubSpot, etc.)</li>
+                  <li>Managed OAuth & authentication for all connected apps</li>
+                  <li>Automated workflows triggered by AI agents</li>
+                  <li>MCP server integration for LinkedIn Ads & more</li>
+                </ul>
+                <a 
+                  href="https://docs.composio.dev/docs" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-primary underline text-xs"
+                >
+                  View Composio Documentation →
+                </a>
               </div>
             </div>
           </TabsContent>
