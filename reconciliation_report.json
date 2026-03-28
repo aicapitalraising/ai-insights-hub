@@ -1,0 +1,430 @@
+{
+  "summary": {
+    "date_checked": "2026-03-28",
+    "reporting_date": "2026-03-27",
+    "clients_reviewed": 23,
+    "fully_accurate": 20,
+    "corrected": 3,
+    "unresolved": 0,
+    "overall_status": "Corrected With Minor Issues",
+    "meta_stats": {
+      "pass": 0,
+      "corrected": 0,
+      "fail": 0,
+      "warning": 23
+    },
+    "leads_stats": {
+      "pass": 23,
+      "corrected": 0,
+      "fail": 0,
+      "warning": 0
+    },
+    "calendar_stats": {
+      "pass": 20,
+      "corrected": 3,
+      "fail": 0,
+      "warning": 0
+    },
+    "committed_stats": {
+      "pass": 23,
+      "corrected": 0,
+      "fail": 0,
+      "warning": 0
+    },
+    "funded_stats": {
+      "pass": 23,
+      "corrected": 0,
+      "fail": 0,
+      "warning": 0
+    }
+  },
+  "corrections": [
+    {
+      "client": "Lansing Capital",
+      "section": "Calendar",
+      "details": [
+        "calls_scheduled: reporting=0 vs source=1"
+      ]
+    },
+    {
+      "client": "Kroh Exploration",
+      "section": "Calendar",
+      "details": [
+        "calls_scheduled: reporting=0 vs source=2",
+        "calls_showed: reporting=0 vs source=2"
+      ]
+    },
+    {
+      "client": "Legacy Capital",
+      "section": "Calendar",
+      "details": [
+        "calls_scheduled: reporting=0 vs source=1"
+      ]
+    }
+  ],
+  "unresolved": [],
+  "client_results": [
+    {
+      "client_name": "JJ Dental",
+      "client_id": "5bffa91b-87a1-42b5-a155-406b15d719e5",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Perrotti\u2019s Pizza | Fort Worth\u2019s Favorite Pizza Since 1986",
+      "client_id": "226beaaa-99e0-4e34-bce1-0166604656c6",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Evia Company ",
+      "client_id": "d402676b-99ad-49e2-b96b-1fc24040076d",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "LSCRE \u2013 Hiring",
+      "client_id": "43dd2062-ace1-4e24-b359-0470d4c466c6",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Lansing Capital",
+      "client_id": "c9d7dc91-2940-4f2e-9672-b9951ee23003",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "CORRECTED",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [
+        "calls_scheduled: reporting=0 vs source=1"
+      ],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "CORRECTED"
+    },
+    {
+      "client_name": "Blue Metric Group",
+      "client_id": "0d75a471-2713-4332-b80e-d5d84b98d677",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Texas State Oil",
+      "client_id": "6163dbe3-3292-4151-88e8-f4530d6c0d73",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Blue Capital",
+      "client_id": "f414feaa-c68e-4e68-b35d-fcefb8ff86e1",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Simple House Capital Group",
+      "client_id": "47b10f07-328a-4c03-9542-86ba8599138b",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "LSCRE - Leasing",
+      "client_id": "9bed8162-6a89-4ec0-b233-aba50b2ee563",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "OBL",
+      "client_id": "268edbc5-d5ab-4425-96a3-1eb30525c08e",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "HPA - AI Capital Raising",
+      "client_id": "18acd701-92ff-4bbc-86aa-1f7cd9a9c973",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Think & Grow Rich The Movie",
+      "client_id": "56d833ca-1c70-44f2-a653-9faa76657d43",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "LSCRE",
+      "client_id": "924aee58-b3a6-42fb-b10f-0945db45cdde",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Kroh Exploration",
+      "client_id": "d16175f2-6376-493d-aae4-bfb3e4a32e50",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "CORRECTED",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [
+        "calls_scheduled: reporting=0 vs source=2",
+        "calls_showed: reporting=0 vs source=2"
+      ],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "CORRECTED"
+    },
+    {
+      "client_name": "Land Value Alpha",
+      "client_id": "70a87509-80b3-4ee7-966e-22d976acfff6",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Paradyme",
+      "client_id": "a5b63280-fe3f-4d67-a6c6-b387262fc5dd",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Quad J Capital",
+      "client_id": "098bdcf2-fa06-4801-8505-676535e6b5ce",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Titan Management Group",
+      "client_id": "9b1b0228-9e7f-402d-91ee-8da7d0cfeb9b",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Legacy Capital",
+      "client_id": "3457607d-0f1b-4ef8-b20f-65bdf4f3c82d",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "CORRECTED",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [
+        "calls_scheduled: reporting=0 vs source=1"
+      ],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "CORRECTED"
+    },
+    {
+      "client_name": "HRT",
+      "client_id": "055eea03-76b7-4e6b-aa1d-6fbd2719e532",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "Freaky Fast Investments",
+      "client_id": "8689db32-4ba7-47ef-81d1-6bf72f645aa1",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [
+        "Meta API error: HTTP Error 403: Forbidden"
+      ],
+      "overall": "ACCURATE"
+    },
+    {
+      "client_name": "HFI | Helping companies create user experiences that build influence, loyalty, and retention",
+      "client_id": "3fe8e254-d08b-4c30-aa3e-a4b4a86f920d",
+      "date_checked": "2026-03-28",
+      "meta_status": "WARNING",
+      "leads_status": "PASS",
+      "calendar_status": "PASS",
+      "committed_status": "PASS",
+      "funded_status": "PASS",
+      "mismatches": [],
+      "corrections": [],
+      "unresolved": [],
+      "overall": "ACCURATE"
+    }
+  ],
+  "slack_message": "Daily Yesterday Stats Reconciliation\nDate Checked: 2026-03-28\nReporting Date Verified: 2026-03-27\n\nClients Reviewed: 23\nClients Fully Accurate: 20\nClients Corrected: 3\nClients With Unresolved Issues: 0\n\nMeta:\n- 0 pass\n- 0 corrected\n- 0 fail\n- 23 warning\n\nLeads:\n- 23 pass\n- 0 corrected\n- 0 fail\n\nCalendar:\n- 20 pass\n- 3 corrected\n- 0 fail\n\nCommitted Investors:\n- 23 pass\n- 0 corrected\n- 0 fail\n\nFunded Investors:\n- 23 pass\n- 0 corrected\n- 0 fail\n\nTop Corrections Made:\n- Lansing Capital: calls_scheduled: reporting=0 vs source=1\n- Kroh Exploration: calls_scheduled: reporting=0 vs source=2; calls_showed: reporting=0 vs source=2\n- Legacy Capital: calls_scheduled: reporting=0 vs source=1\n\nOverall Status: Corrected With Minor Issues"
+}
