@@ -203,14 +203,12 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     setBulkUploadTotalFiles(bulkFiles.length);
 
     try {
-      const uploads = [] as Array<Promise<{
-        payload: Parameters<typeof createCreatives.mutateAsync>[0][number];
-        fileName: string;
-      }>>;
+      const successfulPayloads: Parameters<typeof createCreatives.mutateAsync>[0] = [];
+      let failedUploads = 0;
 
       for (let i = 0; i < bulkFiles.length; i++) {
         const file = bulkFiles[i];
-        uploads.push((async () => {
+        try {
           setBulkUploadFileIndex(i + 1);
           setBulkUploadCurrentFile(file.name);
           setBulkUploadProgress(0);
@@ -222,37 +220,25 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
           const fileName = file.name.replace(/\.[^/.]+$/, '');
           const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-          return {
-            fileName: file.name,
-            payload: {
-              client_id: clientId,
-              client_name: clientName,
-              title,
-              type: isVideo ? 'video' : 'image',
-              platform: bulkPlatform,
-              file_url: fileUrl,
-              headline: null,
-              body_copy: null,
-              cta_text: null,
-              status: isAgencyUpload ? 'draft' : 'pending',
-              comments: [],
-              aspect_ratio: aspectRatio,
-              isAgencyUpload,
-            },
-          };
-        })());
-      }
-
-      const settledUploads = await Promise.allSettled(uploads);
-      const successfulPayloads = settledUploads
-        .filter((result): result is PromiseFulfilledResult<{ payload: Parameters<typeof createCreatives.mutateAsync>[0][number]; fileName: string }> => result.status === 'fulfilled')
-        .map((result) => result.value.payload);
-      const failedUploads = settledUploads.filter((result) => result.status === 'rejected');
-
-      if (failedUploads.length > 0) {
-        failedUploads.forEach((result, index) => {
-          console.error('Failed to upload file before metadata insert:', bulkFiles[index]?.name, result.status === 'rejected' ? result.reason : result);
-        });
+          successfulPayloads.push({
+            client_id: clientId,
+            client_name: clientName,
+            title,
+            type: isVideo ? 'video' : 'image',
+            platform: bulkPlatform,
+            file_url: fileUrl,
+            headline: null,
+            body_copy: null,
+            cta_text: null,
+            status: isAgencyUpload ? 'draft' : 'pending',
+            comments: [],
+            aspect_ratio: aspectRatio,
+            isAgencyUpload,
+          });
+        } catch (error) {
+          failedUploads++;
+          console.error('Failed to upload file before metadata insert:', file.name, error);
+        }
       }
 
       if (successfulPayloads.length > 0) {
@@ -262,8 +248,8 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
       if (successfulPayloads.length > 0) {
         toast.success(`Successfully uploaded ${successfulPayloads.length} creative${successfulPayloads.length !== 1 ? 's' : ''}`);
       }
-      if (failedUploads.length > 0) {
-        toast.error(`Failed to upload ${failedUploads.length} file${failedUploads.length !== 1 ? 's' : ''}`);
+      if (failedUploads > 0) {
+        toast.error(`Failed to upload ${failedUploads} file${failedUploads !== 1 ? 's' : ''}`);
       }
 
       setBulkUploadOpen(false);

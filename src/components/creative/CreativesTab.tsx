@@ -292,7 +292,12 @@ export function CreativesTab() {
     setBulkUploadTotalFiles(bulkFiles.length);
     const clientName = clientMap[bulkClientId] || '';
     try {
-      const uploadJobs = bulkFiles.map((file, index) => (async (): Promise<CreateCreativeInput> => {
+      const successfulPayloads: CreateCreativeInput[] = [];
+      let failedCount = 0;
+
+      for (let index = 0; index < bulkFiles.length; index++) {
+        const file = bulkFiles[index];
+        try {
         setBulkUploadFileIndex(index + 1);
         setBulkUploadCurrentFile(file.name);
         setBulkUploadProgress(0);
@@ -303,7 +308,7 @@ export function CreativesTab() {
         const fileName = file.name.replace(/\.[^/.]+$/, '');
         const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-        return {
+        successfulPayloads.push({
           client_id: bulkClientId,
           client_name: clientName,
           title,
@@ -317,18 +322,12 @@ export function CreativesTab() {
           comments: [],
           aspect_ratio: aspectRatio,
           isAgencyUpload: true,
-        };
-      })());
-
-      const settledUploads = await Promise.allSettled(uploadJobs);
-      const successfulPayloads = settledUploads.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
-      const failedCount = settledUploads.length - successfulPayloads.length;
-
-      settledUploads.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          console.error('Failed to prepare creative upload:', bulkFiles[index]?.name, result.reason);
+        });
+        } catch (error) {
+          failedCount++;
+          console.error('Failed to prepare creative upload:', file.name, error);
         }
-      });
+      }
 
       if (successfulPayloads.length > 0) {
         await createCreatives.mutateAsync(successfulPayloads);
