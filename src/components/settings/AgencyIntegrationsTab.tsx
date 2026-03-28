@@ -316,23 +316,8 @@ export function AgencyIntegrationsTab() {
         })}
       </div>
 
-      {/* Composio Section */}
-      <Card className="border-2 border-border p-4">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-2xl">🧩</span>
-          <div>
-            <h3 className="font-semibold">Composio (Advanced)</h3>
-            <p className="text-xs text-muted-foreground">
-              For AI agent tool calling across 1000+ apps. Managed in Agency Settings → Integrations.
-            </p>
-          </div>
-          <Badge variant="secondary" className="ml-auto">
-            <a href="https://docs.composio.dev/docs" target="_blank" rel="noreferrer" className="flex items-center gap-1">
-              Docs <ExternalLink className="h-3 w-3" />
-            </a>
-          </Badge>
-        </div>
-      </Card>
+      {/* Composio MCP Section */}
+      <ComposioMCPSection />
     </div>
   );
 }
