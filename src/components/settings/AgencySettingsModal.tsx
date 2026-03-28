@@ -107,6 +107,7 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         xai_api_key: xaiKey || null,
         api_usage_limit: parseFloat(apiUsageLimit) || 100,
         meetgeek_api_key: meetgeekApiKey || null,
+        composio_api_key: composioApiKey || null,
         selected_openai_model: selectedOpenaiModel,
         selected_gemini_model: selectedGeminiModel,
         selected_grok_model: selectedGrokModel,
