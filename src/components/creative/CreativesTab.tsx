@@ -56,8 +56,13 @@ import {
   History,
   Inbox,
   Plus,
+  Calendar,
+  BarChart3,
+  FolderArchive,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 // Lazy-load sub-section page components
 const CreativeBriefs = lazy(() => import('@/pages/CreativeBriefs'));
@@ -71,6 +76,8 @@ const VideoEditorPage = lazy(() => import('@/pages/VideoEditorPage'));
 const BrollPage = lazy(() => import('@/pages/BrollPage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const ExportHubPage = lazy(() => import('@/pages/ExportHubPage'));
+const CreativeCalendarLazy = lazy(() => import('@/components/creative/CreativeCalendar').then(m => ({ default: m.CreativeCalendar })));
+const CreativeAnalyticsLazy = lazy(() => import('@/components/creative/CreativeAnalytics').then(m => ({ default: m.CreativeAnalytics })));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
@@ -411,6 +418,14 @@ export function CreativesTab() {
             <Download className="h-4 w-4" />
             Export
           </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Calendar
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="approvals" className="mt-4 space-y-6">
@@ -642,6 +657,26 @@ export function CreativesTab() {
           <Button size="sm" variant="destructive" onClick={() => handleBulkAction('rejected')}>
             <X className="h-3 w-3 mr-1" />
             Reject All
+          </Button>
+          <Button size="sm" variant="outline" onClick={async () => {
+            const selected = filteredCreatives.filter(c => selectedIds.has(c.id) && c.file_url);
+            if (selected.length === 0) { toast.error('No files to export'); return; }
+            toast.info(`Downloading ${selected.length} files...`);
+            const zip = new JSZip();
+            for (const c of selected) {
+              try {
+                const resp = await fetch(c.file_url!);
+                const blob = await resp.blob();
+                const ext = c.type === 'video' ? 'mp4' : 'png';
+                zip.file(`${c.title.replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`, blob);
+              } catch { /* skip */ }
+            }
+            const content = await zip.generateAsync({ type: 'blob' });
+            saveAs(content, `creatives-export-${Date.now()}.zip`);
+            toast.success('ZIP downloaded!');
+          }}>
+            <FolderArchive className="h-3 w-3 mr-1" />
+            Export ZIP
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Clear
@@ -1200,6 +1235,20 @@ export function CreativesTab() {
         <TabsContent value="export" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading export hub..." />}>
             <ExportHubPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Creative Calendar */}
+        <TabsContent value="calendar" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading calendar..." />}>
+            <CreativeCalendarLazy embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Creative Analytics */}
+        <TabsContent value="analytics" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading analytics..." />}>
+            <CreativeAnalyticsLazy embedded />
           </Suspense>
         </TabsContent>
       </Tabs>
