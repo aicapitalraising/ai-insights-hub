@@ -658,6 +658,26 @@ export function CreativesTab() {
             <X className="h-3 w-3 mr-1" />
             Reject All
           </Button>
+          <Button size="sm" variant="outline" onClick={async () => {
+            const selected = filteredCreatives.filter(c => selectedIds.has(c.id) && c.file_url);
+            if (selected.length === 0) { toast.error('No files to export'); return; }
+            toast.info(`Downloading ${selected.length} files...`);
+            const zip = new JSZip();
+            for (const c of selected) {
+              try {
+                const resp = await fetch(c.file_url!);
+                const blob = await resp.blob();
+                const ext = c.type === 'video' ? 'mp4' : 'png';
+                zip.file(`${c.title.replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`, blob);
+              } catch { /* skip */ }
+            }
+            const content = await zip.generateAsync({ type: 'blob' });
+            saveAs(content, `creatives-export-${Date.now()}.zip`);
+            toast.success('ZIP downloaded!');
+          }}>
+            <FolderArchive className="h-3 w-3 mr-1" />
+            Export ZIP
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Clear
           </Button>
