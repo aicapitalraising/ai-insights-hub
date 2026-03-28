@@ -509,6 +509,67 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
                 )}
               </div>
             </div>
+            {/* Composio Integration */}
+            <div className="border-2 border-border p-4 space-y-4">
+              <div>
+                <h4 className="font-medium mb-1 flex items-center gap-2">
+                  <Puzzle className="h-4 w-4" />
+                  Composio Integration
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Connect 1000+ app toolkits for AI agents — GitHub, Gmail, Slack, Notion, CRMs, and more.
+                  Composio handles authentication, tool search, and execution for your AI workflows.
+                  Get your API key from{' '}
+                  <a 
+                    href="https://app.composio.dev/settings" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="text-primary underline"
+                  >
+                    Composio Dashboard → Settings
+                  </a>
+                </p>
+                
+                <Label htmlFor="composioKey">API Key</Label>
+                <div className="relative mt-1">
+                  <Input
+                    id="composioKey"
+                    type={showComposioKey ? 'text' : 'password'}
+                    value={composioApiKey}
+                    onChange={(e) => setComposioApiKey(e.target.value)}
+                    placeholder="Your Composio API key..."
+                    className="font-mono pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => setShowComposioKey(!showComposioKey)}
+                  >
+                    {showComposioKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="bg-muted/50 border border-border p-3 text-sm space-y-2">
+                <p className="font-medium">What Composio enables:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  <li>AI agent tool calling across 1000+ apps (Slack, Gmail, HubSpot, etc.)</li>
+                  <li>Managed OAuth & authentication for all connected apps</li>
+                  <li>Automated workflows triggered by AI agents</li>
+                  <li>MCP server integration for LinkedIn Ads & more</li>
+                </ul>
+                <a 
+                  href="https://docs.composio.dev/docs" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-primary underline text-xs"
+                >
+                  View Composio Documentation →
+                </a>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="api-reference" className="mt-4">
