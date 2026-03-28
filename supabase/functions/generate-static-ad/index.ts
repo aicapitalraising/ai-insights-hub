@@ -312,9 +312,10 @@ serve(async (req) => {
       .upload(filePath, imageBytes, { contentType: mimeType, upsert: false });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
+      console.error('Upload error:', JSON.stringify(uploadError));
+      const errMsg = typeof uploadError === 'object' ? (uploadError.message || JSON.stringify(uploadError)) : String(uploadError);
       return new Response(
-        JSON.stringify({ error: 'Failed to upload image', details: uploadError }),
+        JSON.stringify({ error: `Failed to upload image: ${errMsg}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
