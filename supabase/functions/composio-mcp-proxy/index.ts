@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
     let composioKey = Deno.env.get("COMPOSIO_API_KEY");
 
     if (!composioKey) {
-      // Fallback: read from agency_settings
       const supabase = createClient(
         Deno.env.get("ORIGINAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -38,27 +37,59 @@ Deno.serve(async (req) => {
       );
     }
 
-    const COMPOSIO_BASE = "https://backend.composio.dev/api/v2";
+    // V3 API base
+    const COMPOSIO_V3 = "https://backend.composio.dev/api/v3";
+    // V1 API base (some endpoints like connectedAccounts still use v1)
+    const COMPOSIO_V1 = "https://backend.composio.dev/api/v1";
 
-    // Action: create_session — creates a Composio session for a user and returns MCP connection details
+    const authHeaders = {
+      "x-api-key": composioKey,
+      "Content-Type": "application/json",
+    };
+
+    // Action: create_session — creates a Composio MCP server for a user (v3)
     if (action === "create_session") {
       const sessionUserId = userId || "agency_default";
 
-      const res = await fetch(`${COMPOSIO_BASE}/mcp/session`, {
+      // V3: create an MCP server endpoint
+      const res = await fetch(`${COMPOSIO_V3}/mcp/server`, {
         method: "POST",
-        headers: {
-          "x-api-key": composioKey,
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           user_id: sessionUserId,
-          ...(toolkits ? { toolkits } : {}),
+          ...(toolkits ? { apps: toolkits } : {}),
         }),
       });
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error("Composio session error:", res.status, errText);
+        console.error("Composio v3 MCP server error:", res.status, errText);
+
+        // If v3 also fails, try the streamable-http MCP endpoint
+        if (res.status === 404 || res.status === 410) {
+          const fallbackRes = await fetch(`${COMPOSIO_V3}/mcp/streamable-http`, {
+            method: "POST",
+            headers: authHeaders,
+            body: JSON.stringify({
+              user_id: sessionUserId,
+              ...(toolkits ? { apps: toolkits } : {}),
+            }),
+          });
+
+          if (!fallbackRes.ok) {
+            const fallbackErr = await fallbackRes.text();
+            return new Response(
+              JSON.stringify({ error: `Composio v3 API error [${fallbackRes.status}]: ${fallbackErr}` }),
+              { status: fallbackRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          const fallbackData = await fallbackRes.json();
+          return new Response(JSON.stringify({ success: true, session: fallbackData }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
         return new Response(
           JSON.stringify({ error: `Composio API error [${res.status}]: ${errText}` }),
           { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -71,9 +102,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Action: list_tools — list available tools/toolkits
+    // Action: list_tools — list available tools/actions (v3)
     if (action === "list_tools") {
-      const res = await fetch(`${COMPOSIO_BASE}/actions?limit=100${toolkits ? `&apps=${toolkits}` : ""}`, {
+      const params = new URLSearchParams({ limit: "100" });
+      if (toolkits) params.set("apps", toolkits);
+
+      const res = await fetch(`${COMPOSIO_V3}/actions?${params}`, {
         headers: { "x-api-key": composioKey },
       });
 
@@ -91,7 +125,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Action: execute_tool — execute a specific tool
+    // Action: execute_tool — execute a specific tool (v3)
     if (action === "execute_tool") {
       if (!tool_name) {
         return new Response(
@@ -100,12 +134,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      const res = await fetch(`${COMPOSIO_BASE}/actions/${tool_name}/execute`, {
+      const res = await fetch(`${COMPOSIO_V3}/actions/${tool_name}/execute`, {
         method: "POST",
-        headers: {
-          "x-api-key": composioKey,
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           connected_account_id: userId || "agency_default",
           input: tool_args || {},
@@ -126,9 +157,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Action: list_connections — list connected accounts
+    // Action: list_connections — list connected accounts (v1 — still active)
     if (action === "list_connections") {
-      const res = await fetch(`${COMPOSIO_BASE}/connectedAccounts?showActiveOnly=true`, {
+      const res = await fetch(`${COMPOSIO_V1}/connectedAccounts?showActiveOnly=true`, {
         headers: { "x-api-key": composioKey },
       });
 
@@ -146,7 +177,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Action: initiate_connection — start OAuth flow for an app
+    // Action: initiate_connection — start OAuth flow for an app (v1)
     if (action === "initiate_connection") {
       const { app_name, redirect_url } = tool_args || {};
       if (!app_name) {
@@ -156,12 +187,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      const res = await fetch(`${COMPOSIO_BASE}/connectedAccounts`, {
+      const res = await fetch(`${COMPOSIO_V1}/connectedAccounts`, {
         method: "POST",
-        headers: {
-          "x-api-key": composioKey,
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           integrationId: app_name,
           redirectUri: redirect_url || "https://report-bloom-magic.lovable.app",
