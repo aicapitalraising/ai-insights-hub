@@ -17,8 +17,9 @@ import { useAgencySettings, useUpdateAgencySettings } from '@/hooks/useAgencySet
 import { useSyncMeetings } from '@/hooks/useMeetings';
 import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
-import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Puzzle } from 'lucide-react';
+import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Puzzle, AlertTriangle } from 'lucide-react';
 import { ApiReferenceTab } from './ApiReferenceTab';
+import { ErrorLogTab } from './ErrorLogTab';
 
 const OPENAI_MODELS = [
   { value: 'gpt-5', label: 'GPT-5' },
