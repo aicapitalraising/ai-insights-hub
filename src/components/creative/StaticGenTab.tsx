@@ -137,6 +137,7 @@ export function StaticGenTab({ clientId, clientName }: StaticGenTabProps) {
             onBack={prevStep}
             isGenerating={isGenerating}
             clientId={clientId}
+            client={client}
           />
         )}
         {currentStep === 3 && (
