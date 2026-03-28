@@ -143,30 +143,34 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         </DialogHeader>
 
         <Tabs defaultValue="team" className="mt-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="team" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="team" className="flex items-center gap-1 text-xs">
+              <Users className="h-3.5 w-3.5" />
               Team
             </TabsTrigger>
-            <TabsTrigger value="sync-queue" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              Sync Queue
+            <TabsTrigger value="sync-queue" className="flex items-center gap-1 text-xs">
+              <Database className="h-3.5 w-3.5" />
+              Sync
             </TabsTrigger>
-            <TabsTrigger value="ai-prompts" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              AI Prompts
+            <TabsTrigger value="ai-prompts" className="flex items-center gap-1 text-xs">
+              <Brain className="h-3.5 w-3.5" />
+              AI
             </TabsTrigger>
-            <TabsTrigger value="api-keys" className="flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              API Keys
+            <TabsTrigger value="api-keys" className="flex items-center gap-1 text-xs">
+              <Key className="h-3.5 w-3.5" />
+              Keys
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="flex items-center gap-2">
-              <Video className="h-4 w-4" />
+            <TabsTrigger value="integrations" className="flex items-center gap-1 text-xs">
+              <Video className="h-3.5 w-3.5" />
               Integrations
             </TabsTrigger>
-            <TabsTrigger value="api-reference" className="flex items-center gap-2">
-              <Code2 className="h-4 w-4" />
+            <TabsTrigger value="api-reference" className="flex items-center gap-1 text-xs">
+              <Code2 className="h-3.5 w-3.5" />
               API
+            </TabsTrigger>
+            <TabsTrigger value="error-log" className="flex items-center gap-1 text-xs">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Errors
             </TabsTrigger>
           </TabsList>
           
