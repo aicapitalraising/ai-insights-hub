@@ -25,6 +25,7 @@ import {
   BarChart2,
   Megaphone,
   FileText,
+  Plug,
 } from 'lucide-react';
 import {
   Sidebar,
