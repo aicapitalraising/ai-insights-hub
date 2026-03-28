@@ -29,6 +29,7 @@ import { FunnelPreviewTab } from '@/components/funnel/FunnelPreviewTab';
 import { AgencyBillingTab } from '@/components/billing/AgencyBillingTab';
 import { DealPipelineBoard } from '@/components/deals/DealPipelineBoard';
 import { DataHealthCard } from '@/components/dashboard/DataHealthCard';
+import { AgencyIntegrationsTab } from '@/components/settings/AgencyIntegrationsTab';
 import { IntegrationStatusCards } from '@/components/dashboard/IntegrationStatusCards';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
