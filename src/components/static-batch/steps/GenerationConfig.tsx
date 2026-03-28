@@ -23,6 +23,7 @@ interface GenerationConfigProps {
   onBack: () => void;
   isGenerating: boolean;
   clientId?: string;
+  client?: Client | null;
   onAvatarConfig?: (config: { enabled: boolean; avatarId?: string; lookUrl?: string; avatarDescription?: string }) => void;
 }
 
