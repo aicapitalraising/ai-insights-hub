@@ -496,6 +496,13 @@ const Index = () => {
                 <DataAccuracyAuditPanel />
               </SectionErrorBoundary>
             )}
+
+            {/* Integrations */}
+            {activeTab === 'integrations' && (
+              <SectionErrorBoundary sectionName="Integrations">
+                <AgencyIntegrationsTab />
+              </SectionErrorBoundary>
+            )}
           </main>
         </div>
       </div>
