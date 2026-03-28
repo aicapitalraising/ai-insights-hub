@@ -154,6 +154,7 @@ DO NOT include:
 function getProductionSupabase() {
   const url = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
   const key = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  console.log('Storage target URL:', url?.slice(0, 30) + '...');
   return createClient(url, key);
 }
 
@@ -311,9 +312,10 @@ serve(async (req) => {
       .upload(filePath, imageBytes, { contentType: mimeType, upsert: false });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
+      console.error('Upload error:', JSON.stringify(uploadError));
+      const errMsg = typeof uploadError === 'object' ? (uploadError.message || JSON.stringify(uploadError)) : String(uploadError);
       return new Response(
-        JSON.stringify({ error: 'Failed to upload image', details: uploadError }),
+        JSON.stringify({ error: `Failed to upload image: ${errMsg}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

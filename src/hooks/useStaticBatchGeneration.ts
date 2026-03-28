@@ -150,7 +150,17 @@ export function useStaticBatchGeneration({
         completedCount++;
       } catch (error: any) {
         console.error('Failed to generate ad:', error);
-        const errorMsg = error?.message || error?.details || error?.error || String(error);
+        // Extract a human-readable string from potentially nested error objects
+        const extractMsg = (e: any): string => {
+          if (typeof e === 'string') return e;
+          if (e?.message && typeof e.message === 'string') return e.message;
+          if (e?.error && typeof e.error === 'string') return e.error;
+          if (e?.details && typeof e.details === 'string') return e.details;
+          if (e?.details?.message) return e.details.message;
+          if (e?.error && typeof e.error === 'object') return extractMsg(e.error);
+          try { return JSON.stringify(e); } catch { return 'Unknown error'; }
+        };
+        const errorMsg = extractMsg(error);
         setGeneratedAds((prev) =>
           prev.map((a, idx) =>
             idx === i ? { ...a, status: 'failed' as const, errorMessage: errorMsg } : a
