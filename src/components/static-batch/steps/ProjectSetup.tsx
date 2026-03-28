@@ -34,9 +34,12 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
   const selectedAvatar = avatars.find(a => a.image_url === config.characterImageUrl);
   const { data: avatarLooks = [] } = useAvatarLooks(selectedAvatar?.id);
   const { data: clientProjects = [] } = useProjects(client?.id);
+  const { data: clientOffers = [] } = useClientOffers(client?.id);
   const createProject = useCreateProject();
+  const createOffer = useCreateOffer();
 
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedOfferId, setSelectedOfferId] = useState<string>('');
   const [editableOffer, setEditableOffer] = useState(projectOfferDescription || client?.offer_description || '');
   const [editableDescription, setEditableDescription] = useState(config.productDescription || client?.description || '');
   const [editableWebsite, setEditableWebsite] = useState(client?.website_url || '');
@@ -46,6 +49,25 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectOffer, setNewProjectOffer] = useState('');
+
+  // New offer dialog
+  const [showNewOffer, setShowNewOffer] = useState(false);
+  const [newOfferTitle, setNewOfferTitle] = useState('');
+  const [newOfferDescription, setNewOfferDescription] = useState('');
+  const [newOfferUrl, setNewOfferUrl] = useState('');
+  const [isAnalyzingUrl, setIsAnalyzingUrl] = useState(false);
+
+  // When an offer is selected, populate the offer description
+  useEffect(() => {
+    if (selectedOfferId && clientOffers.length > 0) {
+      const offer = clientOffers.find(o => o.id === selectedOfferId);
+      if (offer) {
+        const offerText = [offer.title, offer.description].filter(Boolean).join('\n\n');
+        setEditableOffer(offerText);
+        onOfferChange?.(offerText);
+      }
+    }
+  }, [selectedOfferId]);
 
   // When a project is selected, load its offer
   useEffect(() => {
