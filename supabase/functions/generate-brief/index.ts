@@ -68,13 +68,28 @@ Deno.serve(async (req) => {
     // Get client info
     const { data: client, error: clientErr } = await supabase
       .from("clients")
-      .select("id, name, industry, description")
+      .select("id, name, industry, description, offer_description, product_url, website_url")
       .eq("id", clientId)
       .single();
 
     if (clientErr || !client) {
       throw new Error("Client not found");
     }
+
+    // Get client offers (pitch decks, file assets, etc.)
+    const { data: clientOffers } = await supabase
+      .from("client_offers")
+      .select("title, description, offer_type, file_url")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    // Get client intake data (ICP, fund details, etc.)
+    const { data: clientIntake } = await supabase
+      .from("client_intake")
+      .select("fund_type, raise_amount, timeline, min_investment, target_investor, brand_notes, additional_notes")
+      .eq("client_id", clientId)
+      .maybeSingle();
 
     // Get client settings for KPI context
     const { data: clientSettings } = await supabase
@@ -246,6 +261,23 @@ Always respond with valid JSON matching this exact schema:
 
       const userPrompt = `Generate a creative brief for ${client.name} (${client.industry || "industry not specified"}).
 ${client.description ? `Business: ${client.description}` : ""}
+${client.offer_description ? `Offer: ${client.offer_description}` : ""}
+${client.product_url ? `Product URL: ${client.product_url}` : ""}
+${client.website_url ? `Website: ${client.website_url}` : ""}
+
+${clientIntake ? `CLIENT ICP & FUND DETAILS:
+- Fund Type: ${clientIntake.fund_type || "Not specified"}
+- Raise Amount: ${clientIntake.raise_amount || "Not specified"}
+- Timeline: ${clientIntake.timeline || "Not specified"}
+- Min Investment: ${clientIntake.min_investment || "Not specified"}
+- Target Investor: ${clientIntake.target_investor || "Not specified"}
+${clientIntake.brand_notes ? `- Brand Notes: ${clientIntake.brand_notes}` : ""}
+${clientIntake.additional_notes ? `- Additional Notes: ${clientIntake.additional_notes}` : ""}
+` : ""}
+${clientOffers && clientOffers.length > 0 ? `CLIENT OFFERS & ASSETS:
+${clientOffers.map((o: any) => `- ${o.title} (${o.offer_type})${o.description ? `: ${o.description}` : ""}`).join("\n")}
+Use these offers as the core value propositions and CTAs in the brief. Each angle should tie back to a specific offer.
+` : ""}
 
 STRATEGIC CONTEXT: ${reasonContext[reason] || reasonContext.scaling}
 
@@ -434,6 +466,21 @@ Always respond with valid JSON matching this exact schema:
 
       const userPrompt = `Generate production-ready ad scripts for ${client.name} (${client.industry || "industry not specified"}).
 ${client.description ? `Business: ${client.description}` : ""}
+${client.offer_description ? `Offer: ${client.offer_description}` : ""}
+${client.product_url ? `Product URL: ${client.product_url}` : ""}
+
+${clientIntake ? `TARGET ICP:
+- Target Investor: ${clientIntake.target_investor || "Not specified"}
+- Fund Type: ${clientIntake.fund_type || "Not specified"}
+- Min Investment: ${clientIntake.min_investment || "Not specified"}
+- Raise Amount: ${clientIntake.raise_amount || "Not specified"}
+${clientIntake.brand_notes ? `- Brand Voice: ${clientIntake.brand_notes}` : ""}
+Scripts MUST speak directly to this ICP. Use their language, reference their goals, and address their specific concerns.
+` : ""}
+${clientOffers && clientOffers.length > 0 ? `OFFERS TO PROMOTE:
+${clientOffers.map((o: any) => `- ${o.title}${o.description ? `: ${o.description}` : ""}`).join("\n")}
+Each script should promote a specific offer. The CTA should drive to the relevant offer.
+` : ""}
 
 CREATIVE BRIEF: "${brief.title}"
 OBJECTIVE: ${brief.objective}
