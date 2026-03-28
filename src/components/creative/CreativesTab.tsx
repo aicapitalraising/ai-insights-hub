@@ -71,6 +71,8 @@ const VideoEditorPage = lazy(() => import('@/pages/VideoEditorPage'));
 const BrollPage = lazy(() => import('@/pages/BrollPage'));
 const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const ExportHubPage = lazy(() => import('@/pages/ExportHubPage'));
+const CreativeCalendarLazy = lazy(() => import('@/components/creative/CreativeCalendar').then(m => ({ default: m.CreativeCalendar })));
+const CreativeAnalyticsLazy = lazy(() => import('@/components/creative/CreativeAnalytics').then(m => ({ default: m.CreativeAnalytics })));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
