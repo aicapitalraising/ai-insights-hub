@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import {
-  Eye, EyeOff, ExternalLink, CheckCircle2, XCircle, RefreshCw, Plug,
+  Eye, EyeOff, ExternalLink, CheckCircle2, XCircle, RefreshCw, Plug, Loader2, Zap,
 } from 'lucide-react';
 
 interface PlatformConfig {
