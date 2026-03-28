@@ -109,6 +109,7 @@ export function GenerationConfig({
   onBack,
   isGenerating,
   clientId,
+  client,
   onAvatarConfig,
 }: GenerationConfigProps) {
   const { data: stylesForCount = [] } = useAdStyles(clientId);
