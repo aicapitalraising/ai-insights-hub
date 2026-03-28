@@ -304,8 +304,8 @@ serve(async (req) => {
     const mimeType = base64Match[1];
     const base64Image = base64Match[2];
 
-    // Upload to PRODUCTION Supabase Storage
-    const supabase = getProductionSupabase();
+    // Upload to Lovable Cloud Storage (local URL — DNS-resolvable from edge functions)
+    const storageClient = getStorageSupabase();
 
     const imageBytes = Uint8Array.from(atob(base64Image), c => c.charCodeAt(0));
     const timestamp = Date.now();
@@ -313,9 +313,9 @@ serve(async (req) => {
     const extension = mimeType.split('/')[1] || 'png';
     const filePath = `generated-ads/${clientId}/${projectId}/${timestamp}-${uuid}.${extension}`;
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await storageClient.storage
       .from('assets')
-      .upload(filePath, imageBytes, { contentType: mimeType, upsert: false });
+      .upload(filePath, imageBytes, { contentType: mimeType, upsert: true, cacheControl: '3600' });
 
     if (uploadError) {
       console.error('Upload error:', JSON.stringify(uploadError));
@@ -326,9 +326,10 @@ serve(async (req) => {
       );
     }
 
-    const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(filePath);
+    const { data: { publicUrl } } = storageClient.storage.from('assets').getPublicUrl(filePath);
 
     // Save asset record to PRODUCTION database
+    const supabase = getProductionSupabase();
     const { data: asset, error: assetError } = await supabase
       .from('assets')
       .insert({
