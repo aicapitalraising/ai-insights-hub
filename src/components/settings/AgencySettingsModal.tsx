@@ -580,6 +580,10 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
           <TabsContent value="api-reference" className="mt-4">
             <ApiReferenceTab />
           </TabsContent>
+
+          <TabsContent value="error-log" className="mt-4">
+            <ErrorLogTab />
+          </TabsContent>
         </Tabs>
 
         <div className="flex justify-end gap-2 mt-6">
