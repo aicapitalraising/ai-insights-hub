@@ -118,6 +118,10 @@ export function GenerationConfig({
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
   const [selectedLookUrl, setSelectedLookUrl] = useState<string>('');
 
+  // Resolve active brand colors and fonts
+  const activeBrandColors = config.brandColors.length > 0 ? config.brandColors : client?.brand_colors || [];
+  const activeBrandFonts = config.brandFonts.length > 0 ? config.brandFonts : client?.brand_fonts || [];
+  const hasBrandData = activeBrandColors.length > 0 || activeBrandFonts.length > 0;
   const { data: avatars = [] } = useAvatars(clientId);
   const { data: looks = [] } = useAvatarLooks(selectedAvatarId || null);
   const { data: allStyles = [] } = useAdStyles(clientId);
