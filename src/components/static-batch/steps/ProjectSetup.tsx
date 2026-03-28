@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Check, User, Palette, Type, Info, Link, ImagePlus, Sparkles, ExternalLink, Globe, Plus, FolderOpen, Pencil } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, User, Palette, Type, Info, Link, ImagePlus, Sparkles, ExternalLink, Globe, Plus, FolderOpen, Pencil, FileText, Loader2, Search, Package } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useAvatars } from '@/hooks/useAvatars';
 import { useAvatarLooks } from '@/hooks/useAvatarLooks';
 import { useProjects, useCreateProject } from '@/hooks/useProjects';
+import { useClientOffers, useCreateOffer, type ClientOffer } from '@/hooks/useClientOffers';
 import type { StaticBatchConfig, Client, Avatar } from '@/types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/db';
+import { invokeCloudFunction } from '@/lib/cloudFunctions';
 import { toast } from 'sonner';
 
 interface ProjectSetupProps {
@@ -32,9 +34,12 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
   const selectedAvatar = avatars.find(a => a.image_url === config.characterImageUrl);
   const { data: avatarLooks = [] } = useAvatarLooks(selectedAvatar?.id);
   const { data: clientProjects = [] } = useProjects(client?.id);
+  const { data: clientOffers = [] } = useClientOffers(client?.id);
   const createProject = useCreateProject();
+  const createOffer = useCreateOffer();
 
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedOfferId, setSelectedOfferId] = useState<string>('');
   const [editableOffer, setEditableOffer] = useState(projectOfferDescription || client?.offer_description || '');
   const [editableDescription, setEditableDescription] = useState(config.productDescription || client?.description || '');
   const [editableWebsite, setEditableWebsite] = useState(client?.website_url || '');
@@ -44,6 +49,25 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectOffer, setNewProjectOffer] = useState('');
+
+  // New offer dialog
+  const [showNewOffer, setShowNewOffer] = useState(false);
+  const [newOfferTitle, setNewOfferTitle] = useState('');
+  const [newOfferDescription, setNewOfferDescription] = useState('');
+  const [newOfferUrl, setNewOfferUrl] = useState('');
+  const [isAnalyzingUrl, setIsAnalyzingUrl] = useState(false);
+
+  // When an offer is selected, populate the offer description
+  useEffect(() => {
+    if (selectedOfferId && clientOffers.length > 0) {
+      const offer = clientOffers.find(o => o.id === selectedOfferId);
+      if (offer) {
+        const offerText = [offer.title, offer.description].filter(Boolean).join('\n\n');
+        setEditableOffer(offerText);
+        onOfferChange?.(offerText);
+      }
+    }
+  }, [selectedOfferId]);
 
   // When a project is selected, load its offer
   useEffect(() => {
@@ -127,6 +151,64 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
     }
   };
 
+  // URL analysis for new offers
+  const handleAnalyzeUrl = async () => {
+    if (!newOfferUrl.trim()) return;
+    setIsAnalyzingUrl(true);
+    try {
+      const { data, error } = await invokeCloudFunction('ai-agent-full-context', {
+        body: {
+          password: 'HPA1234$',
+          action: 'analyze_url',
+          url: newOfferUrl.trim(),
+          context: `Extract the offer/investment opportunity details from this URL. Return a JSON with "title" and "description" fields. The title should be a short offer name. The description should summarize the key value proposition, returns, terms, and investment details.`,
+        },
+      });
+      if (error) throw error;
+      const result = data as any;
+      if (result?.title) setNewOfferTitle(result.title);
+      if (result?.description) setNewOfferDescription(result.description);
+      if (result?.analysis) {
+        // If we got a raw analysis string, try to parse it
+        try {
+          const parsed = JSON.parse(result.analysis);
+          if (parsed.title) setNewOfferTitle(parsed.title);
+          if (parsed.description) setNewOfferDescription(parsed.description);
+        } catch {
+          setNewOfferDescription(result.analysis);
+        }
+      }
+      toast.success('URL analyzed — review and edit the details below');
+    } catch (err: any) {
+      toast.error(`URL analysis failed: ${err.message}`);
+    } finally {
+      setIsAnalyzingUrl(false);
+    }
+  };
+
+  const handleCreateOffer = async () => {
+    if (!client?.id || !newOfferTitle.trim()) return;
+    try {
+      const result = await createOffer.mutateAsync({
+        client_id: client.id,
+        title: newOfferTitle.trim(),
+        description: newOfferDescription.trim() || undefined,
+        offer_type: 'Offer',
+      });
+      const offerId = (result as any)?.id;
+      if (offerId) setSelectedOfferId(offerId);
+      const offerText = [newOfferTitle.trim(), newOfferDescription.trim()].filter(Boolean).join('\n\n');
+      setEditableOffer(offerText);
+      onOfferChange?.(offerText);
+      setShowNewOffer(false);
+      setNewOfferTitle('');
+      setNewOfferDescription('');
+      setNewOfferUrl('');
+    } catch {
+      toast.error('Failed to create offer');
+    }
+  };
+
   // Filter to static batch projects
   const staticProjects = clientProjects.filter(p => p.type === 'static_batch');
 
@@ -139,15 +221,75 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
         </p>
       </div>
 
-      {/* Project Selector */}
+      {/* Offer Picker */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Choose Offer
+          </CardTitle>
+          <CardDescription>
+            Pick an existing offer from {client?.name || 'this client'} or create a new one
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select an offer..." />
+              </SelectTrigger>
+              <SelectContent>
+                {clientOffers.map(offer => (
+                  <SelectItem key={offer.id} value={offer.id}>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <span>{offer.title}</span>
+                      <Badge variant="outline" className="text-[9px] ml-1">{offer.offer_type}</Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+                {clientOffers.length === 0 && (
+                  <SelectItem value="_none" disabled>No offers yet — create one below</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" onClick={() => setShowNewOffer(true)} title="Create new offer">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Selected offer preview */}
+          {selectedOfferId && (() => {
+            const offer = clientOffers.find(o => o.id === selectedOfferId);
+            return offer ? (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">{offer.title}</p>
+                  <Badge variant="outline" className="text-[10px]">{offer.offer_type}</Badge>
+                </div>
+                {offer.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-3">{offer.description}</p>
+                )}
+                {offer.file_url && (
+                  <a href={offer.file_url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+                    <ExternalLink className="h-3 w-3" /> View attached file
+                  </a>
+                )}
+              </div>
+            ) : null;
+          })()}
+        </CardContent>
+      </Card>
+
+      {/* Project Selector (optional) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
-            Project / Offer
+            Project (Optional)
           </CardTitle>
           <CardDescription>
-            Select an existing project or create a new one for {client?.name || 'this client'}
+            Optionally group ads under a project
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -160,9 +302,6 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
                 {staticProjects.map(proj => (
                   <SelectItem key={proj.id} value={proj.id}>
                     {proj.name}
-                    {proj.offer_description && (
-                      <span className="text-muted-foreground ml-2 text-xs">— {proj.offer_description.slice(0, 40)}...</span>
-                    )}
                   </SelectItem>
                 ))}
                 {staticProjects.length === 0 && (
@@ -174,14 +313,6 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          {selectedProjectId && (() => {
-            const proj = clientProjects.find(p => p.id === selectedProjectId);
-            return proj?.offer_description ? (
-              <p className="text-xs text-muted-foreground mt-2 bg-muted/50 rounded p-2">
-                <strong>Project offer:</strong> {proj.offer_description}
-              </p>
-            ) : null;
-          })()}
         </CardContent>
       </Card>
 
@@ -515,6 +646,77 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
             <Button variant="outline" onClick={() => setShowNewProject(false)}>Cancel</Button>
             <Button onClick={handleCreateProject} disabled={!newProjectName.trim() || createProject.isPending}>
               {createProject.isPending ? 'Creating...' : 'Create Project'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Offer Dialog */}
+      <Dialog open={showNewOffer} onOpenChange={setShowNewOffer}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create New Offer</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* URL Analysis */}
+            <div>
+              <Label className="text-sm flex items-center gap-1.5">
+                <Search className="h-3.5 w-3.5" />
+                Analyze URL (optional)
+              </Label>
+              <p className="text-[11px] text-muted-foreground mb-1.5">
+                Paste an offer page URL to auto-extract details
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newOfferUrl}
+                  onChange={(e) => setNewOfferUrl(e.target.value)}
+                  placeholder="https://example.com/offer-page"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzeUrl}
+                  disabled={!newOfferUrl.trim() || isAnalyzingUrl}
+                >
+                  {isAnalyzingUrl ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5 mr-1" />
+                      Analyze
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm">Offer Title *</Label>
+              <Input
+                value={newOfferTitle}
+                onChange={(e) => setNewOfferTitle(e.target.value)}
+                placeholder="e.g. RV Park Investment — 10% Preferred Returns"
+              />
+            </div>
+            <div>
+              <Label className="text-sm">Description</Label>
+              <Textarea
+                value={newOfferDescription}
+                onChange={(e) => setNewOfferDescription(e.target.value)}
+                placeholder="Describe the offer, returns, terms, minimum investment..."
+                className="min-h-[120px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowNewOffer(false); setNewOfferTitle(''); setNewOfferDescription(''); setNewOfferUrl(''); }}>Cancel</Button>
+            <Button onClick={handleCreateOffer} disabled={!newOfferTitle.trim() || createOffer.isPending}>
+              {createOffer.isPending ? 'Creating...' : 'Save Offer & Select'}
             </Button>
           </DialogFooter>
         </DialogContent>
