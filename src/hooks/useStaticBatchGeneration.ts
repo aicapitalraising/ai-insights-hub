@@ -41,17 +41,12 @@ export function useStaticBatchGeneration({
       const style = styles.find((s) => s.id === styleId);
       if (!style) continue;
 
-      const manualVariations = styleVariations[styleId] ?? config.variationsPerStyle;
+      const variations = styleVariations[styleId] ?? config.variationsPerStyle;
 
       const allRefs = [
         ...(style.reference_images || []),
         ...(style.example_image_url ? [style.example_image_url] : []),
       ].filter(Boolean);
-
-      // Use at least one variation per reference image so ALL references get used
-      const variations = allRefs.length > 0
-        ? Math.max(manualVariations, allRefs.length)
-        : manualVariations;
 
       for (const aspectRatio of config.aspectRatios) {
         for (let i = 0; i < variations; i++) {
