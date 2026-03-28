@@ -154,6 +154,7 @@ DO NOT include:
 function getProductionSupabase() {
   const url = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
   const key = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  console.log('Storage target URL:', url?.slice(0, 30) + '...');
   return createClient(url, key);
 }
 
