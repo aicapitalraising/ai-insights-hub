@@ -123,6 +123,14 @@ export function GenerationConfig({
   const activeBrandColors = config.brandColors.length > 0 ? config.brandColors : client?.brand_colors || [];
   const activeBrandFonts = config.brandFonts.length > 0 ? config.brandFonts : client?.brand_fonts || [];
   const hasBrandData = activeBrandColors.length > 0 || activeBrandFonts.length > 0;
+
+  // Auto-enable strict brand adherence when client has brand colors/fonts
+  useEffect(() => {
+    if (hasBrandData && config.strictBrandAdherence === undefined) {
+      updateConfig({ strictBrandAdherence: true });
+    }
+  }, [hasBrandData]);
+
   const { data: avatars = [] } = useAvatars(clientId);
   const { data: looks = [] } = useAvatarLooks(selectedAvatarId || null);
   const { data: allStyles = [] } = useAdStyles(clientId);
