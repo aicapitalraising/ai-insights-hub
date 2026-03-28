@@ -650,6 +650,77 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* New Offer Dialog */}
+      <Dialog open={showNewOffer} onOpenChange={setShowNewOffer}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create New Offer</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* URL Analysis */}
+            <div>
+              <Label className="text-sm flex items-center gap-1.5">
+                <Search className="h-3.5 w-3.5" />
+                Analyze URL (optional)
+              </Label>
+              <p className="text-[11px] text-muted-foreground mb-1.5">
+                Paste an offer page URL to auto-extract details
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newOfferUrl}
+                  onChange={(e) => setNewOfferUrl(e.target.value)}
+                  placeholder="https://example.com/offer-page"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzeUrl}
+                  disabled={!newOfferUrl.trim() || isAnalyzingUrl}
+                >
+                  {isAnalyzingUrl ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5 mr-1" />
+                      Analyze
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm">Offer Title *</Label>
+              <Input
+                value={newOfferTitle}
+                onChange={(e) => setNewOfferTitle(e.target.value)}
+                placeholder="e.g. RV Park Investment — 10% Preferred Returns"
+              />
+            </div>
+            <div>
+              <Label className="text-sm">Description</Label>
+              <Textarea
+                value={newOfferDescription}
+                onChange={(e) => setNewOfferDescription(e.target.value)}
+                placeholder="Describe the offer, returns, terms, minimum investment..."
+                className="min-h-[120px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowNewOffer(false); setNewOfferTitle(''); setNewOfferDescription(''); setNewOfferUrl(''); }}>Cancel</Button>
+            <Button onClick={handleCreateOffer} disabled={!newOfferTitle.trim() || createOffer.isPending}>
+              {createOffer.isPending ? 'Creating...' : 'Save Offer & Select'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
