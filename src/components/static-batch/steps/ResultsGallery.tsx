@@ -334,8 +334,11 @@ export function ResultsGallery({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full h-full flex flex-col items-center justify-center p-3 gap-2">
                   {getStatusIcon(ad.status)}
+                  {ad.status === 'failed' && ad.errorMessage && (
+                    <p className="text-[10px] text-destructive text-center line-clamp-3 px-1">{ad.errorMessage}</p>
+                  )}
                 </div>
               )}
               <div className="absolute top-2 right-2">
