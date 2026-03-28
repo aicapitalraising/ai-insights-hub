@@ -272,10 +272,43 @@ export function GenerationConfig({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Show active brand context */}
+            {activeBrandColors.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Active Brand Colors</Label>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {activeBrandColors.map((color, i) => (
+                    <div key={i} className="flex items-center gap-1 bg-muted/50 rounded px-1.5 py-0.5">
+                      <div className="w-4 h-4 rounded border border-border" style={{ backgroundColor: color }} />
+                      <span className="text-[10px] font-mono text-muted-foreground">{color}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activeBrandFonts.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Active Brand Fonts</Label>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {activeBrandFonts.map((font, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px]">{font}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!hasBrandData && (
+              <p className="text-xs text-muted-foreground italic">
+                No brand colors or fonts set for this client. AI will use the style's default palette.
+              </p>
+            )}
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-sm">Strict Brand Color & Font Adherence</Label>
-                <p className="text-[11px] text-muted-foreground mt-0.5">AI will not deviate from brand colors/fonts</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {hasBrandData
+                    ? 'AI will only use the exact brand colors and fonts shown above'
+                    : 'Enable to lock AI to brand colors/fonts (set them in client settings)'}
+                </p>
               </div>
               <Switch
                 checked={config.strictBrandAdherence || false}
