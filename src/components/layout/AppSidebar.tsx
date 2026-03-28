@@ -25,6 +25,7 @@ import {
   BarChart2,
   Megaphone,
   FileText,
+  Plug,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -111,6 +112,7 @@ const navStructure = [
     children: [
       { title: 'Database', value: 'database', icon: Database },
       { title: 'Spam List', value: 'spam', icon: Shield },
+      { title: 'Integrations', value: 'integrations', icon: Plug },
     ],
   },
 ];
