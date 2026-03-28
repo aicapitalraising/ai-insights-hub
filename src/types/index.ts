@@ -212,6 +212,7 @@ export interface GeneratedAd {
   imageUrl: string;
   referenceImageUrl?: string; // The original reference image used to generate this ad
   status: 'pending' | 'generating' | 'completed' | 'failed';
+  errorMessage?: string;
   createdAt: string;
   editHistory?: string[]; // Previous image URLs before AI edits
 }

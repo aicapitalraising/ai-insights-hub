@@ -148,11 +148,12 @@ export function useStaticBatchGeneration({
         }
 
         completedCount++;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to generate ad:', error);
+        const errorMsg = error?.message || error?.details || error?.error || String(error);
         setGeneratedAds((prev) =>
           prev.map((a, idx) =>
-            idx === i ? { ...a, status: 'failed' as const } : a
+            idx === i ? { ...a, status: 'failed' as const, errorMessage: errorMsg } : a
           )
         );
         failedCount++;
