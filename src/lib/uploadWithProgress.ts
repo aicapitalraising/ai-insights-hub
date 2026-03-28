@@ -1,7 +1,8 @@
-import { supabase as storageClient } from '@/integrations/supabase/client';
+import { supabase as storageClient } from '@/integrations/supabase/db';
 
-const STORAGE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const STORAGE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+// Use production Supabase for storage uploads (Cloud DB has RLS issues for anon uploads)
+const STORAGE_URL = 'https://jgwwmtuvjlmzapwqiabu.supabase.co';
+const STORAGE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impnd3dtdHV2amxtemFwd3FpYWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NDkzODIsImV4cCI6MjA4MzMyNTM4Mn0.STFrUoif30xXQCjabc3skP6_tTnVIATwHhwWxeZoUr4';
 
 /**
  * Upload a file to Storage with progress tracking via XMLHttpRequest.
