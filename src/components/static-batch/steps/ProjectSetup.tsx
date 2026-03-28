@@ -163,15 +163,75 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
         </p>
       </div>
 
-      {/* Project Selector */}
+      {/* Offer Picker */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Choose Offer
+          </CardTitle>
+          <CardDescription>
+            Pick an existing offer from {client?.name || 'this client'} or create a new one
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select an offer..." />
+              </SelectTrigger>
+              <SelectContent>
+                {clientOffers.map(offer => (
+                  <SelectItem key={offer.id} value={offer.id}>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <span>{offer.title}</span>
+                      <Badge variant="outline" className="text-[9px] ml-1">{offer.offer_type}</Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+                {clientOffers.length === 0 && (
+                  <SelectItem value="_none" disabled>No offers yet — create one below</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" onClick={() => setShowNewOffer(true)} title="Create new offer">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Selected offer preview */}
+          {selectedOfferId && (() => {
+            const offer = clientOffers.find(o => o.id === selectedOfferId);
+            return offer ? (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">{offer.title}</p>
+                  <Badge variant="outline" className="text-[10px]">{offer.offer_type}</Badge>
+                </div>
+                {offer.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-3">{offer.description}</p>
+                )}
+                {offer.file_url && (
+                  <a href={offer.file_url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+                    <ExternalLink className="h-3 w-3" /> View attached file
+                  </a>
+                )}
+              </div>
+            ) : null;
+          })()}
+        </CardContent>
+      </Card>
+
+      {/* Project Selector (optional) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
-            Project / Offer
+            Project (Optional)
           </CardTitle>
           <CardDescription>
-            Select an existing project or create a new one for {client?.name || 'this client'}
+            Optionally group ads under a project
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -184,9 +244,6 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
                 {staticProjects.map(proj => (
                   <SelectItem key={proj.id} value={proj.id}>
                     {proj.name}
-                    {proj.offer_description && (
-                      <span className="text-muted-foreground ml-2 text-xs">— {proj.offer_description.slice(0, 40)}...</span>
-                    )}
                   </SelectItem>
                 ))}
                 {staticProjects.length === 0 && (
@@ -198,14 +255,6 @@ export function ProjectSetup({ config, updateConfig, client, projectOfferDescrip
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          {selectedProjectId && (() => {
-            const proj = clientProjects.find(p => p.id === selectedProjectId);
-            return proj?.offer_description ? (
-              <p className="text-xs text-muted-foreground mt-2 bg-muted/50 rounded p-2">
-                <strong>Project offer:</strong> {proj.offer_description}
-              </p>
-            ) : null;
-          })()}
         </CardContent>
       </Card>
 
