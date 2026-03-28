@@ -321,3 +321,184 @@ export function AgencyIntegrationsTab() {
     </div>
   );
 }
+
+const COMPOSIO_APPS = [
+  { id: 'gmail', name: 'Gmail', icon: '📧' },
+  { id: 'github', name: 'GitHub', icon: '🐙' },
+  { id: 'slack', name: 'Slack', icon: '💬' },
+  { id: 'notion', name: 'Notion', icon: '📝' },
+  { id: 'hubspot', name: 'HubSpot', icon: '🔶' },
+  { id: 'google_calendar', name: 'Google Calendar', icon: '📅' },
+  { id: 'google_sheets', name: 'Google Sheets', icon: '📊' },
+  { id: 'linear', name: 'Linear', icon: '🔷' },
+  { id: 'twitter', name: 'X / Twitter', icon: '🐦' },
+  { id: 'linkedin', name: 'LinkedIn', icon: '💼' },
+];
+
+function ComposioMCPSection() {
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [connectingApp, setConnectingApp] = useState<string | null>(null);
+
+  const { data: connections, isLoading: loadingConnections, refetch: refetchConnections } = useQuery({
+    queryKey: ['composio-connections'],
+    queryFn: async () => {
+      const { data, error } = await invokeCloudFunction('composio-mcp-proxy', {
+        body: { action: 'list_connections' },
+      });
+      if (error) throw error;
+      return data?.connections?.items || [];
+    },
+    retry: false,
+    enabled: true,
+  });
+
+  const handleTestConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const { data, error } = await invokeCloudFunction('composio-mcp-proxy', {
+        body: { action: 'create_session', userId: 'test_connection' },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        setTestResult({ success: true, message: `Connected! MCP endpoint ready.` });
+      } else {
+        setTestResult({ success: false, message: data?.error || 'Unknown error' });
+      }
+    } catch (err) {
+      setTestResult({ success: false, message: (err as Error).message });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleConnectApp = async (appId: string) => {
+    setConnectingApp(appId);
+    try {
+      const { data, error } = await invokeCloudFunction('composio-mcp-proxy', {
+        body: {
+          action: 'initiate_connection',
+          userId: 'agency_default',
+          tool_args: { app_name: appId },
+        },
+      });
+      if (error) throw error;
+      if (data?.connection?.redirectUrl) {
+        window.open(data.connection.redirectUrl, '_blank');
+        toast.success('OAuth flow opened — complete authentication in the new tab');
+      } else {
+        toast.success(`${appId} connection initiated`);
+      }
+      setTimeout(() => refetchConnections(), 3000);
+    } catch (err) {
+      toast.error(`Failed to connect ${appId}: ${(err as Error).message}`);
+    } finally {
+      setConnectingApp(null);
+    }
+  };
+
+  const connectedAppIds = new Set(
+    (connections || []).map((c: any) => c.appName?.toLowerCase() || c.appUniqueId?.toLowerCase())
+  );
+
+  return (
+    <Card className="border-2 border-border p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🧩</span>
+          <div>
+            <h3 className="font-semibold flex items-center gap-2">
+              Composio MCP
+              <Badge variant="secondary" className="text-[10px]">AI Agent Tools</Badge>
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Connect 1000+ apps for AI agent tool calling — Gmail, GitHub, Slack, Notion, CRMs & more.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="https://docs.composio.dev/docs"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-primary hover:underline flex items-center gap-1"
+          >
+            Docs <ExternalLink className="h-3 w-3" />
+          </a>
+          <Button variant="outline" size="sm" onClick={handleTestConnection} disabled={testing}>
+            {testing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Zap className="h-3 w-3 mr-1" />}
+            Test
+          </Button>
+        </div>
+      </div>
+
+      {testResult && (
+        <div className={`text-sm p-2 rounded border ${testResult.success ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-300'}`}>
+          {testResult.success ? <CheckCircle2 className="h-3 w-3 inline mr-1" /> : <XCircle className="h-3 w-3 inline mr-1" />}
+          {testResult.message}
+        </div>
+      )}
+
+      {/* Quick Connect Apps */}
+      <div>
+        <Label className="text-xs text-muted-foreground mb-2 block">Quick Connect Apps</Label>
+        <div className="grid grid-cols-5 gap-2">
+          {COMPOSIO_APPS.map((app) => {
+            const isConnected = connectedAppIds.has(app.id);
+            const isConnecting = connectingApp === app.id;
+            return (
+              <Button
+                key={app.id}
+                variant={isConnected ? 'default' : 'outline'}
+                size="sm"
+                className="flex flex-col items-center gap-1 h-auto py-2 text-xs"
+                onClick={() => !isConnected && handleConnectApp(app.id)}
+                disabled={isConnecting || isConnected}
+              >
+                {isConnecting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span className="text-lg">{app.icon}</span>
+                )}
+                <span className="truncate w-full text-center">{app.name}</span>
+                {isConnected && <CheckCircle2 className="h-3 w-3" />}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Connected Accounts */}
+      {loadingConnections ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" /> Loading connections...
+        </div>
+      ) : connections && connections.length > 0 ? (
+        <div>
+          <Label className="text-xs text-muted-foreground mb-2 block">
+            Active Connections ({connections.length})
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {(connections as any[]).map((conn: any) => (
+              <Badge key={conn.id} variant="default" className="bg-green-600 text-xs">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                {conn.appName || conn.appUniqueId || 'Unknown'}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="bg-muted/50 border border-border p-3 text-xs text-muted-foreground space-y-1">
+        <p className="font-medium text-foreground">How it works:</p>
+        <ul className="list-disc list-inside space-y-0.5">
+          <li>Composio acts as an MCP server — your AI agent discovers & calls tools automatically</li>
+          <li>OAuth authentication is managed by Composio (tokens, refresh, scopes)</li>
+          <li>The agent can send emails, create issues, update CRMs, and more — all via natural language</li>
+          <li>API key is stored in Agency Settings → Integrations tab</li>
+        </ul>
+      </div>
+    </Card>
+  );
+}
