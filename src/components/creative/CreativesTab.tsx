@@ -2,7 +2,7 @@ import { useState, useRef, lazy, Suspense } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAllCreatives } from '@/hooks/useAllCreatives';
 import { useClients, Client } from '@/hooks/useClients';
-import { Creative, useUpdateCreativeStatus, useDeleteCreative, useCreateCreative, uploadCreativeFile, detectAspectRatio } from '@/hooks/useCreatives';
+import { Creative, CreateCreativeInput, useUpdateCreativeStatus, useDeleteCreative, useCreateCreative, useCreateCreatives, uploadCreativeFile, detectAspectRatio } from '@/hooks/useCreatives';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -91,13 +91,17 @@ export function CreativesTab() {
   
   // Upload state
   const createCreative = useCreateCreative();
+  const createCreatives = useCreateCreatives();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadCurrentFile, setUploadCurrentFile] = useState('');
-  const [uploadFileIndex, setUploadFileIndex] = useState(0);
-  const [uploadTotalFiles, setUploadTotalFiles] = useState(0);
+  const [singleUploading, setSingleUploading] = useState(false);
+  const [singleUploadProgress, setSingleUploadProgress] = useState(0);
+  const [singleUploadCurrentFile, setSingleUploadCurrentFile] = useState('');
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
+  const [bulkUploadCurrentFile, setBulkUploadCurrentFile] = useState('');
+  const [bulkUploadFileIndex, setBulkUploadFileIndex] = useState(0);
+  const [bulkUploadTotalFiles, setBulkUploadTotalFiles] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
@@ -240,14 +244,15 @@ export function CreativesTab() {
       toast.error('Please select a client and enter a title');
       return;
     }
-    setUploading(true);
-    setUploadProgress(0);
+    setSingleUploading(true);
+    setSingleUploadProgress(0);
+    setSingleUploadCurrentFile(newCreative.file?.name || 'Creative file');
     try {
       let fileUrl = null;
       let aspectRatio = null;
       if (newCreative.file && (newCreative.type === 'image' || newCreative.type === 'video')) {
         aspectRatio = await detectAspectRatio(newCreative.file);
-        fileUrl = await uploadCreativeFile(newCreative.file, newCreative.client_id, (pct) => setUploadProgress(pct));
+        fileUrl = await uploadCreativeFile(newCreative.file, newCreative.client_id, (pct) => setSingleUploadProgress(pct));
       }
       const clientName = clientMap[newCreative.client_id] || '';
       await createCreative.mutateAsync({
@@ -271,7 +276,9 @@ export function CreativesTab() {
     } catch (err: any) {
       toast.error(err.message || 'Upload failed');
     } finally {
-      setUploading(false);
+      setSingleUploading(false);
+      setSingleUploadProgress(0);
+      setSingleUploadCurrentFile('');
     }
   };
 
@@ -281,53 +288,64 @@ export function CreativesTab() {
       toast.error('Please select a client and add files');
       return;
     }
-    setUploading(true);
-    setUploadTotalFiles(bulkFiles.length);
-    let successCount = 0;
-    let failCount = 0;
+    setBulkUploading(true);
+    setBulkUploadTotalFiles(bulkFiles.length);
     const clientName = clientMap[bulkClientId] || '';
     try {
-      for (let i = 0; i < bulkFiles.length; i++) {
-        const file = bulkFiles[i];
-        setUploadFileIndex(i + 1);
-        setUploadCurrentFile(file.name);
-        setUploadProgress(0);
+      const successfulPayloads: CreateCreativeInput[] = [];
+      let failedCount = 0;
+
+      for (let index = 0; index < bulkFiles.length; index++) {
+        const file = bulkFiles[index];
         try {
-          const isVideo = file.type.startsWith('video/');
-          const aspectRatio = await detectAspectRatio(file);
-          const fileUrl = await uploadCreativeFile(file, bulkClientId, (pct) => setUploadProgress(pct));
-          const fileName = file.name.replace(/\.[^/.]+$/, '');
-          const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-          await createCreative.mutateAsync({
-            client_id: bulkClientId,
-            client_name: clientName,
-            title,
-            type: isVideo ? 'video' : 'image',
-            platform: bulkPlatform,
-            file_url: fileUrl,
-            headline: null,
-            body_copy: null,
-            cta_text: null,
-            status: 'draft',
-            comments: [],
-            aspect_ratio: aspectRatio,
-            isAgencyUpload: true,
-          });
-          successCount++;
-        } catch (err) {
-          console.error('Failed to upload file:', file.name, err);
-          failCount++;
+        setBulkUploadFileIndex(index + 1);
+        setBulkUploadCurrentFile(file.name);
+        setBulkUploadProgress(0);
+
+        const isVideo = file.type.startsWith('video/');
+        const aspectRatio = await detectAspectRatio(file);
+        const fileUrl = await uploadCreativeFile(file, bulkClientId, (pct) => setBulkUploadProgress(pct));
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
+        const title = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+        successfulPayloads.push({
+          client_id: bulkClientId,
+          client_name: clientName,
+          title,
+          type: isVideo ? 'video' : 'image',
+          platform: bulkPlatform,
+          file_url: fileUrl,
+          headline: null,
+          body_copy: null,
+          cta_text: null,
+          status: 'draft',
+          comments: [],
+          aspect_ratio: aspectRatio,
+          isAgencyUpload: true,
+        });
+        } catch (error) {
+          failedCount++;
+          console.error('Failed to prepare creative upload:', file.name, error);
         }
       }
-      if (successCount > 0) toast.success(`Uploaded ${successCount} creative${successCount !== 1 ? 's' : ''}`);
-      if (failCount > 0) toast.error(`Failed to upload ${failCount} file${failCount !== 1 ? 's' : ''}`);
+
+      if (successfulPayloads.length > 0) {
+        await createCreatives.mutateAsync(successfulPayloads);
+      }
+
+      if (successfulPayloads.length > 0) toast.success(`Uploaded ${successfulPayloads.length} creative${successfulPayloads.length !== 1 ? 's' : ''}`);
+      if (failedCount > 0) toast.error(`Failed to upload ${failedCount} file${failedCount !== 1 ? 's' : ''}`);
       setBulkUploadOpen(false);
       setBulkFiles([]);
     } catch (error) {
       console.error('Bulk upload error:', error);
       toast.error('Bulk upload failed');
     } finally {
-      setUploading(false);
+      setBulkUploading(false);
+      setBulkUploadProgress(0);
+      setBulkUploadCurrentFile('');
+      setBulkUploadFileIndex(0);
+      setBulkUploadTotalFiles(0);
     }
   };
 
@@ -487,18 +505,21 @@ export function CreativesTab() {
                 )}
               </div>
               <input ref={bulkFileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => setBulkFiles(Array.from(e.target.files || []))} />
-              {uploading && (
-                <div className="space-y-2 bg-muted/30 rounded-lg p-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium truncate max-w-[200px]">File {uploadFileIndex}/{uploadTotalFiles}: {uploadCurrentFile}</span>
-                    <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+              {bulkUploading && (
+                <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <div className="min-w-0">
+                      <p className="font-medium">Uploading batch</p>
+                      <p className="truncate text-muted-foreground">File {bulkUploadFileIndex}/{bulkUploadTotalFiles}: {bulkUploadCurrentFile}</p>
+                    </div>
+                    <span className="text-muted-foreground font-mono">{bulkUploadProgress}%</span>
                   </div>
-                  <Progress value={uploadProgress} className="h-2" />
+                  <Progress value={bulkUploadProgress} className="h-2" />
                 </div>
               )}
-              <Button onClick={handleBulkUpload} className="w-full" disabled={uploading || bulkFiles.length === 0 || !bulkClientId}>
-                {uploading ? (
-                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading {uploadFileIndex}/{uploadTotalFiles}...</>
+              <Button onClick={handleBulkUpload} className="w-full" disabled={bulkUploading || bulkFiles.length === 0 || !bulkClientId}>
+                {bulkUploading ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading {bulkUploadFileIndex}/{bulkUploadTotalFiles}...</>
                 ) : (
                   <><Upload className="h-4 w-4 mr-2" />Upload {bulkFiles.length} Creative{bulkFiles.length !== 1 ? 's' : ''}</>
                 )}
@@ -585,18 +606,21 @@ export function CreativesTab() {
                 <label className="text-sm font-medium">Body Copy</label>
                 <Textarea value={newCreative.body_copy} onChange={(e) => setNewCreative({ ...newCreative, body_copy: e.target.value })} placeholder="Ad body text" rows={3} />
               </div>
-              {uploading && (
-                <div className="space-y-2 bg-muted/30 rounded-lg p-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium">Uploading...</span>
-                    <span className="text-muted-foreground font-mono">{uploadProgress}%</span>
+              {singleUploading && (
+                <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <div className="min-w-0">
+                      <p className="font-medium">Uploading creative</p>
+                      <p className="truncate text-muted-foreground">{singleUploadCurrentFile}</p>
+                    </div>
+                    <span className="text-muted-foreground font-mono">{singleUploadProgress}%</span>
                   </div>
-                  <Progress value={uploadProgress} className="h-2" />
+                  <Progress value={singleUploadProgress} className="h-2" />
                 </div>
               )}
-              <Button onClick={handleSingleUpload} className="w-full" disabled={uploading || !newCreative.client_id}>
-                {uploading ? (
-                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading... {uploadProgress}%</>
+              <Button onClick={handleSingleUpload} className="w-full" disabled={singleUploading || !newCreative.client_id}>
+                {singleUploading ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Uploading... {singleUploadProgress}%</>
                 ) : (
                   <><Upload className="h-4 w-4 mr-2" />Upload Creative</>
                 )}

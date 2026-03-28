@@ -34,6 +34,83 @@ export interface Creative {
   updated_at: string;
 }
 
+export interface CreateCreativeInput {
+  client_id: string;
+  client_name?: string;
+  title: string;
+  type?: string;
+  platform?: string;
+  file_url?: string | null;
+  headline?: string | null;
+  body_copy?: string | null;
+  cta_text?: string | null;
+  status?: string;
+  comments?: Json;
+  aspect_ratio?: string | null;
+  isAgencyUpload?: boolean;
+}
+
+function buildCreativeInsertPayload(creative: CreateCreativeInput) {
+  return {
+    client_id: creative.client_id,
+    title: creative.title,
+    type: creative.type || 'image',
+    platform: creative.platform || 'meta',
+    file_url: creative.file_url || null,
+    headline: creative.headline || null,
+    body_copy: creative.body_copy || null,
+    cta_text: creative.cta_text || null,
+    status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
+    comments: creative.comments || [],
+    aspect_ratio: creative.aspect_ratio || null,
+  };
+}
+
+async function dualWriteCreatives(rows: Array<Record<string, any>>) {
+  if (rows.length === 0) return;
+
+  cloudClient
+    .from('creatives')
+    .upsert(rows, { onConflict: 'id' })
+    .then(({ error: cloudErr }) => {
+      if (cloudErr) console.warn('Cloud creative dual-write failed:', cloudErr.message);
+    });
+}
+
+async function insertCreatives(creatives: CreateCreativeInput[]) {
+  if (creatives.length === 0) return [] as any[];
+
+  const insertPayloads = creatives.map(buildCreativeInsertPayload);
+  const { data, error } = await supabase
+    .from('creatives')
+    .insert(insertPayloads)
+    .select();
+
+  if (error) throw error;
+
+  await dualWriteCreatives((data || []).map((row) => ({
+    client_id: row.client_id,
+    title: row.title,
+    type: row.type,
+    platform: row.platform,
+    file_url: row.file_url,
+    headline: row.headline,
+    body_copy: row.body_copy,
+    cta_text: row.cta_text,
+    status: row.status,
+    comments: row.comments,
+    aspect_ratio: row.aspect_ratio,
+    id: row.id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    source: row.source,
+    trigger_campaign_id: row.trigger_campaign_id,
+    ai_performance_score: row.ai_performance_score,
+  })));
+
+  return data || [];
+}
+
 function mapCreativeRow(item: any): Creative {
   return {
     ...item,
@@ -143,49 +220,8 @@ export function useCreateCreative() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (creative: {
-      client_id: string;
-      client_name?: string;
-      title: string;
-      type?: string;
-      platform?: string;
-      file_url?: string | null;
-      headline?: string | null;
-      body_copy?: string | null;
-      cta_text?: string | null;
-      status?: string;
-      comments?: Json;
-      aspect_ratio?: string | null;
-      isAgencyUpload?: boolean;
-    }) => {
-      const insertPayload = {
-        client_id: creative.client_id,
-        title: creative.title,
-        type: creative.type || 'image',
-        platform: creative.platform || 'meta',
-        file_url: creative.file_url || null,
-        headline: creative.headline || null,
-        body_copy: creative.body_copy || null,
-        cta_text: creative.cta_text || null,
-        status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
-        comments: creative.comments || [],
-        aspect_ratio: creative.aspect_ratio || null,
-      };
-
-      const { data, error } = await supabase
-        .from('creatives')
-        .insert(insertPayload)
-        .select()
-        .single();
-      
-      if (error) throw error;
-
-      // Dual-write to Cloud database
-      cloudClient.from('creatives')
-        .insert({ ...insertPayload, id: data.id, created_at: data.created_at, updated_at: data.updated_at })
-        .then(({ error: cloudErr }) => {
-          if (cloudErr) console.warn('Cloud dual-write failed:', cloudErr.message);
-        });
+    mutationFn: async (creative: CreateCreativeInput) => {
+      const [data] = await insertCreatives([creative]);
       
       // Run AI spelling/grammar check for agency uploads
       // Check text content OR video/image creatives (which may have text overlays or spoken content)
@@ -251,6 +287,25 @@ export function useCreateCreative() {
     },
     onError: (error: Error) => {
       toast.error('Failed to upload creative: ' + error.message);
+    },
+  });
+}
+
+export function useCreateCreatives() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (creatives: CreateCreativeInput[]) => insertCreatives(creatives),
+    onSuccess: (_, variables) => {
+      const clientIds = [...new Set(variables.map((creative) => creative.client_id))];
+      clientIds.forEach((clientId) => {
+        queryClient.invalidateQueries({ queryKey: ['creatives', clientId] });
+      });
+      queryClient.invalidateQueries({ queryKey: ['creatives'] });
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to upload creatives: ' + error.message);
     },
   });
 }
