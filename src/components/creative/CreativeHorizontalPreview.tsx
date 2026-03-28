@@ -99,10 +99,11 @@ export function CreativeHorizontalPreview({ creative, clientName }: CreativeHori
         >
           <video 
             ref={(el) => { videoRefs.current[platform] = el; }}
-            src={creative.file_url}
+            src={`${creative.file_url}#t=0.1`}
             className={`w-full h-full ${objectFit}`}
             loop
             playsInline
+            preload="auto"
             muted={isMuted}
           />
           <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
