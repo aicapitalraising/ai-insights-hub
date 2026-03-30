@@ -580,7 +580,7 @@ export function DraggableClientTable({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none"><span className="text-muted-foreground">None</span></SelectItem>
-                          {agencyMembers.map(m => (
+                          {agencyMembers.filter(m => m.pod?.name === 'Account Management').map(m => (
                             <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
                           ))}
                         </SelectContent>
