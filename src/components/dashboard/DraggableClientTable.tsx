@@ -548,6 +548,42 @@ export function DraggableClientTable({
                       </Select>
                     </TableCell>
 
+                    {/* Media Buyer */}
+                    <TableCell className="text-center py-0 px-0.5" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={client.media_buyer || '_none'}
+                        onValueChange={(val) => updateClient.mutateAsync({ id: client.id, media_buyer: val === '_none' ? null : val } as any)}
+                      >
+                        <SelectTrigger className="h-5 w-[75px] text-[9px] border-0 bg-transparent p-0 justify-center [&>svg]:h-2.5 [&>svg]:w-2.5">
+                          <span className="truncate">{client.media_buyer ? agencyMembers.find(m => m.name === client.media_buyer)?.name?.split(' ')[0] || client.media_buyer?.split(' ')[0] || '—' : '—'}</span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none"><span className="text-muted-foreground">None</span></SelectItem>
+                          {agencyMembers.map(m => (
+                            <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    {/* Account Manager */}
+                    <TableCell className="text-center py-0 px-0.5" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={client.account_manager || '_none'}
+                        onValueChange={(val) => updateClient.mutateAsync({ id: client.id, account_manager: val === '_none' ? null : val } as any)}
+                      >
+                        <SelectTrigger className="h-5 w-[75px] text-[9px] border-0 bg-transparent p-0 justify-center [&>svg]:h-2.5 [&>svg]:w-2.5">
+                          <span className="truncate">{client.account_manager ? agencyMembers.find(m => m.name === client.account_manager)?.name?.split(' ')[0] || client.account_manager?.split(' ')[0] || '—' : '—'}</span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none"><span className="text-muted-foreground">None</span></SelectItem>
+                          {agencyMembers.map(m => (
+                            <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
                     {/* Meta Spend */}
                     <TableCell className={`text-right font-mono tabular-nums text-[11px] py-0 px-1 ${(m.totalAdSpend || 0) === 0 ? 'text-destructive font-bold' : ''}`}>
                       {formatCurrency(m.totalAdSpend || 0)}
