@@ -170,6 +170,8 @@ export function DraggableClientTable({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: '', direction: null });
   const updateClient = useUpdateClient();
+  const { data: assignments = {} } = useClientAssignments();
+  const updateAssignment = useUpdateClientAssignment();
   const { data: agencyMembers = [] } = useAgencyMembers();
 
   // Fetch yesterday's metrics to flag inactive clients
