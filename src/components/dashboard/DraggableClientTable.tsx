@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient as useRQClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/db';
+import { useAgencyMembers } from '@/hooks/useTasks';
 import { calculateClientRevenue } from '@/hooks/useClientMRR';
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { differenceInDays, subDays, format } from 'date-fns';
@@ -168,6 +169,7 @@ export function DraggableClientTable({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: '', direction: null });
   const updateClient = useUpdateClient();
+  const { data: agencyMembers = [] } = useAgencyMembers();
 
   // Fetch yesterday's metrics to flag inactive clients
   const yesterday = useMemo(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'), []);
@@ -401,6 +403,8 @@ export function DraggableClientTable({
               <TableHead className="w-7 sticky left-0 bg-card z-10 py-0 px-1"></TableHead>
               <TableHead className="font-bold text-[11px] sticky left-7 bg-card z-10 min-w-[100px] py-0 px-1">Client</TableHead>
               <TableHead className="font-bold text-[11px] py-0 px-1 text-center">Status</TableHead>
+              <TableHead className="font-bold text-[11px] py-0 px-1 text-center min-w-[80px]">MB</TableHead>
+              <TableHead className="font-bold text-[11px] py-0 px-1 text-center min-w-[80px]">AM</TableHead>
               <SortableHeader column="adSpend" label="Spend" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader column="dailyTarget" label="$/Day" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader column="metaLeads" label="Meta Leads" sortConfig={sortConfig} onSort={handleSort} />
@@ -540,6 +544,42 @@ export function DraggableClientTable({
                           <SelectItem value="paused">
                             <Badge className="bg-muted text-muted-foreground text-[9px]">Pause</Badge>
                           </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    {/* Media Buyer */}
+                    <TableCell className="text-center py-0 px-0.5" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={client.media_buyer || '_none'}
+                        onValueChange={(val) => updateClient.mutateAsync({ id: client.id, media_buyer: val === '_none' ? null : val } as any)}
+                      >
+                        <SelectTrigger className="h-5 w-[75px] text-[9px] border-0 bg-transparent p-0 justify-center [&>svg]:h-2.5 [&>svg]:w-2.5">
+                          <span className="truncate">{client.media_buyer ? agencyMembers.find(m => m.name === client.media_buyer)?.name?.split(' ')[0] || client.media_buyer?.split(' ')[0] || '—' : '—'}</span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none"><span className="text-muted-foreground">None</span></SelectItem>
+                          {agencyMembers.map(m => (
+                            <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    {/* Account Manager */}
+                    <TableCell className="text-center py-0 px-0.5" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={client.account_manager || '_none'}
+                        onValueChange={(val) => updateClient.mutateAsync({ id: client.id, account_manager: val === '_none' ? null : val } as any)}
+                      >
+                        <SelectTrigger className="h-5 w-[75px] text-[9px] border-0 bg-transparent p-0 justify-center [&>svg]:h-2.5 [&>svg]:w-2.5">
+                          <span className="truncate">{client.account_manager ? agencyMembers.find(m => m.name === client.account_manager)?.name?.split(' ')[0] || client.account_manager?.split(' ')[0] || '—' : '—'}</span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none"><span className="text-muted-foreground">None</span></SelectItem>
+                          {agencyMembers.map(m => (
+                            <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </TableCell>
