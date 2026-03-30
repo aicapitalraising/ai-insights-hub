@@ -250,6 +250,17 @@ export function ClientOffersSection({ clientId, clientName, isPublicView = false
               )}
 
               <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => navigate(`/client/${clientId}/offer/${offer.id}`)}
+                >
+                  View All Assets <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
                 {offer.file_url && (
                   <Button
                     variant="outline"
