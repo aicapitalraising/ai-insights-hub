@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useClientOffers, useCreateOffer, useUpdateOffer, useDeleteOffer, uploadOfferFile, ClientOffer } from '@/hooks/useClientOffers';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, FileText, Image, File, Trash2, Download, ExternalLink, Upload, Pencil } from 'lucide-react';
+import { Plus, FileText, Image, File, Trash2, Download, ExternalLink, Upload, Pencil, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { OfferAssetHub } from './OfferAssetHub';
@@ -54,6 +55,7 @@ export function ClientOffersSection({ clientId, clientName, isPublicView = false
   const updateOffer = useUpdateOffer();
   const deleteOffer = useDeleteOffer();
   const { currentMember } = useTeamMember();
+  const navigate = useNavigate();
 
   const [addOpen, setAddOpen] = useState(false);
   const [editOffer, setEditOffer] = useState<ClientOffer | null>(null);
@@ -246,6 +248,17 @@ export function ClientOffersSection({ clientId, clientName, isPublicView = false
                   clientType={clientType}
                 />
               )}
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => navigate(`/client/${clientId}/offer/${offer.id}`)}
+                >
+                  View All Assets <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
 
               <div className="flex items-center gap-2">
                 {offer.file_url && (

@@ -50,6 +50,7 @@ const HistoryPage = lazyRetry(() => import("./pages/HistoryPage"));
 const ExportHubPage = lazyRetry(() => import("./pages/ExportHubPage"));
 const ClientProjectsPage = lazyRetry(() => import("./pages/ClientProjectsPage"));
 const ProjectPage = lazyRetry(() => import("./pages/ProjectPage"));
+const OfferDetailPage = lazyRetry(() => import("./pages/OfferDetailPage"));
 
 // Funnel Builder pages
 const FunnelBuilderPage = lazyRetry(() => import("./pages/FunnelBuilderPage"));
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/client/:clientId" element={<PasswordGate><ClientDetail /></PasswordGate>} />
             <Route path="/client/:clientId/records" element={<PasswordGate><ClientRecords /></PasswordGate>} />
             <Route path="/client/:clientId/creatives" element={<PasswordGate><ClientCreatives /></PasswordGate>} />
+            <Route path="/client/:clientId/offer/:offerId" element={<PasswordGate><OfferDetailPage /></PasswordGate>} />
             <Route path="/database" element={<PasswordGate><DatabaseView /></PasswordGate>} />
             <Route path="/spam-blacklist" element={<PasswordGate><SpamBlacklist /></PasswordGate>} />
             <Route path="/sync-health" element={<PasswordGate><SyncHealthPage /></PasswordGate>} />
