@@ -29,6 +29,8 @@ export interface Client {
   offer_description?: string | null;
   product_url?: string | null;
   website_url?: string | null;
+  media_buyer?: string | null;
+  account_manager?: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
