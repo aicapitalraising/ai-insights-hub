@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useClientOffers, useCreateOffer, useUpdateOffer, useDeleteOffer, uploadOfferFile, ClientOffer } from '@/hooks/useClientOffers';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { Button } from '@/components/ui/button';
