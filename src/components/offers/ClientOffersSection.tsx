@@ -55,6 +55,7 @@ export function ClientOffersSection({ clientId, clientName, isPublicView = false
   const updateOffer = useUpdateOffer();
   const deleteOffer = useDeleteOffer();
   const { currentMember } = useTeamMember();
+  const navigate = useNavigate();
 
   const [addOpen, setAddOpen] = useState(false);
   const [editOffer, setEditOffer] = useState<ClientOffer | null>(null);
