@@ -981,6 +981,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          account_manager: string | null
           brand_colors: string[] | null
           brand_fonts: string[] | null
           business_manager_url: string | null
@@ -1000,6 +1001,7 @@ export type Database = {
           last_ghl_sync_at: string | null
           last_hubspot_sync_at: string | null
           logo_url: string | null
+          media_buyer: string | null
           meta_access_token: string | null
           meta_ad_account_id: string | null
           name: string
@@ -1014,6 +1016,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          account_manager?: string | null
           brand_colors?: string[] | null
           brand_fonts?: string[] | null
           business_manager_url?: string | null
@@ -1033,6 +1036,7 @@ export type Database = {
           last_ghl_sync_at?: string | null
           last_hubspot_sync_at?: string | null
           logo_url?: string | null
+          media_buyer?: string | null
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
           name: string
@@ -1047,6 +1051,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          account_manager?: string | null
           brand_colors?: string[] | null
           brand_fonts?: string[] | null
           business_manager_url?: string | null
@@ -1066,6 +1071,7 @@ export type Database = {
           last_ghl_sync_at?: string | null
           last_hubspot_sync_at?: string | null
           logo_url?: string | null
+          media_buyer?: string | null
           meta_access_token?: string | null
           meta_ad_account_id?: string | null
           name?: string
