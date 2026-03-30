@@ -572,11 +572,11 @@ export function DraggableClientTable({
                     {/* Account Manager */}
                     <TableCell className="text-center py-0 px-0.5" onClick={(e) => e.stopPropagation()}>
                       <Select
-                        value={client.account_manager || '_none'}
-                        onValueChange={(val) => updateClient.mutateAsync({ id: client.id, account_manager: val === '_none' ? null : val } as any)}
+                        value={assignments[client.id]?.account_manager || '_none'}
+                        onValueChange={(val) => updateAssignment.mutateAsync({ id: client.id, account_manager: val === '_none' ? null : val })}
                       >
                         <SelectTrigger className="h-5 w-[75px] text-[9px] border-0 bg-transparent p-0 justify-center [&>svg]:h-2.5 [&>svg]:w-2.5">
-                          <span className="truncate">{client.account_manager ? agencyMembers.find(m => m.name === client.account_manager)?.name?.split(' ')[0] || client.account_manager?.split(' ')[0] || '—' : '—'}</span>
+                          <span className="truncate">{assignments[client.id]?.account_manager ? agencyMembers.find(m => m.name === assignments[client.id]?.account_manager)?.name?.split(' ')[0] || assignments[client.id]?.account_manager?.split(' ')[0] || '—' : '—'}</span>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none"><span className="text-muted-foreground">None</span></SelectItem>
