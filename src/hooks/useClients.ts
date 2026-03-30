@@ -96,7 +96,7 @@ export function useClientByToken(token: string | undefined) {
         console.log('[useClientByToken] Trying public_token lookup');
         const result = await supabase
           .from('clients')
-          .select('id, name, status, public_token, business_manager_url, slug, industry, ghl_location_id, ghl_api_key, ghl_sync_status, ghl_sync_error, last_ghl_sync_at, hubspot_portal_id, hubspot_access_token, hubspot_sync_status, hubspot_sync_error, last_hubspot_sync_at, meta_ad_account_id, meta_access_token, logo_url, brand_colors, brand_fonts, description, media_buyer, account_manager, sort_order, created_at, updated_at')
+          .select('id, name, status, public_token, business_manager_url, slug, industry, ghl_location_id, ghl_api_key, ghl_sync_status, ghl_sync_error, last_ghl_sync_at, hubspot_portal_id, hubspot_access_token, hubspot_sync_status, hubspot_sync_error, last_hubspot_sync_at, meta_ad_account_id, meta_access_token, logo_url, brand_colors, brand_fonts, description, sort_order, created_at, updated_at')
           .eq('public_token', token)
           .maybeSingle();
         
