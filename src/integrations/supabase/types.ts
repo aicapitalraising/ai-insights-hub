@@ -524,6 +524,30 @@ export type Database = {
           },
         ]
       }
+      client_assignments: {
+        Row: {
+          account_manager: string | null
+          client_id: string
+          created_at: string
+          media_buyer: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_manager?: string | null
+          client_id: string
+          created_at?: string
+          media_buyer?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_manager?: string | null
+          client_id?: string
+          created_at?: string
+          media_buyer?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_custom_tabs: {
         Row: {
           client_id: string
