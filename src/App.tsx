@@ -50,6 +50,7 @@ const HistoryPage = lazyRetry(() => import("./pages/HistoryPage"));
 const ExportHubPage = lazyRetry(() => import("./pages/ExportHubPage"));
 const ClientProjectsPage = lazyRetry(() => import("./pages/ClientProjectsPage"));
 const ProjectPage = lazyRetry(() => import("./pages/ProjectPage"));
+const OfferDetailPage = lazyRetry(() => import("./pages/OfferDetailPage"));
 
 // Funnel Builder pages
 const FunnelBuilderPage = lazyRetry(() => import("./pages/FunnelBuilderPage"));
