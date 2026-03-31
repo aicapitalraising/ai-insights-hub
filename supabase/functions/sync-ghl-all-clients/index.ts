@@ -98,12 +98,11 @@ Deno.serve(async (req) => {
         const calendarBody: Record<string, unknown> = { clientId: client.id };
         if (sinceDateDays) calendarBody.sinceDateDays = sinceDateDays;
         
-        const res = await fetch(`${supabaseUrl}/functions/v1/sync-calendar-appointments`, {
+        const data = await fetchWithRetry(`${supabaseUrl}/functions/v1/sync-calendar-appointments`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
           body: JSON.stringify(calendarBody),
-        });
-        const data = await res.json();
+        }, `${client.name} calendar`);
         clientResult.calendar = !data.error;
         if (data.error) clientResult.errors.push(`calendar: ${data.error}`);
         else console.log(`[sync-ghl-all-clients] ✓ ${client.name} calendar synced`);
