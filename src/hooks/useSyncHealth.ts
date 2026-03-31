@@ -170,12 +170,12 @@ export function useSyncHealth(clientId: string | undefined) {
           .eq('id', clientId)
           .single(),
         
-        // Leads count and last sync
+        // Leads count and last update
         supabase
           .from('leads')
-          .select('ghl_synced_at', { count: 'exact' })
+          .select('updated_at', { count: 'exact' })
           .eq('client_id', clientId)
-          .order('ghl_synced_at', { ascending: false, nullsFirst: false })
+          .order('updated_at', { ascending: false, nullsFirst: false })
           .limit(1),
         
         // Calls count and last sync
