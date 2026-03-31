@@ -800,6 +800,9 @@ async function handleCreateTask(
             if (parsed.client_id && parsed.client_id !== "unknown") {
               clientId = parsed.client_id;
               clientName = parsed.client_name || "Unknown";
+              // Fetch slug for public link
+              const { data: detectedClient } = await supabase.from("clients").select("slug, public_token").eq("id", clientId).single();
+              clientSlug = detectedClient?.slug || detectedClient?.public_token || null;
             }
           }
         } catch { /* fallback */ }
