@@ -21,17 +21,20 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const localDb = createClient(supabaseUrl, supabaseKey);
 
-  // Production DB for dual-write
+  // Production DB — source of truth for reads and writes
   const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || supabaseUrl;
   const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || supabaseKey;
   const isDistinct = prodUrl !== supabaseUrl;
   const prodDb = isDistinct ? createClient(prodUrl, prodKey) : null;
-  const mirrorToProd = async (label: string, fn: (db: any) => Promise<any>) => {
-    if (!prodDb) return;
-    try { const r = await fn(prodDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
-    catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+  // Use production DB for reads (client lookup, lead queries), local for function invocations
+  const supabase = prodDb || localDb;
+  // Mirror writes to local Lovable Cloud DB (fire-and-forget)
+  const mirrorToLocal = async (label: string, fn: (db: any) => Promise<any>) => {
+    if (!isDistinct) return;
+    try { const r = await fn(localDb); if (r?.error) console.warn(`[dual-write-local] ${label}:`, r.error.message); }
+    catch (e) { console.warn(`[dual-write-local] ${label}:`, e); }
   };
 
   try {
@@ -106,8 +109,8 @@ serve(async (req) => {
           console.error('Error inserting ad spend:', insertError);
         } else {
           insertedCount++;
-          // Dual-write ad spend to production
-          await mirrorToProd("ad_spend", (db) => db.from('ad_spend_reports').upsert(adSpendRecord, {
+          // Mirror ad spend to local Lovable Cloud DB
+          await mirrorToLocal("ad_spend", (db) => db.from('ad_spend_reports').upsert(adSpendRecord, {
             onConflict: 'client_id,reported_at,platform,campaign_name',
             ignoreDuplicates: false
           }));
@@ -180,8 +183,8 @@ serve(async (req) => {
       await supabase.from('webhook_logs').insert(webhookLogData).then(({ error: logErr }) => {
         if (logErr) console.error('[WEBHOOK-LOG] Failed to log:', logErr);
       });
-      // Dual-write webhook log to production
-      await mirrorToProd("webhook_log", (db) => db.from('webhook_logs').insert(webhookLogData));
+      // Mirror webhook log to local Lovable Cloud DB
+      await mirrorToLocal("webhook_log", (db) => db.from('webhook_logs').insert(webhookLogData));
       
       if (contactId && client.ghl_api_key && client.ghl_location_id) {
         // Full lead pipeline: 5s delay → sync contact → enrich → 5s delay → sync notes back
