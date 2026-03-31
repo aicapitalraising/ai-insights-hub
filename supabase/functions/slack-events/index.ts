@@ -183,7 +183,7 @@ async function handleMessage(event: any, env: Env, supabase: any, cloudDb: any, 
 // AI Message Analysis: detect actionable items
 // -------------------------------------------------------------------
 async function analyzeMessageForTasks(
-  event: any, env: Env, supabase: any, clientId: string,
+  event: any, env: Env, supabase: any, cloudDb: any, clientId: string,
   text: string, userName: string, channelId: string, messageTs: string, threadTs: string | null
 ) {
   try {
