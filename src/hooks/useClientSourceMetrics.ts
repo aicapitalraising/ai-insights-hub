@@ -92,7 +92,7 @@ export function buildClientMetricsFromRPC(
     result[row.client_id] = {
       totalAdSpend,
       totalLeads,
-      spamLeads: Number(row.spam_leads),
+      spamLeads,
       totalCalls,
       showedCalls,
       reconnectCalls,
