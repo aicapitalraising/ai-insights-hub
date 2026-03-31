@@ -370,7 +370,7 @@ Tasks: ${recentTasks.map((t: any) => `"${t.title}" (${t.id})`).join(", ")}`,
 // -------------------------------------------------------------------
 // Core handler for @HPA mentions
 // -------------------------------------------------------------------
-async function handleMention(event: any, env: Env, supabase: any, clientId: string | null, mapping: any) {
+async function handleMention(event: any, env: Env, supabase: any, cloudDb: any, clientId: string | null, mapping: any) {
   const channelId = event.channel;
   const threadTs = event.thread_ts || event.ts;
   const userText = event.text.replace(/<@[A-Z0-9]+>/g, "").trim();
