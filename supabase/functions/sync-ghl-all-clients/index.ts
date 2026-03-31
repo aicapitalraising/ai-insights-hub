@@ -49,6 +49,23 @@ Deno.serve(async (req) => {
   const ghlClients = clients;
   console.log(`[sync-ghl-all-clients] Found ${ghlClients.length} GHL clients to sync`);
 
+  // Helper: fetch with 1 retry and exponential backoff
+  async function fetchWithRetry(url: string, options: RequestInit, label: string): Promise<any> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(url, options);
+        return await res.json();
+      } catch (err) {
+        if (attempt === 0) {
+          console.warn(`[sync-ghl-all-clients] ${label} failed, retrying in 10s...`);
+          await new Promise(resolve => setTimeout(resolve, 10000));
+        } else {
+          throw err;
+        }
+      }
+    }
+  }
+
   const doSync = async () => {
     const results: Array<{ clientId: string; name: string; contacts: boolean; calendar: boolean; pipelines: boolean; errors: string[] }> = [];
 
@@ -62,12 +79,11 @@ Deno.serve(async (req) => {
         const contactsBody: Record<string, unknown> = { client_id: client.id, syncType: "contacts" };
         if (sinceDateDays) contactsBody.sinceDateDays = sinceDateDays;
         
-        const res = await fetch(`${supabaseUrl}/functions/v1/sync-ghl-contacts`, {
+        const data = await fetchWithRetry(`${supabaseUrl}/functions/v1/sync-ghl-contacts`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
           body: JSON.stringify(contactsBody),
-        });
-        const data = await res.json();
+        }, `${client.name} contacts`);
         clientResult.contacts = !data.error;
         if (data.error) clientResult.errors.push(`contacts: ${data.error}`);
         else console.log(`[sync-ghl-all-clients] ✓ ${client.name} contacts synced`);
