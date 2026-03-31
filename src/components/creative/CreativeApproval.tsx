@@ -100,6 +100,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
   const [bulkPlatform, setBulkPlatform] = useState<'meta' | 'tiktok' | 'youtube' | 'google'>('meta');
+  const [bulkOfferId, setBulkOfferId] = useState<string>('');
   
   const [newCreative, setNewCreative] = useState({
     title: '',
@@ -109,6 +110,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     body_copy: '',
     cta_text: '',
     file: null as File | null,
+    offerId: '' as string,
   });
 
   // Apply offer filter first
