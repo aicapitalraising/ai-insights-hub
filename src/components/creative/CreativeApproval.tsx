@@ -63,6 +63,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   const { data: allCreatives = [], isLoading } = useCreatives(clientId);
   const { clientId: routeClientId } = useParams<{ clientId: string }>();
   const { data: client } = useClient(routeClientId || clientId);
+  const { data: offers = [] } = useClientOffers(clientId);
   const createCreative = useCreateCreative();
   const createCreatives = useCreateCreatives();
   const updateStatus = useUpdateCreativeStatus();
@@ -72,6 +73,9 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   
   // Check if this is an agency upload (team member logged in and not public view)
   const isAgencyUpload = !!currentMember && !isPublicView;
+  
+  // Offer filter state
+  const [selectedOfferId, setSelectedOfferId] = useState<string>('all');
   
   // Public view: filter out draft creatives (not yet approved by agency)
   const creatives = isPublicView 
