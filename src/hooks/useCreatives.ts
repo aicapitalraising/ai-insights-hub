@@ -48,6 +48,7 @@ export interface CreateCreativeInput {
   comments?: Json;
   aspect_ratio?: string | null;
   isAgencyUpload?: boolean;
+  trigger_campaign_id?: string | null;
 }
 
 function buildCreativeInsertPayload(creative: CreateCreativeInput) {
@@ -63,6 +64,7 @@ function buildCreativeInsertPayload(creative: CreateCreativeInput) {
     status: creative.status || (creative.isAgencyUpload ? 'draft' : 'pending'),
     comments: creative.comments || [],
     aspect_ratio: creative.aspect_ratio || null,
+    trigger_campaign_id: creative.trigger_campaign_id || null,
   };
 }
 
