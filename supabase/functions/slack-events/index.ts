@@ -28,8 +28,12 @@ serve(async (req) => {
   const SLACK_SIGNING_SECRET = Deno.env.get("SLACK_SIGNING_SECRET");
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const SLACK_API_KEY = Deno.env.get("SLACK_API_KEY");
+  // Production DB for tasks, clients, etc.
   const SUPABASE_URL = Deno.env.get("ORIGINAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  // Cloud DB for slack_channel_mappings, slack_activity_log
+  const CLOUD_URL = Deno.env.get("SUPABASE_URL")!;
+  const CLOUD_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   if (!SLACK_SIGNING_SECRET) throw new Error("SLACK_SIGNING_SECRET not configured");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
