@@ -198,6 +198,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         body_copy: '',
         cta_text: '',
         file: null,
+        offerId: '',
       });
     } catch (error) {
       console.error('Upload error:', error);
