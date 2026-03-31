@@ -1093,7 +1093,30 @@ const getHistoryIcon = (action: string) => {
                                   <span className="font-medium text-sm">{getDisplayAuthorName(entry.data.author_name)}</span>
                                   {entry.data.comment_type === 'voice' && <Badge variant="outline" className="text-xs h-5"><Mic className="h-3 w-3 mr-1" />Voice</Badge>}
                                   <span className="text-xs text-muted-foreground">{format(entry.timestamp, 'MMM d, h:mm a')}</span>
-                                  {!isPublicView && (
+                                  {!isPublicView && entry.data.comment_type !== 'voice' && (
+                                    <div className="ml-auto flex gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => {
+                                          setEditingCommentId(entry.data.id);
+                                          setEditingCommentContent(entry.data.content);
+                                        }}
+                                        className="text-muted-foreground hover:text-foreground"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm('Delete this comment?')) {
+                                            deleteComment.mutate({ commentId: entry.data.id, taskId: task.id });
+                                          }
+                                        }}
+                                        className="text-muted-foreground hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {!isPublicView && entry.data.comment_type === 'voice' && (
                                     <button
                                       onClick={() => {
                                         if (confirm('Delete this comment?')) {
@@ -1109,7 +1132,36 @@ const getHistoryIcon = (action: string) => {
                                 {entry.data.comment_type === 'voice' && entry.data.audio_url && (
                                   <div className="mt-2"><VoiceNotePlayer audioUrl={entry.data.audio_url} duration={entry.data.duration_seconds || undefined} transcript={entry.data.transcript} /></div>
                                 )}
-                                {entry.data.comment_type !== 'voice' && <div className="text-sm mt-1 whitespace-pre-wrap break-words">{renderContentWithLinks(entry.data.content)}</div>}
+                                {entry.data.comment_type !== 'voice' && (
+                                  editingCommentId === entry.data.id ? (
+                                    <div className="mt-1 space-y-2">
+                                      <Textarea
+                                        value={editingCommentContent}
+                                        onChange={e => setEditingCommentContent(e.target.value)}
+                                        className="text-sm min-h-[60px]"
+                                        autoFocus
+                                      />
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          onClick={async () => {
+                                            if (editingCommentContent.trim()) {
+                                              await editComment.mutateAsync({ commentId: entry.data.id, taskId: task.id, content: editingCommentContent.trim() });
+                                            }
+                                            setEditingCommentId(null);
+                                          }}
+                                          disabled={editComment.isPending}
+                                        >
+                                          Save
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm mt-1 whitespace-pre-wrap break-words">{renderContentWithLinks(entry.data.content)}</div>
+                                  )
+                                )}
                               </div>
                             </div>
                           ) : (
