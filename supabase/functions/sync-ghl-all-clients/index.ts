@@ -114,12 +114,11 @@ Deno.serve(async (req) => {
 
       // 3. Sync pipelines (committed + funded from pipeline stages)
       try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/sync-ghl-pipelines`, {
+        const data = await fetchWithRetry(`${supabaseUrl}/functions/v1/sync-ghl-pipelines`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
           body: JSON.stringify({ client_id: client.id }),
-        });
-        const data = await res.json();
+        }, `${client.name} pipelines`);
         clientResult.pipelines = !data.error;
         if (data.error) clientResult.errors.push(`pipelines: ${data.error}`);
         else console.log(`[sync-ghl-all-clients] ✓ ${client.name} pipelines synced`);
