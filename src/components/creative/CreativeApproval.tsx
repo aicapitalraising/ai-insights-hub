@@ -186,6 +186,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         comments: [],
         aspect_ratio: aspectRatio,
         isAgencyUpload,
+        trigger_campaign_id: newCreative.offerId || null,
       });
 
       setUploadOpen(false);
