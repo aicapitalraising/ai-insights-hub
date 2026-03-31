@@ -49,6 +49,6 @@ export function useLeads() {
       if (error) throw error;
       return (data || []).map((row: Record<string, unknown>) => mapDbLeadToEnrichedLead(row));
     },
-    refetchInterval: 30000, // Auto-refresh every 30s
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
   });
 }

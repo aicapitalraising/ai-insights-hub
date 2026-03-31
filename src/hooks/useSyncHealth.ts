@@ -228,7 +228,7 @@ export function useSyncHealth(clientId: string | undefined) {
         }
       );
 
-      const leadsLastSync = leadsResult.data?.[0]?.ghl_synced_at || null;
+      const leadsLastSync = leadsResult.data?.[0]?.updated_at || null;
       const callsLastSync = callsResult.data?.[0]?.ghl_synced_at || null;
       const fundedLastSync = fundedResult.data?.[0]?.created_at || null;
 
