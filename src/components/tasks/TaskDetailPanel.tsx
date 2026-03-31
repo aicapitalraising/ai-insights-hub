@@ -64,6 +64,7 @@ import {
   useTaskFiles,
   useTaskHistory,
   useAddTaskComment,
+  useDeleteTaskComment,
   useUploadTaskFile,
   useAddTaskHistory,
   useAgencyMembers,
