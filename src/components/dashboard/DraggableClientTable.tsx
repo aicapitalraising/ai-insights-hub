@@ -73,6 +73,15 @@ function getClientSyncStatus(client: Client): {
     const hubspotSyncStatus = client.hubspot_sync_status;
     const lastHubspotSyncAt = client.last_hubspot_sync_at;
     const hubspotSyncError = client.hubspot_sync_error;
+    
+    // If last sync is recent (within 24h), treat as healthy regardless of stored status
+    if (lastHubspotSyncAt) {
+      const hoursSince = (Date.now() - new Date(lastHubspotSyncAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSince <= 24 && hubspotSyncStatus !== 'error') {
+        return { status: 'healthy', lastSyncAt: lastHubspotSyncAt, error: null, source: 'hubspot' };
+      }
+    }
+    
     if (hubspotSyncStatus) {
       return {
         status: hubspotSyncStatus as 'healthy' | 'stale' | 'error' | 'not_configured',
@@ -88,6 +97,15 @@ function getClientSyncStatus(client: Client): {
     const ghlSyncStatus = client.ghl_sync_status;
     const lastGhlSyncAt = client.last_ghl_sync_at;
     const ghlSyncError = client.ghl_sync_error;
+    
+    // If last sync is recent (within 24h), treat as healthy regardless of stored status
+    if (lastGhlSyncAt) {
+      const hoursSince = (Date.now() - new Date(lastGhlSyncAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSince <= 24 && ghlSyncStatus !== 'error') {
+        return { status: 'healthy', lastSyncAt: lastGhlSyncAt, error: null, source: 'ghl' };
+      }
+    }
+    
     if (ghlSyncStatus) {
       return {
         status: ghlSyncStatus as 'healthy' | 'stale' | 'error' | 'not_configured',
@@ -693,7 +711,18 @@ export function DraggableClientTable({
                         </Badge>
                       )}
                       {syncInfo.status === 'error' && (
-                        <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Err</Badge>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 cursor-help">
+                              {syncInfo.source === 'hubspot' ? 'HS' : syncInfo.source === 'ghl' ? 'GHL' : 'Err'}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">
+                            <p className="font-medium">CRM Sync Error</p>
+                            {syncInfo.error && <p className="mt-1 text-destructive">{syncInfo.error}</p>}
+                            {syncInfo.lastSyncAt && <p className="mt-1 text-muted-foreground">Last sync: {formatDistanceToNow(new Date(syncInfo.lastSyncAt), { addSuffix: true })}</p>}
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                       {syncInfo.status === 'not_configured' && (
                         <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 text-muted-foreground">—</Badge>
