@@ -54,6 +54,7 @@ import {
   useTaskFiles,
   useTaskHistory,
   useAddTaskComment,
+  useDeleteTaskComment,
   useUploadTaskFile,
   useAddTaskHistory,
   useAgencyMembers,
@@ -102,6 +103,7 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
   const { data: meetings = [] } = useMeetings();
   const { data: agencyMembers = [] } = useAgencyMembers();
   const addComment = useAddTaskComment();
+  const deleteComment = useDeleteTaskComment();
   const uploadFile = useUploadTaskFile();
   const { currentMember } = useTeamMember();
   const { reviewFile, isReviewing, reviewingFileId } = useTaskFileReview();
@@ -760,7 +762,7 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
                       <div key={`${entry.type}-${entry.data.id}`}>
                         {entry.type === 'comment' ? (
                           // Comment entry
-                          <div className="flex gap-3">
+                          <div className="flex gap-3 group/comment">
                             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-xs font-medium text-primary">
                                 {getInitials(getDisplayAuthorName(entry.data.author_name))}
@@ -780,6 +782,18 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
                                 <span className="text-xs text-muted-foreground">
                                   {format(entry.timestamp, 'MMM d, h:mm a')}
                                 </span>
+                                {!isPublicView && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm('Delete this comment?')) {
+                                        deleteComment.mutate({ commentId: entry.data.id, taskId: task.id });
+                                      }
+                                    }}
+                                    className="ml-auto opacity-0 group-hover/comment:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                               </div>
                               {/* Voice Note Player with inline transcript */}
                               {entry.data.comment_type === 'voice' && entry.data.audio_url && (

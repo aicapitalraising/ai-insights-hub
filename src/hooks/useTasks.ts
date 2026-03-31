@@ -405,6 +405,29 @@ export function useAddTaskComment() {
   });
 }
 
+// Delete comment mutation
+export function useDeleteTaskComment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ commentId, taskId }: { commentId: string; taskId: string }) => {
+      const { error } = await supabase
+        .from('task_comments')
+        .delete()
+        .eq('id', commentId);
+      if (error) throw error;
+      return { taskId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['task-comments', data.taskId] });
+      toast.success('Comment deleted');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to delete comment: ' + error.message);
+    },
+  });
+}
+
 // Add voice comment mutation
 export function useAddVoiceComment() {
   const queryClient = useQueryClient();
