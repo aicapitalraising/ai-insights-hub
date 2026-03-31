@@ -30,10 +30,11 @@ serve(async (req) => {
   const prodDb = isDistinct ? createClient(prodUrl, prodKey) : null;
   // Use production DB for reads (client lookup, lead queries), local for function invocations
   const supabase = prodDb || localDb;
-  const mirrorToProd = async (label: string, fn: (db: any) => Promise<any>) => {
-    if (!prodDb) return;
-    try { const r = await fn(prodDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
-    catch (e) { console.warn(`[dual-write] ${label}:`, e); }
+  // Mirror writes to local Lovable Cloud DB (fire-and-forget)
+  const mirrorToLocal = async (label: string, fn: (db: any) => Promise<any>) => {
+    if (!isDistinct) return;
+    try { const r = await fn(localDb); if (r?.error) console.warn(`[dual-write-local] ${label}:`, r.error.message); }
+    catch (e) { console.warn(`[dual-write-local] ${label}:`, e); }
   };
 
   try {
