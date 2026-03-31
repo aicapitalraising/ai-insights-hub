@@ -96,15 +96,43 @@ Deno.serve(async (req) => {
     for (const client of clients) {
       const clientResult = { clientId: client.id, name: client.name, daysUpdated: 0, errors: [] as string[] };
 
+      // Helper to get UTC boundaries for a given date in America/Los_Angeles
+      // During PST (Nov-Mar): UTC offset is -8h, so day starts at 08:00 UTC
+      // During PDT (Mar-Nov): UTC offset is -7h, so day starts at 07:00 UTC
+      function getLADayBounds(dateStr: string): { dayStart: string; dayNext: string } {
+        // Create date at noon UTC to avoid DST edge issues, then check if DST is active
+        const d = new Date(`${dateStr}T12:00:00Z`);
+        const month = d.getUTCMonth(); // 0-indexed
+        const day = d.getUTCDate();
+        
+        // Approximate PDT: Mar 9 - Nov 2 (second Sunday of March to first Sunday of November)
+        // For simplicity, use -7 (PDT) for Mar 10 - Nov 2, -8 (PST) otherwise
+        let offsetHours = 8; // PST default
+        if (month > 2 && month < 10) {
+          offsetHours = 7; // PDT: Apr-Oct definitely PDT
+        } else if (month === 2 && day >= 10) {
+          offsetHours = 7; // Late March: PDT
+        } else if (month === 10 && day < 3) {
+          offsetHours = 7; // Early Nov: still PDT
+        }
+        
+        const startHour = String(offsetHours).padStart(2, '0');
+        const nextDate = new Date(d);
+        nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+        
+        return {
+          dayStart: `${dateStr}T${startHour}:00:00.000Z`,
+          dayNext: `${nextDateStr}T${startHour}:00:00.000Z`,
+        };
+      }
+
       const current = new Date(startDate + "T00:00:00Z");
       const end = new Date(endDate + "T00:00:00Z");
 
       while (current <= end) {
         const dateStr = current.toISOString().split("T")[0];
-        const dayStart = `${dateStr}T00:00:00.000Z`;
-        const next = new Date(current);
-        next.setUTCDate(next.getUTCDate() + 1);
-        const dayNext = `${next.toISOString().split("T")[0]}T00:00:00.000Z`;
+        const { dayStart, dayNext } = getLADayBounds(dateStr);
 
         try {
           // ── Leads: by created_at ──
