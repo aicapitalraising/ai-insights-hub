@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createDualClients, mirrorWrite } from "../_shared/dual-write.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,9 +23,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get("ORIGINAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { prodDb: supabase, cloudDb } = createDualClients();
 
   let startDate: string;
   let endDate: string;
@@ -230,10 +229,7 @@ Deno.serve(async (req) => {
               }
             }
           }
-          const { error: upsertError } = await supabase
-            .from("daily_metrics")
-            .upsert(
-              {
+          const upsertRow = {
                 client_id: client.id,
                 date: dateStr,
                 leads: totalValidLeads,
@@ -247,9 +243,16 @@ Deno.serve(async (req) => {
                 commitments: commitmentCount,
                 commitment_dollars: commitmentDollars,
                 updated_at: new Date().toISOString(),
-              },
-              { onConflict: "client_id,date", ignoreDuplicates: false }
-            );
+              };
+
+          const { error: upsertError } = await supabase
+            .from("daily_metrics")
+            .upsert(upsertRow, { onConflict: "client_id,date", ignoreDuplicates: false });
+
+          // Mirror write to Lovable Cloud so frontend can read it
+          await mirrorWrite(cloudDb, `daily_metrics:${client.id}:${dateStr}`, (db) =>
+            db.from("daily_metrics").upsert(upsertRow, { onConflict: "client_id,date", ignoreDuplicates: false })
+          );
 
           if (upsertError) {
             clientResult.errors.push(`${dateStr}: ${upsertError.message}`);
