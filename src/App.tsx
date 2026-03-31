@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DateFilterProvider } from "@/contexts/DateFilterContext";
 import { PasswordGate } from "@/components/auth/PasswordGate";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
 // Auto-retry dynamic imports on failure (handles stale cache after deploys)
@@ -91,6 +92,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Protected routes - require password */}
@@ -140,6 +142,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
         </BrowserRouter>
       </DateFilterProvider>
     </TooltipProvider>

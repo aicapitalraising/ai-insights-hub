@@ -198,7 +198,7 @@ export function aggregateMetrics(dailyMetrics: DailyMetric[], fundedInvestors: F
     : (() => {
         const leadsWithPipeline = leads?.filter(l => l.pipeline_value && l.pipeline_value > 0) || [];
         return leadsWithPipeline.length > 0
-          ? Math.min(...leadsWithPipeline.map(l => l.pipeline_value || 0))
+          ? leadsWithPipeline.reduce((sum, l) => sum + (l.pipeline_value || 0), 0)
           : 0;
       })();
 

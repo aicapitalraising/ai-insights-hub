@@ -174,11 +174,11 @@ Deno.serve(async (req) => {
           await supabase.from("sync_accuracy_log").insert({
             client_id: client.id,
             check_date: checkDate,
-            metric_type: check.type,
-            expected_count: check.expected,
-            actual_count: check.actual,
+            metric: check.type,
+            expected_value: check.expected,
+            actual_value: check.actual,
             discrepancy: check.expected - check.actual,
-            auto_fixed: true,
+            status: 'discrepancy',
           });
         }
       }

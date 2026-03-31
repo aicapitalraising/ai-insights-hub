@@ -38,17 +38,18 @@ Deno.serve(async (req) => {
       startDate = body.startDate;
       endDate = body.endDate;
     } else {
+      // Default: 7-day lookback to catch backdated imports and late-arriving data
       const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-      startDate = yesterday.toISOString().split("T")[0];
+      const weekAgo = new Date(today);
+      weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+      startDate = weekAgo.toISOString().split("T")[0];
       endDate = today.toISOString().split("T")[0];
     }
   } catch {
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    startDate = yesterday.toISOString().split("T")[0];
+    const weekAgo = new Date(today);
+    weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+    startDate = weekAgo.toISOString().split("T")[0];
     endDate = today.toISOString().split("T")[0];
   }
 
