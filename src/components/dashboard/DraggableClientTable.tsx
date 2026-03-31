@@ -711,7 +711,18 @@ export function DraggableClientTable({
                         </Badge>
                       )}
                       {syncInfo.status === 'error' && (
-                        <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Err</Badge>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 cursor-help">
+                              {syncInfo.source === 'hubspot' ? 'HS' : syncInfo.source === 'ghl' ? 'GHL' : 'Err'}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">
+                            <p className="font-medium">CRM Sync Error</p>
+                            {syncInfo.error && <p className="mt-1 text-destructive">{syncInfo.error}</p>}
+                            {syncInfo.lastSyncAt && <p className="mt-1 text-muted-foreground">Last sync: {formatDistanceToNow(new Date(syncInfo.lastSyncAt), { addSuffix: true })}</p>}
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                       {syncInfo.status === 'not_configured' && (
                         <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 text-muted-foreground">—</Badge>
