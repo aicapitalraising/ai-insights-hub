@@ -21,13 +21,15 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const localDb = createClient(supabaseUrl, supabaseKey);
 
-  // Production DB for dual-write
+  // Production DB — source of truth for reads and writes
   const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || supabaseUrl;
   const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || supabaseKey;
   const isDistinct = prodUrl !== supabaseUrl;
   const prodDb = isDistinct ? createClient(prodUrl, prodKey) : null;
+  // Use production DB for reads (client lookup, lead queries), local for function invocations
+  const supabase = prodDb || localDb;
   const mirrorToProd = async (label: string, fn: (db: any) => Promise<any>) => {
     if (!prodDb) return;
     try { const r = await fn(prodDb); if (r?.error) console.warn(`[dual-write] ${label}:`, r.error.message); }
