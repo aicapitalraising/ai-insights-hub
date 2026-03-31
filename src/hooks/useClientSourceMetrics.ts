@@ -66,12 +66,19 @@ export function buildClientMetricsFromRPC(
         totalImpressions: acc.totalImpressions + (day.impressions || 0),
         totalCommitments: acc.totalCommitments + (day.commitments || 0),
         commitmentDollars: acc.commitmentDollars + Number(day.commitment_dollars || 0),
+        // Use daily_metrics leads/spam (timezone-corrected by recalculate) as fallback
+        dmLeads: acc.dmLeads + (day.leads || 0),
+        dmSpam: acc.dmSpam + (day.spam_leads || 0),
       }),
-      { totalAdSpend: 0, totalClicks: 0, totalImpressions: 0, totalCommitments: 0, commitmentDollars: 0 }
+      { totalAdSpend: 0, totalClicks: 0, totalImpressions: 0, totalCommitments: 0, commitmentDollars: 0, dmLeads: 0, dmSpam: 0 }
     );
 
     const totalAdSpend = dailyTotals.totalAdSpend;
-    const totalLeads = Number(row.total_leads);
+    // Prefer daily_metrics leads (timezone-corrected) when RPC returns 0 but daily_metrics has data
+    const rpcLeads = Number(row.total_leads);
+    const rpcSpam = Number(row.spam_leads);
+    const totalLeads = (rpcLeads === 0 && dailyTotals.dmLeads > 0) ? dailyTotals.dmLeads : rpcLeads;
+    const spamLeads = (rpcSpam === 0 && dailyTotals.dmSpam > 0) ? dailyTotals.dmSpam : rpcSpam;
     const totalCalls = Number(row.total_calls);
     const showedCalls = Number(row.showed_calls);
     const reconnectCalls = Number(row.reconnect_calls);
@@ -85,7 +92,7 @@ export function buildClientMetricsFromRPC(
     result[row.client_id] = {
       totalAdSpend,
       totalLeads,
-      spamLeads: Number(row.spam_leads),
+      spamLeads,
       totalCalls,
       showedCalls,
       reconnectCalls,
