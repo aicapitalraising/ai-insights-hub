@@ -499,7 +499,7 @@ export function DraggableClientTable({
                             </TooltipTrigger>
                             <TooltipContent side="right" className="max-w-xs">
                               <div className="text-xs">
-                                <strong>{syncInfo.source === 'hubspot' ? 'HubSpot' : 'GHL'}: </strong>
+                                <strong>{syncInfo.source === 'hubspot' ? 'HubSpot' : syncInfo.source === 'ghl' ? 'GHL' : 'CRM'}: </strong>
                                 {syncInfo.status === 'healthy' && 'Synced'}
                                 {syncInfo.status === 'stale' && 'Stale'}
                                 {syncInfo.status === 'error' && 'Error'}
