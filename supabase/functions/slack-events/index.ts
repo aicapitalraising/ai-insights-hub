@@ -155,7 +155,7 @@ async function handleMessage(event: any, env: Env, supabase: any, cloudDb: any, 
   const userName = slackUser?.real_name || slackUser?.name || "Unknown";
 
   // Log the message as activity
-  const { error: logError } = await supabase.from("slack_activity_log").upsert({
+  const { error: logError } = await cloudDb.from("slack_activity_log").upsert({
     client_id: clientId,
     channel_id: channelId,
     message_ts: messageTs,
