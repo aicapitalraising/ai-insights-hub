@@ -553,7 +553,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                 {offers.length > 0 && (
                   <div>
                     <label className="text-sm font-medium">Link to Offer</label>
-                    <Select value={newCreative.offerId} onValueChange={(val) => setNewCreative({ ...newCreative, offerId: val })}>
+                    <Select value={newCreative.offerId || '__none__'} onValueChange={(val) => setNewCreative({ ...newCreative, offerId: val === '__none__' ? '' : val })}>
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="None (unlinked)" />
                       </SelectTrigger>
