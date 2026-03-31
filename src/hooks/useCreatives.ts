@@ -485,12 +485,19 @@ export async function uploadCreativeFile(
   const fileExt = file.name.split('.').pop();
   const fileName = `${clientId}/${Date.now()}.${fileExt}`;
   
-  // Use production DB for storage - Cloud DB has RLS issues for anonymous uploads
+  // Use progress-tracking upload for large files (>5MB), standard for smaller ones
+  if (file.size > 5 * 1024 * 1024) {
+    const { uploadWithProgress } = await import('@/lib/uploadWithProgress');
+    return uploadWithProgress('creatives', fileName, file, onProgress);
+  }
+
   const { data, error } = await supabase.storage
     .from('creatives')
     .upload(fileName, file);
   
   if (error) throw error;
+  
+  if (onProgress) onProgress(100);
   
   const { data: { publicUrl } } = supabase.storage
     .from('creatives')
