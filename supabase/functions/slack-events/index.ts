@@ -94,7 +94,10 @@ serve(async (req) => {
 // Event Router: dispatches based on event type
 // -------------------------------------------------------------------
 async function routeEvent(event: any, env: Env) {
+  // Production DB for tasks, clients, client_settings, agency_members, task_comments
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  // Cloud DB for slack_channel_mappings, slack_activity_log
+  const cloudDb = createClient(env.CLOUD_URL, env.CLOUD_KEY);
   const channelId = event.channel;
 
   // Try to join the channel (needed for Slack Connect channels the bot was @mentioned in but isn't formally a member of)
@@ -110,14 +113,14 @@ async function routeEvent(event: any, env: Env) {
     });
   } catch { /* ignore — private/connect channels may reject join */ }
 
-  // Look up channel mapping
-  const { data: mapping } = await supabase
+  // Look up channel mapping (Cloud DB)
+  const { data: mapping } = await cloudDb
     .from("slack_channel_mappings")
     .select("*")
     .eq("channel_id", channelId)
     .maybeSingle();
 
-  // Also check legacy client_settings mapping
+  // Also check legacy client_settings mapping (Production DB)
   const { data: legacySettings } = await supabase
     .from("client_settings")
     .select("client_id")
@@ -127,10 +130,10 @@ async function routeEvent(event: any, env: Env) {
   const clientId = mapping?.client_id || legacySettings?.[0]?.client_id || null;
 
   if (event.type === "app_mention") {
-    await handleMention(event, env, supabase, clientId, mapping);
+    await handleMention(event, env, supabase, cloudDb, clientId, mapping);
   } else if (event.type === "message" && !event.subtype) {
     // Regular message — log and optionally analyze
-    await handleMessage(event, env, supabase, clientId, mapping);
+    await handleMessage(event, env, supabase, cloudDb, clientId, mapping);
   }
 }
 
