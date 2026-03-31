@@ -907,11 +907,13 @@ async function handleListTasks(
   }
 
   let clientNames: Record<string, string> = {};
-  if (!scopedClientId) {
-    const clientIds = [...new Set(tasks.map((t: any) => t.client_id).filter(Boolean))];
-    if (clientIds.length > 0) {
-      const { data: clients } = await supabase.from("clients").select("id, name").in("id", clientIds);
-      for (const c of clients || []) clientNames[c.id] = c.name;
+  let clientSlugs: Record<string, string> = {};
+  const clientIds = [...new Set(tasks.map((t: any) => t.client_id).filter(Boolean))];
+  if (clientIds.length > 0) {
+    const { data: clients } = await supabase.from("clients").select("id, name, slug, public_token").in("id", clientIds);
+    for (const c of clients || []) {
+      clientNames[c.id] = c.name;
+      if (c.slug || c.public_token) clientSlugs[c.id] = c.slug || c.public_token;
     }
   }
 
@@ -924,7 +926,11 @@ async function handleListTasks(
     const emoji = stageEmoji[t.stage] || "📌";
     const due = t.due_date ? ` · Due: ${t.due_date}` : "";
     const clientLabel = !scopedClientId && clientNames[t.client_id] ? ` · ${clientNames[t.client_id]}` : "";
-    return `${emoji} <${appUrl}/client/${t.client_id}?task=${t.id}|${t.title}> [${t.priority}]${clientLabel}${due}`;
+    const slug = clientSlugs[t.client_id];
+    const taskLink = slug
+      ? `${appUrl}/public/${slug}?task=${t.id}`
+      : `${appUrl}/client/${t.client_id}?task=${t.id}`;
+    return `${emoji} <${taskLink}|${t.title}> [${t.priority}]${clientLabel}${due}`;
   });
 
   await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
