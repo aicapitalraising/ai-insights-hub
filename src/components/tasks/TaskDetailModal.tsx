@@ -106,6 +106,7 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
   const { data: agencyMembers = [] } = useAgencyMembers();
   const addComment = useAddTaskComment();
   const deleteComment = useDeleteTaskComment();
+  const editComment = useEditTaskComment();
   const uploadFile = useUploadTaskFile();
   const { currentMember } = useTeamMember();
   const { reviewFile, isReviewing, reviewingFileId } = useTaskFileReview();
