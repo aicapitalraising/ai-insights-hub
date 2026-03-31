@@ -28,6 +28,7 @@ import {
   CalendarIcon,
   Loader2,
   Trash2,
+  Pencil,
   Send,
   User,
   CheckCircle2,
@@ -55,6 +56,7 @@ import {
   useTaskHistory,
   useAddTaskComment,
   useDeleteTaskComment,
+  useEditTaskComment,
   useUploadTaskFile,
   useAddTaskHistory,
   useAgencyMembers,
@@ -104,6 +106,7 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
   const { data: agencyMembers = [] } = useAgencyMembers();
   const addComment = useAddTaskComment();
   const deleteComment = useDeleteTaskComment();
+  const editComment = useEditTaskComment();
   const uploadFile = useUploadTaskFile();
   const { currentMember } = useTeamMember();
   const { reviewFile, isReviewing, reviewingFileId } = useTaskFileReview();
@@ -112,7 +115,8 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
   const [newComment, setNewComment] = useState('');
-  
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
@@ -782,7 +786,30 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
                                 <span className="text-xs text-muted-foreground">
                                   {format(entry.timestamp, 'MMM d, h:mm a')}
                                 </span>
-                                {!isPublicView && (
+                                {!isPublicView && entry.data.comment_type !== 'voice' && (
+                                  <div className="ml-auto flex gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => {
+                                        setEditingCommentId(entry.data.id);
+                                        setEditingCommentContent(entry.data.content);
+                                      }}
+                                      className="text-muted-foreground hover:text-foreground"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm('Delete this comment?')) {
+                                          deleteComment.mutate({ commentId: entry.data.id, taskId: task.id });
+                                        }
+                                      }}
+                                      className="text-muted-foreground hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                )}
+                                {!isPublicView && entry.data.comment_type === 'voice' && (
                                   <button
                                     onClick={() => {
                                       if (confirm('Delete this comment?')) {
@@ -805,11 +832,38 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
                                   />
                                 </div>
                               )}
-                              {/* Text content - only show for non-voice comments */}
+                              {/* Text content - editable or display */}
                               {entry.data.comment_type !== 'voice' && (
-                                <div className="text-sm mt-1 whitespace-pre-wrap">
-                                  {entry.data.content}
-                                </div>
+                                editingCommentId === entry.data.id ? (
+                                  <div className="mt-1 space-y-2">
+                                    <Textarea
+                                      value={editingCommentContent}
+                                      onChange={e => setEditingCommentContent(e.target.value)}
+                                      className="text-sm min-h-[60px]"
+                                      autoFocus
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={async () => {
+                                          if (editingCommentContent.trim()) {
+                                            await editComment.mutateAsync({ commentId: entry.data.id, taskId: task.id, content: editingCommentContent.trim() });
+                                          }
+                                          setEditingCommentId(null);
+                                        }}
+                                        disabled={editComment.isPending}
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-sm mt-1 whitespace-pre-wrap">
+                                    {entry.data.content}
+                                  </div>
+                                )
                               )}
                             </div>
                           </div>
