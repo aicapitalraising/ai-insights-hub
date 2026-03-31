@@ -175,7 +175,7 @@ async function handleMessage(event: any, env: Env, supabase: any, cloudDb: any, 
 
   // If auto_create_tasks is enabled, run AI analysis
   if (mapping?.auto_create_tasks && clientId) {
-    await analyzeMessageForTasks(event, env, supabase, clientId, text, userName, channelId, messageTs, threadTs);
+    await analyzeMessageForTasks(event, env, supabase, cloudDb, clientId, text, userName, channelId, messageTs, threadTs);
   }
 }
 
