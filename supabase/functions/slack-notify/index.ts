@@ -53,24 +53,35 @@ serve(async (req) => {
       });
     }
 
+    // Fetch client slug for public dashboard links
+    const { data: clientInfo } = await supabase
+      .from("clients")
+      .select("slug, public_token")
+      .eq("id", client_id)
+      .maybeSingle();
+    
+    const slug = clientInfo?.slug || clientInfo?.public_token;
     const appUrl = Deno.env.get("APP_URL") || "https://reporting.highperformanceads.com";
+    const taskLink = slug
+      ? `${appUrl}/public/${slug}?task=${task.id}`
+      : `${appUrl}/client/${client_id}?task=${task.id}`;
     let message = "";
 
     switch (type) {
       case "task_created":
-        message = `📋 *New Task Created*\n\n*${task.title}*\n🎯 Priority: ${task.priority || "medium"}\n👤 By: ${user_name || "System"}\n🔗 <${appUrl}/client/${client_id}?task=${task.id}|View Task>`;
+        message = `📋 *New Task Created*\n\n*${task.title}*\n🎯 Priority: ${task.priority || "medium"}\n👤 By: ${user_name || "System"}\n🔗 <${taskLink}|View Task>`;
         break;
 
       case "task_updated":
-        message = `🔄 *Task Updated*\n\n*${task.title}*\n📌 Status: ${task.status} → ${task.stage || task.status}\n👤 By: ${user_name || "System"}\n🔗 <${appUrl}/client/${client_id}?task=${task.id}|View Task>`;
+        message = `🔄 *Task Updated*\n\n*${task.title}*\n📌 Status: ${task.status} → ${task.stage || task.status}\n👤 By: ${user_name || "System"}\n🔗 <${taskLink}|View Task>`;
         break;
 
       case "task_completed":
-        message = `✅ *Task Completed*\n\n*${task.title}*\n👤 Completed by: ${user_name || "System"}\n🔗 <${appUrl}/client/${client_id}?task=${task.id}|View Task>`;
+        message = `✅ *Task Completed*\n\n*${task.title}*\n👤 Completed by: ${user_name || "System"}\n🔗 <${taskLink}|View Task>`;
         break;
 
       case "task_comment":
-        message = `💬 *New Comment on Task*\n\n*${task.title}*\n👤 ${user_name || "Someone"}: ${comment?.slice(0, 500) || ""}\n🔗 <${appUrl}/client/${client_id}?task=${task.id}|View Task>`;
+        message = `💬 *New Comment on Task*\n\n*${task.title}*\n👤 ${user_name || "Someone"}: ${comment?.slice(0, 500) || ""}\n🔗 <${taskLink}|View Task>`;
         break;
 
       default:

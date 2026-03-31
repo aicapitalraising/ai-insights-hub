@@ -92,11 +92,21 @@ function PublicReportContent() {
   
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState<string>(() => {
+    // Deep-link: if ?task= is present, auto-switch to tasks section
+    if (searchParams.get('task')) return 'tasks';
     return searchParams.get('section') || 'overview';
   });
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [selectedType, setSelectedType] = useState<string>('');
   const [drillDownModal, setDrillDownModal] = useState<string | null>(null);
+
+  // Deep-link: if ?task= param changes, switch to tasks section
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId) {
+      setActiveSection('tasks');
+    }
+  }, [searchParams]);
 
   const handleActivityClick = (activityId: string, type: string) => {
     if (type.startsWith('task_')) {

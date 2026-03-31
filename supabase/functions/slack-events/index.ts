@@ -767,9 +767,11 @@ async function handleCreateTask(
   let clientId = scopedClientId;
   let clientName = "Unknown";
 
+  let clientSlug: string | null = null;
   if (clientId) {
-    const { data: client } = await supabase.from("clients").select("name").eq("id", clientId).single();
+    const { data: client } = await supabase.from("clients").select("name, slug, public_token").eq("id", clientId).single();
     clientName = client?.name || "Unknown";
+    clientSlug = client?.slug || client?.public_token || null;
   } else {
     const { data: allClients } = await supabase.from("clients").select("id, name").eq("status", "active");
 
@@ -798,6 +800,9 @@ async function handleCreateTask(
             if (parsed.client_id && parsed.client_id !== "unknown") {
               clientId = parsed.client_id;
               clientName = parsed.client_name || "Unknown";
+              // Fetch slug for public link
+              const { data: detectedClient } = await supabase.from("clients").select("slug, public_token").eq("id", clientId).single();
+              clientSlug = detectedClient?.slug || detectedClient?.public_token || null;
             }
           }
         } catch { /* fallback */ }
@@ -868,7 +873,9 @@ async function handleCreateTask(
   });
 
   const appUrl = Deno.env.get("APP_URL") || "https://reporting.highperformanceads.com";
-  const taskLink = `${appUrl}/client/${clientId}?task=${newTask.id}`;
+  const taskLink = clientSlug
+    ? `${appUrl}/public/${clientSlug}?task=${newTask.id}`
+    : `${appUrl}/client/${clientId}?task=${newTask.id}`;
 
   await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
     `✅ *Task Created for ${clientName}!*\n\n📋 *Title:* ${newTask.title}\n📝 *Description:* ${taskData.description}\n🎯 *Priority:* ${taskData.priority}\n👤 *Created by:* ${userName}\n🔗 <${taskLink}|View Task in Dashboard>`
@@ -900,11 +907,13 @@ async function handleListTasks(
   }
 
   let clientNames: Record<string, string> = {};
-  if (!scopedClientId) {
-    const clientIds = [...new Set(tasks.map((t: any) => t.client_id).filter(Boolean))];
-    if (clientIds.length > 0) {
-      const { data: clients } = await supabase.from("clients").select("id, name").in("id", clientIds);
-      for (const c of clients || []) clientNames[c.id] = c.name;
+  let clientSlugs: Record<string, string> = {};
+  const clientIds = [...new Set(tasks.map((t: any) => t.client_id).filter(Boolean))];
+  if (clientIds.length > 0) {
+    const { data: clients } = await supabase.from("clients").select("id, name, slug, public_token").in("id", clientIds);
+    for (const c of clients || []) {
+      clientNames[c.id] = c.name;
+      if (c.slug || c.public_token) clientSlugs[c.id] = c.slug || c.public_token;
     }
   }
 
@@ -917,7 +926,11 @@ async function handleListTasks(
     const emoji = stageEmoji[t.stage] || "📌";
     const due = t.due_date ? ` · Due: ${t.due_date}` : "";
     const clientLabel = !scopedClientId && clientNames[t.client_id] ? ` · ${clientNames[t.client_id]}` : "";
-    return `${emoji} <${appUrl}/client/${t.client_id}?task=${t.id}|${t.title}> [${t.priority}]${clientLabel}${due}`;
+    const slug = clientSlugs[t.client_id];
+    const taskLink = slug
+      ? `${appUrl}/public/${slug}?task=${t.id}`
+      : `${appUrl}/client/${t.client_id}?task=${t.id}`;
+    return `${emoji} <${taskLink}|${t.title}> [${t.priority}]${clientLabel}${due}`;
   });
 
   await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
