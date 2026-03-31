@@ -870,7 +870,9 @@ async function handleCreateTask(
   });
 
   const appUrl = Deno.env.get("APP_URL") || "https://reporting.highperformanceads.com";
-  const taskLink = `${appUrl}/client/${clientId}?task=${newTask.id}`;
+  const taskLink = clientSlug
+    ? `${appUrl}/public/${clientSlug}?task=${newTask.id}`
+    : `${appUrl}/client/${clientId}?task=${newTask.id}`;
 
   await updateOrPostMessage(env.LOVABLE_API_KEY, env.SLACK_API_KEY, channel, thread, thinkingTs,
     `✅ *Task Created for ${clientName}!*\n\n📋 *Title:* ${newTask.title}\n📝 *Description:* ${taskData.description}\n🎯 *Priority:* ${taskData.priority}\n👤 *Created by:* ${userName}\n🔗 <${taskLink}|View Task in Dashboard>`
