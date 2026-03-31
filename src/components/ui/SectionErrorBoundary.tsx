@@ -25,7 +25,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[SectionErrorBoundary:${this.props.sectionName || 'unknown'}] Caught error:`, error, errorInfo);
+    console.error(`[SectionErrorBoundary:${this.props.sectionName || 'unknown'}] Caught error:`, error.message, error.stack, errorInfo.componentStack);
   }
 
   private handleRetry = () => {
