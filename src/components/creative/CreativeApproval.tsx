@@ -550,6 +550,25 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   </div>
                 </div>
 
+                {offers.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium">Link to Offer</label>
+                    <Select value={newCreative.offerId} onValueChange={(val) => setNewCreative({ ...newCreative, offerId: val })}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="None (unlinked)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None (unlinked)</SelectItem>
+                        {offers.map((offer) => (
+                          <SelectItem key={offer.id} value={offer.id}>
+                            {offer.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {(newCreative.type === 'image' || newCreative.type === 'video') && (
                   <div>
                     <label className="text-sm font-medium">File</label>
