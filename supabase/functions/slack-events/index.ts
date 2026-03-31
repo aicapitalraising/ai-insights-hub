@@ -767,9 +767,11 @@ async function handleCreateTask(
   let clientId = scopedClientId;
   let clientName = "Unknown";
 
+  let clientSlug: string | null = null;
   if (clientId) {
-    const { data: client } = await supabase.from("clients").select("name").eq("id", clientId).single();
+    const { data: client } = await supabase.from("clients").select("name, slug, public_token").eq("id", clientId).single();
     clientName = client?.name || "Unknown";
+    clientSlug = client?.slug || client?.public_token || null;
   } else {
     const { data: allClients } = await supabase.from("clients").select("id, name").eq("status", "active");
 
