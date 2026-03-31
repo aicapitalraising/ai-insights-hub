@@ -109,8 +109,8 @@ serve(async (req) => {
           console.error('Error inserting ad spend:', insertError);
         } else {
           insertedCount++;
-          // Dual-write ad spend to production
-          await mirrorToProd("ad_spend", (db) => db.from('ad_spend_reports').upsert(adSpendRecord, {
+          // Mirror ad spend to local Lovable Cloud DB
+          await mirrorToLocal("ad_spend", (db) => db.from('ad_spend_reports').upsert(adSpendRecord, {
             onConflict: 'client_id,reported_at,platform,campaign_name',
             ignoreDuplicates: false
           }));
