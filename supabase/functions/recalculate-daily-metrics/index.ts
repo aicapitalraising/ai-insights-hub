@@ -16,6 +16,9 @@ declare const EdgeRuntime: { waitUntil: (promise: Promise<any>) => void } | unde
  * - funded_investors / funded_on_day: counted by funded_investors.funded_at (stage change date)
  * - commitments / commitments_on_day: counted by funded_investors.funded_at where commitment_amount > 0
  * - ad_spend / impressions / clicks / ctr: NEVER touched here — owned by sync-meta-ads
+ *
+ * TIMEZONE: All date boundaries use America/Los_Angeles (PST/PDT) to match
+ * Meta ad spend reporting dates. E.g. March 29 PST = March 29 07:00 UTC to March 30 07:00 UTC.
  */
 
 Deno.serve(async (req) => {
