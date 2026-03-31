@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface SlackChannelMapping {
@@ -41,6 +42,12 @@ export function useAddSlackChannel() {
         .select()
         .single();
       if (error) throw error;
+
+      // Dual-write to Cloud
+      cloudClient.from('slack_channel_mappings').upsert(data, { onConflict: 'id' }).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write slack_channel_mappings:', e.message);
+      });
+
       return data;
     },
     onSuccess: (_, vars) => {
@@ -66,6 +73,11 @@ export function useUpdateSlackChannel() {
         .update(updates)
         .eq('id', id);
       if (error) throw error;
+
+      // Dual-write to Cloud
+      cloudClient.from('slack_channel_mappings').update(updates).eq('id', id).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write slack_channel_mappings:', e.message);
+      });
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['slack-channel-mappings', vars.client_id] });
@@ -82,6 +94,11 @@ export function useRemoveSlackChannel() {
         .delete()
         .eq('id', id);
       if (error) throw error;
+
+      // Dual-delete from Cloud
+      cloudClient.from('slack_channel_mappings').delete().eq('id', id).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-delete slack_channel_mappings:', e.message);
+      });
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['slack-channel-mappings', vars.client_id] });
@@ -112,11 +129,12 @@ export function useSlackActivityLog(clientId: string | undefined) {
   });
 }
 
+// Edge functions are deployed on Cloud, so use cloudClient for functions.invoke
 export function useSyncSlackChannels() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ client_id, channel_id }: { client_id?: string; channel_id?: string }) => {
-      const { data, error } = await supabase.functions.invoke('slack-sync-channels', {
+      const { data, error } = await cloudClient.functions.invoke('slack-sync-channels', {
         body: { client_id, channel_id, limit: 100, auto_create_tasks: true },
       });
       if (error) throw error;
@@ -136,7 +154,7 @@ export function useSyncSlackChannels() {
 export function useSendSlackMessage() {
   return useMutation({
     mutationFn: async ({ channel, text, thread_ts }: { channel: string; text: string; thread_ts?: string }) => {
-      const { data, error } = await supabase.functions.invoke('slack-send-message', {
+      const { data, error } = await cloudClient.functions.invoke('slack-send-message', {
         body: { channel, text, thread_ts },
       });
       if (error) throw error;

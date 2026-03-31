@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 import type { AdStyle } from '@/types';
 
 // Fetch all styles (global defaults + client-specific)
@@ -38,6 +39,12 @@ export function useCreateAdStyle() {
         .select()
         .single();
       if (error) throw error;
+
+      // Dual-write to Cloud
+      cloudClient.from('ad_styles').upsert(data, { onConflict: 'id' }).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write ad_styles:', e.message);
+      });
+
       return data as AdStyle;
     },
     onSuccess: (_, variables) => {
@@ -60,6 +67,12 @@ export function useUpdateAdStyle() {
         .select()
         .single();
       if (error) throw error;
+
+      // Dual-write to Cloud
+      cloudClient.from('ad_styles').upsert(data, { onConflict: 'id' }).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write ad_styles:', e.message);
+      });
+
       return data as AdStyle;
     },
     onSuccess: () => {
@@ -79,6 +92,11 @@ export function useDeleteAdStyle() {
         .delete()
         .eq('id', id);
       if (error) throw error;
+
+      // Dual-delete from Cloud
+      cloudClient.from('ad_styles').delete().eq('id', id).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-delete ad_styles:', e.message);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ad-styles'] });
@@ -86,7 +104,7 @@ export function useDeleteAdStyle() {
   });
 }
 
-// Upload reference image for a style
+// Upload reference image for a style (storage stays on Cloud)
 export function useUploadStyleReference() {
   const queryClient = useQueryClient();
 
@@ -95,23 +113,28 @@ export function useUploadStyleReference() {
       const fileExt = file.name.split('.').pop();
       const filePath = `references/${clientId || 'global'}/${styleId}/${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await cloudClient.storage
         .from('assets')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = cloudClient.storage
         .from('assets')
         .getPublicUrl(filePath);
 
-      // Update the style with the new reference image URL
+      // Update the style on production
       const { error: updateError } = await supabase
         .from('ad_styles')
         .update({ example_image_url: publicUrl })
         .eq('id', styleId);
 
       if (updateError) throw updateError;
+
+      // Dual-write to Cloud
+      cloudClient.from('ad_styles').update({ example_image_url: publicUrl }).eq('id', styleId).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write ad_styles ref:', e.message);
+      });
 
       return publicUrl;
     },
@@ -132,6 +155,11 @@ export function useRemoveStyleReference() {
         .update({ example_image_url: null })
         .eq('id', styleId);
       if (error) throw error;
+
+      // Dual-write to Cloud
+      cloudClient.from('ad_styles').update({ example_image_url: null }).eq('id', styleId).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write ad_styles ref remove:', e.message);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ad-styles'] });

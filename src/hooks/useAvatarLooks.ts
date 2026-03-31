@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
@@ -51,6 +52,12 @@ export function useCreateAvatarLook() {
         .select()
         .single();
       if (error) throw error;
+
+      // Dual-write to Cloud
+      cloudClient.from('avatar_looks').upsert(data, { onConflict: 'id' }).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write avatar_looks:', e.message);
+      });
+
       return data as AvatarLook;
     },
     onSuccess: (data) => {
@@ -63,12 +70,12 @@ export function useDeleteAvatarLook() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, avatarId, imageUrl }: { id: string; avatarId: string; imageUrl: string }) => {
-      // Try to delete from storage if it's in our bucket
+      // Try to delete from storage (storage is on Cloud)
       try {
         const url = new URL(imageUrl);
         const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/avatars\/(.+)/);
         if (pathMatch) {
-          await supabase.storage.from('avatars').remove([pathMatch[1]]);
+          await cloudClient.storage.from('avatars').remove([pathMatch[1]]);
         }
       } catch {
         // Ignore storage deletion errors
@@ -79,6 +86,12 @@ export function useDeleteAvatarLook() {
         .delete()
         .eq('id', id);
       if (error) throw error;
+
+      // Dual-delete from Cloud
+      cloudClient.from('avatar_looks').delete().eq('id', id).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-delete avatar_looks:', e.message);
+      });
+
       return { avatarId };
     },
     onSuccess: ({ avatarId }) => {
@@ -108,6 +121,12 @@ export function useSetPrimaryLook() {
         .from('avatars')
         .update({ image_url: imageUrl })
         .eq('id', avatarId);
+
+      // Dual-write to Cloud
+      cloudClient.from('avatar_looks').update({ is_primary: false }).eq('avatar_id', avatarId).then(() => {
+        cloudClient.from('avatar_looks').update({ is_primary: true }).eq('id', lookId);
+        cloudClient.from('avatars').update({ image_url: imageUrl }).eq('id', avatarId);
+      });
       
       return { avatarId };
     },
