@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/db';
+import { supabase as cloudClient } from '@/integrations/supabase/client';
 import type { Avatar, AvatarStyle } from '@/types';
 
 // Fetch all avatars (for admin view)
@@ -83,6 +84,12 @@ export function useCreateAvatar() {
         .single();
       
       if (error) throw error;
+
+      // Dual-write to Cloud
+      cloudClient.from('avatars').upsert(data, { onConflict: 'id' }).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-write avatars:', e.message);
+      });
+
       return data as Avatar;
     },
     onSuccess: () => {
@@ -102,6 +109,11 @@ export function useDeleteAvatar() {
         .eq('id', id);
       
       if (error) throw error;
+
+      // Dual-delete from Cloud
+      cloudClient.from('avatars').delete().eq('id', id).then(({ error: e }) => {
+        if (e) console.warn('Cloud dual-delete avatars:', e.message);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['avatars'] });
