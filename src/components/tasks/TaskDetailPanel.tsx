@@ -133,7 +133,9 @@ import { toast } from 'sonner';
    
    const [isEditingDescription, setIsEditingDescription] = useState(false);
    const [editedDescription, setEditedDescription] = useState('');
-   const [newComment, setNewComment] = useState('');
+    const [newComment, setNewComment] = useState('');
+    const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [editingCommentContent, setEditingCommentContent] = useState('');
    const [lightboxOpen, setLightboxOpen] = useState(false);
    const [selectedFileIndex, setSelectedFileIndex] = useState(0);
    const [inlineFileIndex, setInlineFileIndex] = useState(0);
