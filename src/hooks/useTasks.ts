@@ -428,6 +428,29 @@ export function useDeleteTaskComment() {
   });
 }
 
+// Edit comment mutation
+export function useEditTaskComment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ commentId, taskId, content }: { commentId: string; taskId: string; content: string }) => {
+      const { error } = await supabase
+        .from('task_comments')
+        .update({ content })
+        .eq('id', commentId);
+      if (error) throw error;
+      return { taskId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['task-comments', data.taskId] });
+      toast.success('Comment updated');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update comment: ' + error.message);
+    },
+  });
+}
+
 // Add voice comment mutation
 export function useAddVoiceComment() {
   const queryClient = useQueryClient();
