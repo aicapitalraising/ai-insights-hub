@@ -30,9 +30,10 @@ serve(async (req) => {
 
   try {
     const allChannels: any[] = [];
+    const seenIds = new Set<string>();
     let cursor: string | undefined;
 
-    // Paginate through all channels
+    // Paginate through all channels from conversations.list
     do {
       const params = new URLSearchParams({
         types: "public_channel,private_channel",
@@ -55,18 +56,84 @@ serve(async (req) => {
         throw new Error(`Slack API failed [${response.status}]: ${JSON.stringify(data)}`);
       }
 
-      allChannels.push(
-        ...data.channels.map((ch: any) => ({
+      for (const ch of data.channels) {
+        seenIds.add(ch.id);
+        allChannels.push({
           id: ch.id,
           name: ch.name,
           is_private: ch.is_private,
           num_members: ch.num_members,
           topic: ch.topic?.value || "",
-        }))
-      );
+        });
+      }
 
       cursor = data.response_metadata?.next_cursor || undefined;
     } while (cursor);
+
+    // Also discover channels from slack_activity_log that weren't in conversations.list
+    // (e.g. Slack Connect channels hosted by other orgs)
+    const SUPABASE_URL = Deno.env.get("ORIGINAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_KEY = Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    if (SUPABASE_URL && SUPABASE_KEY) {
+      const { createClient } = await import("npm:@supabase/supabase-js@2");
+      const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+      
+      // Get distinct channel IDs from activity log
+      const { data: activityChannels } = await supabase
+        .from("slack_activity_log")
+        .select("channel_id")
+        .limit(500);
+      
+      // Also get channel IDs from mappings
+      const { data: mappedChannels } = await supabase
+        .from("slack_channel_mappings")
+        .select("channel_id, channel_name");
+
+      const knownChannelIds = new Set<string>();
+      for (const ac of activityChannels || []) knownChannelIds.add(ac.channel_id);
+      for (const mc of mappedChannels || []) knownChannelIds.add(mc.channel_id);
+
+      // For any channel ID not in conversations.list, try conversations.info
+      const missingIds = [...knownChannelIds].filter(id => !seenIds.has(id));
+      
+      for (const channelId of missingIds) {
+        try {
+          // Try to join first (needed for Slack Connect channels)
+          await fetch(`${GATEWAY_URL}/conversations.join`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "X-Connection-Api-Key": SLACK_API_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ channel: channelId }),
+          });
+
+          const infoRes = await fetch(`${GATEWAY_URL}/conversations.info?channel=${channelId}`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "X-Connection-Api-Key": SLACK_API_KEY,
+              "Content-Type": "application/json",
+            },
+          });
+          const infoData = await infoRes.json();
+          if (infoData.ok && infoData.channel && !infoData.channel.is_archived) {
+            seenIds.add(channelId);
+            allChannels.push({
+              id: infoData.channel.id,
+              name: infoData.channel.name,
+              is_private: infoData.channel.is_private || false,
+              num_members: infoData.channel.num_members || 0,
+              topic: infoData.channel.topic?.value || "",
+            });
+          }
+        } catch (err) {
+          console.error(`Failed to fetch info for channel ${channelId}:`, err);
+        }
+      }
+    }
 
     // Sort alphabetically
     allChannels.sort((a, b) => a.name.localeCompare(b.name));

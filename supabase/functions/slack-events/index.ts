@@ -16,6 +16,8 @@ interface Env {
   SLACK_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  CLOUD_URL: string;
+  CLOUD_KEY: string;
 }
 
 serve(async (req) => {
@@ -26,14 +28,18 @@ serve(async (req) => {
   const SLACK_SIGNING_SECRET = Deno.env.get("SLACK_SIGNING_SECRET");
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const SLACK_API_KEY = Deno.env.get("SLACK_API_KEY");
+  // Production DB for tasks, clients, etc.
   const SUPABASE_URL = Deno.env.get("ORIGINAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("ORIGINAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  // Cloud DB for slack_channel_mappings, slack_activity_log
+  const CLOUD_URL = Deno.env.get("SUPABASE_URL")!;
+  const CLOUD_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   if (!SLACK_SIGNING_SECRET) throw new Error("SLACK_SIGNING_SECRET not configured");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   if (!SLACK_API_KEY) throw new Error("SLACK_API_KEY not configured");
 
-  const env: Env = { LOVABLE_API_KEY, SLACK_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY };
+  const env: Env = { LOVABLE_API_KEY, SLACK_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CLOUD_URL, CLOUD_KEY };
 
   const rawBody = await req.text();
 
@@ -88,17 +94,33 @@ serve(async (req) => {
 // Event Router: dispatches based on event type
 // -------------------------------------------------------------------
 async function routeEvent(event: any, env: Env) {
+  // Production DB for tasks, clients, client_settings, agency_members, task_comments
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  // Cloud DB for slack_channel_mappings, slack_activity_log
+  const cloudDb = createClient(env.CLOUD_URL, env.CLOUD_KEY);
   const channelId = event.channel;
 
-  // Look up channel mapping
-  const { data: mapping } = await supabase
+  // Try to join the channel (needed for Slack Connect channels the bot was @mentioned in but isn't formally a member of)
+  try {
+    await fetch(`${SLACK_GATEWAY_URL}/conversations.join`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": env.SLACK_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ channel: channelId }),
+    });
+  } catch { /* ignore — private/connect channels may reject join */ }
+
+  // Look up channel mapping (Cloud DB)
+  const { data: mapping } = await cloudDb
     .from("slack_channel_mappings")
     .select("*")
     .eq("channel_id", channelId)
     .maybeSingle();
 
-  // Also check legacy client_settings mapping
+  // Also check legacy client_settings mapping (Production DB)
   const { data: legacySettings } = await supabase
     .from("client_settings")
     .select("client_id")
@@ -108,17 +130,17 @@ async function routeEvent(event: any, env: Env) {
   const clientId = mapping?.client_id || legacySettings?.[0]?.client_id || null;
 
   if (event.type === "app_mention") {
-    await handleMention(event, env, supabase, clientId, mapping);
+    await handleMention(event, env, supabase, cloudDb, clientId, mapping);
   } else if (event.type === "message" && !event.subtype) {
     // Regular message — log and optionally analyze
-    await handleMessage(event, env, supabase, clientId, mapping);
+    await handleMessage(event, env, supabase, cloudDb, clientId, mapping);
   }
 }
 
 // -------------------------------------------------------------------
 // Handle regular messages: log activity + AI analysis
 // -------------------------------------------------------------------
-async function handleMessage(event: any, env: Env, supabase: any, clientId: string | null, mapping: any) {
+async function handleMessage(event: any, env: Env, supabase: any, cloudDb: any, clientId: string | null, mapping: any) {
   const channelId = event.channel;
   const messageTs = event.ts;
   const threadTs = event.thread_ts || null;
@@ -133,7 +155,7 @@ async function handleMessage(event: any, env: Env, supabase: any, clientId: stri
   const userName = slackUser?.real_name || slackUser?.name || "Unknown";
 
   // Log the message as activity
-  const { error: logError } = await supabase.from("slack_activity_log").upsert({
+  const { error: logError } = await cloudDb.from("slack_activity_log").upsert({
     client_id: clientId,
     channel_id: channelId,
     message_ts: messageTs,
@@ -153,7 +175,7 @@ async function handleMessage(event: any, env: Env, supabase: any, clientId: stri
 
   // If auto_create_tasks is enabled, run AI analysis
   if (mapping?.auto_create_tasks && clientId) {
-    await analyzeMessageForTasks(event, env, supabase, clientId, text, userName, channelId, messageTs, threadTs);
+    await analyzeMessageForTasks(event, env, supabase, cloudDb, clientId, text, userName, channelId, messageTs, threadTs);
   }
 }
 
@@ -161,7 +183,7 @@ async function handleMessage(event: any, env: Env, supabase: any, clientId: stri
 // AI Message Analysis: detect actionable items
 // -------------------------------------------------------------------
 async function analyzeMessageForTasks(
-  event: any, env: Env, supabase: any, clientId: string,
+  event: any, env: Env, supabase: any, cloudDb: any, clientId: string,
   text: string, userName: string, channelId: string, messageTs: string, threadTs: string | null
 ) {
   try {
@@ -226,7 +248,7 @@ Rules:
     } catch { /* use defaults */ }
 
     // Update the activity log with AI analysis
-    await supabase.from("slack_activity_log")
+    await cloudDb.from("slack_activity_log")
       .update({ ai_analysis: analysis })
       .eq("channel_id", channelId)
       .eq("message_ts", messageTs);
@@ -255,7 +277,7 @@ Rules:
 
       if (!error && newTask) {
         // Update activity log with linked task
-        await supabase.from("slack_activity_log")
+        await cloudDb.from("slack_activity_log")
           .update({ linked_task_id: newTask.id, message_type: "task_action" })
           .eq("channel_id", channelId)
           .eq("message_ts", messageTs);
@@ -328,7 +350,7 @@ Tasks: ${recentTasks.map((t: any) => `"${t.title}" (${t.id})`).join(", ")}`,
                   comment_type: "text",
                 });
 
-                await supabase.from("slack_activity_log")
+                await cloudDb.from("slack_activity_log")
                   .update({ linked_task_id: parsed.task_id, message_type: "task_action" })
                   .eq("channel_id", channelId)
                   .eq("message_ts", messageTs);
@@ -348,7 +370,7 @@ Tasks: ${recentTasks.map((t: any) => `"${t.title}" (${t.id})`).join(", ")}`,
 // -------------------------------------------------------------------
 // Core handler for @HPA mentions
 // -------------------------------------------------------------------
-async function handleMention(event: any, env: Env, supabase: any, clientId: string | null, mapping: any) {
+async function handleMention(event: any, env: Env, supabase: any, cloudDb: any, clientId: string | null, mapping: any) {
   const channelId = event.channel;
   const threadTs = event.thread_ts || event.ts;
   const userText = event.text.replace(/<@[A-Z0-9]+>/g, "").trim();
@@ -359,7 +381,7 @@ async function handleMention(event: any, env: Env, supabase: any, clientId: stri
   const userEmail = slackUser?.profile?.email || null;
   const userName = slackUser?.real_name || slackUser?.name || "User";
 
-  await supabase.from("slack_activity_log").upsert({
+  await cloudDb.from("slack_activity_log").upsert({
     client_id: clientId,
     channel_id: channelId,
     message_ts: event.ts,
