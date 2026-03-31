@@ -251,6 +251,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
             comments: [],
             aspect_ratio: aspectRatio,
             isAgencyUpload,
+            trigger_campaign_id: bulkOfferId || null,
           });
         } catch (error) {
           failedUploads++;
