@@ -16,6 +16,8 @@ interface Env {
   SLACK_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  CLOUD_URL: string;
+  CLOUD_KEY: string;
 }
 
 serve(async (req) => {
