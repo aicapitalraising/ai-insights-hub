@@ -183,8 +183,8 @@ serve(async (req) => {
       await supabase.from('webhook_logs').insert(webhookLogData).then(({ error: logErr }) => {
         if (logErr) console.error('[WEBHOOK-LOG] Failed to log:', logErr);
       });
-      // Dual-write webhook log to production
-      await mirrorToProd("webhook_log", (db) => db.from('webhook_logs').insert(webhookLogData));
+      // Mirror webhook log to local Lovable Cloud DB
+      await mirrorToLocal("webhook_log", (db) => db.from('webhook_logs').insert(webhookLogData));
       
       if (contactId && client.ghl_api_key && client.ghl_location_id) {
         // Full lead pipeline: 5s delay → sync contact → enrich → 5s delay → sync notes back
