@@ -115,7 +115,8 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
   const [newComment, setNewComment] = useState('');
-  
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
