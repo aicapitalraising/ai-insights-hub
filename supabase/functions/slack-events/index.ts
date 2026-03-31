@@ -248,7 +248,7 @@ Rules:
     } catch { /* use defaults */ }
 
     // Update the activity log with AI analysis
-    await supabase.from("slack_activity_log")
+    await cloudDb.from("slack_activity_log")
       .update({ ai_analysis: analysis })
       .eq("channel_id", channelId)
       .eq("message_ts", messageTs);
@@ -277,7 +277,7 @@ Rules:
 
       if (!error && newTask) {
         // Update activity log with linked task
-        await supabase.from("slack_activity_log")
+        await cloudDb.from("slack_activity_log")
           .update({ linked_task_id: newTask.id, message_type: "task_action" })
           .eq("channel_id", channelId)
           .eq("message_ts", messageTs);
@@ -350,7 +350,7 @@ Tasks: ${recentTasks.map((t: any) => `"${t.title}" (${t.id})`).join(", ")}`,
                   comment_type: "text",
                 });
 
-                await supabase.from("slack_activity_log")
+                await cloudDb.from("slack_activity_log")
                   .update({ linked_task_id: parsed.task_id, message_type: "task_action" })
                   .eq("channel_id", channelId)
                   .eq("message_ts", messageTs);
