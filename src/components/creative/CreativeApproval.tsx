@@ -111,19 +111,26 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     file: null as File | null,
   });
 
+  // Apply offer filter first
+  const offerFilteredCreatives = selectedOfferId === 'all'
+    ? creatives
+    : selectedOfferId === 'unlinked'
+      ? creatives.filter(c => !c.trigger_campaign_id)
+      : creatives.filter(c => c.trigger_campaign_id === selectedOfferId);
+
   const statusCounts = {
-    all: creatives.length,
-    draft: creatives.filter(c => c.status === 'draft').length,
-    pending: creatives.filter(c => c.status === 'pending').length,
-    approved: creatives.filter(c => c.status === 'approved').length,
-    launched: creatives.filter(c => c.status === 'launched').length,
-    revisions: creatives.filter(c => c.status === 'revisions').length,
-    rejected: creatives.filter(c => c.status === 'rejected').length,
+    all: offerFilteredCreatives.length,
+    draft: offerFilteredCreatives.filter(c => c.status === 'draft').length,
+    pending: offerFilteredCreatives.filter(c => c.status === 'pending').length,
+    approved: offerFilteredCreatives.filter(c => c.status === 'approved').length,
+    launched: offerFilteredCreatives.filter(c => c.status === 'launched').length,
+    revisions: offerFilteredCreatives.filter(c => c.status === 'revisions').length,
+    rejected: offerFilteredCreatives.filter(c => c.status === 'rejected').length,
   };
 
   const filteredCreatives = activeTab === 'all' 
-    ? creatives 
-    : creatives.filter(c => c.status === activeTab);
+    ? offerFilteredCreatives 
+    : offerFilteredCreatives.filter(c => c.status === activeTab);
 
   const handleSendToClient = (creative: Creative) => {
     updateStatus.mutate({ id: creative.id, status: 'pending', clientId, creativeTitle: creative.title });
