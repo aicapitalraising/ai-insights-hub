@@ -558,7 +558,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                         <SelectValue placeholder="None (unlinked)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None (unlinked)</SelectItem>
+                        <SelectItem value="__none__">None (unlinked)</SelectItem>
                         {offers.map((offer) => (
                           <SelectItem key={offer.id} value={offer.id}>
                             {offer.title}
