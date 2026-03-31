@@ -381,7 +381,7 @@ async function handleMention(event: any, env: Env, supabase: any, cloudDb: any, 
   const userEmail = slackUser?.profile?.email || null;
   const userName = slackUser?.real_name || slackUser?.name || "User";
 
-  await supabase.from("slack_activity_log").upsert({
+  await cloudDb.from("slack_activity_log").upsert({
     client_id: clientId,
     channel_id: channelId,
     message_ts: event.ts,
