@@ -140,7 +140,7 @@ async function routeEvent(event: any, env: Env) {
 // -------------------------------------------------------------------
 // Handle regular messages: log activity + AI analysis
 // -------------------------------------------------------------------
-async function handleMessage(event: any, env: Env, supabase: any, clientId: string | null, mapping: any) {
+async function handleMessage(event: any, env: Env, supabase: any, cloudDb: any, clientId: string | null, mapping: any) {
   const channelId = event.channel;
   const messageTs = event.ts;
   const threadTs = event.thread_ts || null;
