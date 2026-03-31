@@ -388,7 +388,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                 {offers.length > 0 && (
                   <div>
                     <label className="text-sm font-medium">Link to Offer</label>
-                    <Select value={bulkOfferId} onValueChange={setBulkOfferId}>
+                    <Select value={bulkOfferId || '__none__'} onValueChange={(val) => setBulkOfferId(val === '__none__' ? '' : val)}>
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="None (unlinked)" />
                       </SelectTrigger>
