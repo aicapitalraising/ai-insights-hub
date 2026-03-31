@@ -651,7 +651,26 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
           </div>
         </div>
 
-        {/* Filter Tabs */}
+        {/* Offer Filter + Status Tabs */}
+        <div className="flex items-center gap-3 mb-2 flex-wrap">
+          {offers.length > 0 && (
+            <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+              <SelectTrigger className="w-[200px] h-8 text-sm">
+                <SelectValue placeholder="Filter by offer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Offers</SelectItem>
+                <SelectItem value="unlinked">Unlinked</SelectItem>
+                {offers.map((offer) => (
+                  <SelectItem key={offer.id} value={offer.id}>
+                    {offer.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
