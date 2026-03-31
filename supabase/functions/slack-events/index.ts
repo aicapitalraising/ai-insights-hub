@@ -91,6 +91,19 @@ async function routeEvent(event: any, env: Env) {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
   const channelId = event.channel;
 
+  // Try to join the channel (needed for Slack Connect channels the bot was @mentioned in but isn't formally a member of)
+  try {
+    await fetch(`${SLACK_GATEWAY_URL}/conversations.join`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": env.SLACK_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ channel: channelId }),
+    });
+  } catch { /* ignore — private/connect channels may reject join */ }
+
   // Look up channel mapping
   const { data: mapping } = await supabase
     .from("slack_channel_mappings")
