@@ -14,6 +14,9 @@ import {
   CreativeComment 
 } from '@/hooks/useCreatives';
 import { useClient } from '@/hooks/useClients';
+import { useClientOffers } from '@/hooks/useClientOffers';
+import { useTeamMember } from '@/contexts/TeamMemberContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
