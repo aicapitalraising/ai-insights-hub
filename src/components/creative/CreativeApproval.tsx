@@ -14,7 +14,9 @@ import {
   CreativeComment 
 } from '@/hooks/useCreatives';
 import { useClient } from '@/hooks/useClients';
+import { useClientOffers } from '@/hooks/useClientOffers';
 import { useTeamMember } from '@/contexts/TeamMemberContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +63,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   const { data: allCreatives = [], isLoading } = useCreatives(clientId);
   const { clientId: routeClientId } = useParams<{ clientId: string }>();
   const { data: client } = useClient(routeClientId || clientId);
+  const { data: offers = [] } = useClientOffers(clientId);
   const createCreative = useCreateCreative();
   const createCreatives = useCreateCreatives();
   const updateStatus = useUpdateCreativeStatus();
@@ -70,6 +73,9 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   
   // Check if this is an agency upload (team member logged in and not public view)
   const isAgencyUpload = !!currentMember && !isPublicView;
+  
+  // Offer filter state
+  const [selectedOfferId, setSelectedOfferId] = useState<string>('all');
   
   // Public view: filter out draft creatives (not yet approved by agency)
   const creatives = isPublicView 
@@ -94,6 +100,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
   const [bulkPlatform, setBulkPlatform] = useState<'meta' | 'tiktok' | 'youtube' | 'google'>('meta');
+  const [bulkOfferId, setBulkOfferId] = useState<string>('');
   
   const [newCreative, setNewCreative] = useState({
     title: '',
@@ -103,21 +110,29 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
     body_copy: '',
     cta_text: '',
     file: null as File | null,
+    offerId: '' as string,
   });
 
+  // Apply offer filter first
+  const offerFilteredCreatives = selectedOfferId === 'all'
+    ? creatives
+    : selectedOfferId === 'unlinked'
+      ? creatives.filter(c => !c.trigger_campaign_id)
+      : creatives.filter(c => c.trigger_campaign_id === selectedOfferId);
+
   const statusCounts = {
-    all: creatives.length,
-    draft: creatives.filter(c => c.status === 'draft').length,
-    pending: creatives.filter(c => c.status === 'pending').length,
-    approved: creatives.filter(c => c.status === 'approved').length,
-    launched: creatives.filter(c => c.status === 'launched').length,
-    revisions: creatives.filter(c => c.status === 'revisions').length,
-    rejected: creatives.filter(c => c.status === 'rejected').length,
+    all: offerFilteredCreatives.length,
+    draft: offerFilteredCreatives.filter(c => c.status === 'draft').length,
+    pending: offerFilteredCreatives.filter(c => c.status === 'pending').length,
+    approved: offerFilteredCreatives.filter(c => c.status === 'approved').length,
+    launched: offerFilteredCreatives.filter(c => c.status === 'launched').length,
+    revisions: offerFilteredCreatives.filter(c => c.status === 'revisions').length,
+    rejected: offerFilteredCreatives.filter(c => c.status === 'rejected').length,
   };
 
   const filteredCreatives = activeTab === 'all' 
-    ? creatives 
-    : creatives.filter(c => c.status === activeTab);
+    ? offerFilteredCreatives 
+    : offerFilteredCreatives.filter(c => c.status === activeTab);
 
   const handleSendToClient = (creative: Creative) => {
     updateStatus.mutate({ id: creative.id, status: 'pending', clientId, creativeTitle: creative.title });
@@ -171,6 +186,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         comments: [],
         aspect_ratio: aspectRatio,
         isAgencyUpload,
+        trigger_campaign_id: newCreative.offerId || null,
       });
 
       setUploadOpen(false);
@@ -183,6 +199,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
         body_copy: '',
         cta_text: '',
         file: null,
+        offerId: '',
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -234,6 +251,7 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
             comments: [],
             aspect_ratio: aspectRatio,
             isAgencyUpload,
+            trigger_campaign_id: bulkOfferId || null,
           });
         } catch (error) {
           failedUploads++;
@@ -366,6 +384,25 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                     ))}
                   </div>
                 </div>
+
+                {offers.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium">Link to Offer</label>
+                    <Select value={bulkOfferId} onValueChange={setBulkOfferId}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="None (unlinked)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None (unlinked)</SelectItem>
+                        {offers.map((offer) => (
+                          <SelectItem key={offer.id} value={offer.id}>
+                            {offer.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-sm font-medium">Select Files</label>
@@ -513,6 +550,25 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                   </div>
                 </div>
 
+                {offers.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium">Link to Offer</label>
+                    <Select value={newCreative.offerId} onValueChange={(val) => setNewCreative({ ...newCreative, offerId: val })}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="None (unlinked)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None (unlinked)</SelectItem>
+                        {offers.map((offer) => (
+                          <SelectItem key={offer.id} value={offer.id}>
+                            {offer.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {(newCreative.type === 'image' || newCreative.type === 'video') && (
                   <div>
                     <label className="text-sm font-medium">File</label>
@@ -638,7 +694,26 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
           </div>
         </div>
 
-        {/* Filter Tabs */}
+        {/* Offer Filter + Status Tabs */}
+        <div className="flex items-center gap-3 mb-2 flex-wrap">
+          {offers.length > 0 && (
+            <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+              <SelectTrigger className="w-[200px] h-8 text-sm">
+                <SelectValue placeholder="Filter by offer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Offers</SelectItem>
+                <SelectItem value="unlinked">Unlinked</SelectItem>
+                {offers.map((offer) => (
+                  <SelectItem key={offer.id} value={offer.id}>
+                    {offer.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
