@@ -762,7 +762,7 @@ export function TaskDetailModal({ task, open, onOpenChange, clientName, clientId
                       <div key={`${entry.type}-${entry.data.id}`}>
                         {entry.type === 'comment' ? (
                           // Comment entry
-                          <div className="flex gap-3">
+                          <div className="flex gap-3 group/comment">
                             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-xs font-medium text-primary">
                                 {getInitials(getDisplayAuthorName(entry.data.author_name))}
