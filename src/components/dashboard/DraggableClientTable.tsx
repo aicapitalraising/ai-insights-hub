@@ -73,6 +73,15 @@ function getClientSyncStatus(client: Client): {
     const hubspotSyncStatus = client.hubspot_sync_status;
     const lastHubspotSyncAt = client.last_hubspot_sync_at;
     const hubspotSyncError = client.hubspot_sync_error;
+    
+    // If last sync is recent (within 24h), treat as healthy regardless of stored status
+    if (lastHubspotSyncAt) {
+      const hoursSince = (Date.now() - new Date(lastHubspotSyncAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSince <= 24 && hubspotSyncStatus !== 'error') {
+        return { status: 'healthy', lastSyncAt: lastHubspotSyncAt, error: null, source: 'hubspot' };
+      }
+    }
+    
     if (hubspotSyncStatus) {
       return {
         status: hubspotSyncStatus as 'healthy' | 'stale' | 'error' | 'not_configured',
@@ -88,6 +97,15 @@ function getClientSyncStatus(client: Client): {
     const ghlSyncStatus = client.ghl_sync_status;
     const lastGhlSyncAt = client.last_ghl_sync_at;
     const ghlSyncError = client.ghl_sync_error;
+    
+    // If last sync is recent (within 24h), treat as healthy regardless of stored status
+    if (lastGhlSyncAt) {
+      const hoursSince = (Date.now() - new Date(lastGhlSyncAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSince <= 24 && ghlSyncStatus !== 'error') {
+        return { status: 'healthy', lastSyncAt: lastGhlSyncAt, error: null, source: 'ghl' };
+      }
+    }
+    
     if (ghlSyncStatus) {
       return {
         status: ghlSyncStatus as 'healthy' | 'stale' | 'error' | 'not_configured',
