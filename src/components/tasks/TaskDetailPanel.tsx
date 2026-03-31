@@ -1079,7 +1079,7 @@ const getHistoryIcon = (action: string) => {
                         return (
                         <div key={`${entry.type}-${entry.data.id}`}>
                           {entry.type === 'comment' ? (
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 group/comment">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                                 <span className="text-xs font-medium text-primary">{getInitials(getDisplayAuthorName(entry.data.author_name))}</span>
                               </div>
@@ -1088,6 +1088,18 @@ const getHistoryIcon = (action: string) => {
                                   <span className="font-medium text-sm">{getDisplayAuthorName(entry.data.author_name)}</span>
                                   {entry.data.comment_type === 'voice' && <Badge variant="outline" className="text-xs h-5"><Mic className="h-3 w-3 mr-1" />Voice</Badge>}
                                   <span className="text-xs text-muted-foreground">{format(entry.timestamp, 'MMM d, h:mm a')}</span>
+                                  {!isPublicView && (
+                                    <button
+                                      onClick={() => {
+                                        if (confirm('Delete this comment?')) {
+                                          deleteComment.mutate({ commentId: entry.data.id, taskId: task.id });
+                                        }
+                                      }}
+                                      className="ml-auto opacity-0 group-hover/comment:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
                                 </div>
                                 {entry.data.comment_type === 'voice' && entry.data.audio_url && (
                                   <div className="mt-2"><VoiceNotePlayer audioUrl={entry.data.audio_url} duration={entry.data.duration_seconds || undefined} transcript={entry.data.transcript} /></div>
