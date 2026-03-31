@@ -39,7 +39,7 @@ serve(async (req) => {
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   if (!SLACK_API_KEY) throw new Error("SLACK_API_KEY not configured");
 
-  const env: Env = { LOVABLE_API_KEY, SLACK_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY };
+  const env: Env = { LOVABLE_API_KEY, SLACK_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CLOUD_URL, CLOUD_KEY };
 
   const rawBody = await req.text();
 
