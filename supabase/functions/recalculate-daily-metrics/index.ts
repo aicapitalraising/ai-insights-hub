@@ -229,10 +229,7 @@ Deno.serve(async (req) => {
               }
             }
           }
-          const { error: upsertError } = await supabase
-            .from("daily_metrics")
-            .upsert(
-              {
+          const upsertRow = {
                 client_id: client.id,
                 date: dateStr,
                 leads: totalValidLeads,
@@ -246,9 +243,16 @@ Deno.serve(async (req) => {
                 commitments: commitmentCount,
                 commitment_dollars: commitmentDollars,
                 updated_at: new Date().toISOString(),
-              },
-              { onConflict: "client_id,date", ignoreDuplicates: false }
-            );
+              };
+
+          const { error: upsertError } = await supabase
+            .from("daily_metrics")
+            .upsert(upsertRow, { onConflict: "client_id,date", ignoreDuplicates: false });
+
+          // Mirror write to Lovable Cloud so frontend can read it
+          await mirrorWrite(cloudDb, `daily_metrics:${client.id}:${dateStr}`, (db) =>
+            db.from("daily_metrics").upsert(upsertRow, { onConflict: "client_id,date", ignoreDuplicates: false })
+          );
 
           if (upsertError) {
             clientResult.errors.push(`${dateStr}: ${upsertError.message}`);
