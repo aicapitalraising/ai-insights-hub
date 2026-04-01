@@ -12,6 +12,10 @@ import { Sun, Moon, History, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
+function navigateToThankYou(navigate: ReturnType<typeof useNavigate>, name: string, type: 'sod' | 'eod') {
+  navigate(`/daily/thank-you?name=${encodeURIComponent(name)}&type=${type}`);
+}
+
 function getDefaultMode(): 'sod' | 'eod' {
   const hour = new Date().getHours();
   return hour < 14 ? 'sod' : 'eod';
