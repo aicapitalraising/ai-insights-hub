@@ -891,22 +891,50 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                     )}
                   </div>
 
+                  {/* Previous Versions - agency only */}
+                  {!isPublicView && selectedCreative.comments && selectedCreative.comments.some(c => c.author === 'System' && c.text.startsWith('📎 Previous version:')) && (
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-medium mb-2">Version History</h4>
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {selectedCreative.comments
+                          .filter(c => c.author === 'System' && c.text.startsWith('📎 Previous version:'))
+                          .map((c, i) => {
+                            const url = c.text.replace('📎 Previous version: ', '');
+                            return (
+                              <div key={c.id} className="flex-shrink-0 border rounded-lg overflow-hidden w-32">
+                                <img src={url} alt={`Version ${i + 1}`} className="w-full h-24 object-cover bg-muted" />
+                                <p className="text-xs text-muted-foreground p-1 text-center">v{i + 1}</p>
+                              </div>
+                            );
+                          })}
+                        <div className="flex-shrink-0 border-2 border-primary rounded-lg overflow-hidden w-32">
+                          {selectedCreative.file_url && (
+                            <img src={selectedCreative.file_url} alt="Current" className="w-full h-24 object-cover bg-muted" />
+                          )}
+                          <p className="text-xs text-primary font-medium p-1 text-center">Current</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Comments */}
                   <div className="border-t pt-4">
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                       <MessageSquare className="h-4 w-4" />
-                      Comments ({selectedCreative.comments?.length || 0})
+                      Comments ({(selectedCreative.comments || []).filter(c => c.author !== 'System').length})
                     </h4>
-                    {selectedCreative.comments && selectedCreative.comments.length > 0 ? (
+                    {selectedCreative.comments && selectedCreative.comments.filter(c => c.author !== 'System').length > 0 ? (
                       <ScrollArea className="h-[200px] border rounded-lg p-3 mb-2">
                         <div className="space-y-2">
-                          {selectedCreative.comments.map((comment) => (
+                          {selectedCreative.comments.filter(c => c.author !== 'System').map((comment) => (
                             <div 
                               key={comment.id}
                               className={`p-2 rounded-lg text-sm ${
                                 comment.author === 'Client' 
                                   ? 'bg-primary/10 ml-4' 
-                                  : 'bg-muted mr-4'
+                                  : comment.author === 'AI Review'
+                                    ? 'bg-accent/50 border border-accent'
+                                    : 'bg-muted mr-4'
                               }`}
                             >
                               <div className="flex justify-between mb-0.5">
