@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Task } from '@/hooks/useTasks';
+import { Task, useUpdateTask, useAddTaskComment } from '@/hooks/useTasks';
 import { DailyReport, TaskSnapshot, useClientNames } from '@/hooks/useDailyReports';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
