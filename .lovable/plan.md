@@ -1,81 +1,131 @@
 
 
-## Revised Daily Report Page (`/daily`) — Tasks-Driven SOD/EOD
+# Agents Tab — Autonomous AI Workers
 
-All sections of the SOD and EOD reports pull directly from the member's actual task list, so nothing is invented out of thin air.
+## Overview
+Add an "Agents" tab to the agency sidebar that lets you create, configure, schedule, and monitor autonomous AI agents. Each agent has a defined role, schedule (cron), prompt, model selection, connected data sources (connectors), and an optional client scope. Agents run as scheduled edge functions that execute their prompts with full data access.
 
----
+Inspired by Utari/Manus: each agent is a self-contained worker with a specific job, connectors, and a schedule.
 
-### Core Change from Previous Plan
+## Architecture
 
-Instead of free-text "problem clients" and "blockers" fields, the EOD report lets members **tag tasks from their real task list** as blocked, along with a root cause and next step. The SOD view similarly pulls carry-over blocked tasks so they're visible first thing in the morning.
+```text
+┌─────────────────────────────────────────────────┐
+│  Frontend: AgentsTab                            │
+│  ┌─────────────┐  ┌──────────────────────────┐  │
+│  │ Agent List   │  │ Agent Detail / Editor    │  │
+│  │ (cards)      │→ │ - Name, description      │  │
+│  │              │  │ - Schedule (cron picker)  │  │
+│  │ + New Agent  │  │ - Prompt template         │  │
+│  │              │  │ - Model selector          │  │
+│  │ Templates ▾  │  │ - Client scope (all/one)  │  │
+│  │              │  │ - Connectors (toggles)    │  │
+│  └─────────────┘  │ - Run history / logs      │  │
+│                    └──────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+        │                       │
+        ▼                       ▼
+   DB: agents table      Edge Function:
+   DB: agent_runs table  run-agent (scheduled)
+```
 
----
+## Database
 
-### How It Works
+**`agents` table:**
+- `id`, `name`, `description`, `icon` (emoji/lucide)
+- `prompt_template` (text — the system prompt with `{{client_name}}`, `{{date}}` variables)
+- `schedule_cron` (text, e.g. `0 6 * * *` for 6 AM daily)
+- `schedule_timezone` (text, default `America/Los_Angeles`)
+- `model` (text, default `gemini-2.5-pro`)
+- `client_id` (uuid, nullable — null = runs for all active clients)
+- `connectors` (jsonb — list of enabled data sources: `["meta_ads", "ghl_crm", "database", "slack"]`)
+- `enabled` (boolean)
+- `template_key` (text, nullable — links to built-in templates)
+- `created_at`, `updated_at`
 
-**Member identification**: Auto-detected via `TeamMemberContext`. Their tasks are fetched by joining `task_assignees` where `member_id` matches, filtering to tasks with `due_date <= today` or status not completed.
+**`agent_runs` table:**
+- `id`, `agent_id` (FK), `client_id` (uuid, nullable)
+- `status` (`pending` | `running` | `completed` | `failed`)
+- `started_at`, `completed_at`
+- `input_summary` (text — what data was pulled)
+- `output_summary` (text — what the agent did/found)
+- `actions_taken` (jsonb — list of mutations: records updated, messages sent, etc.)
+- `error` (text, nullable)
+- `tokens_used` (integer)
 
-**SOD — Morning Planning**
-- Shows today's tasks + overdue tasks assigned to the member
-- Blocked tasks from yesterday flagged at the top
-- Member picks their **Top 3 priorities** from the task list (task picker, not free text)
-- Client touchpoints section — only for Account Management pod members
-- Quick-add for ad-hoc tasks (creates a real task via `useCreateTask`)
+RLS: public full access (matches existing pattern).
 
-**EOD — Evening Accountability**
-- Same task list with status toggles: **completed / in-progress / blocked**
-- For any task marked **blocked**: inline fields for root cause + next step (stored in the report snapshot)
-- "Problem clients" derived automatically: clients associated with blocked tasks are surfaced
-- Additional form fields:
-  - Client touchpoints count + notes (AM pod only)
-  - Client experience 3-touch rule executed (AM pod only)
-  - Wins shared (free text — results, stats, testimonials)
-  - Self-assessment (1-10)
-- Submit saves everything to `daily_reports`
+## Edge Function: `run-agent`
 
-**Report History**: Past submissions viewable per member with date picker.
+A single edge function that:
+1. Receives `{ agent_id, client_id? }` (called by pg_cron or manually)
+2. Loads agent config from DB
+3. Based on `connectors`, fetches relevant data:
+   - `database` → queries leads, calls, daily_metrics, funded_investors
+   - `meta_ads` → calls Meta API using client's `meta_access_token`
+   - `ghl_crm` → calls GHL API using client's `ghl_api_key`
+   - `slack` → reads/posts via Slack connector gateway
+4. Interpolates data into `prompt_template`
+5. Calls AI gateway with the assembled prompt
+6. Parses AI response for actions (write-back data, send Slack messages, create tasks)
+7. Executes actions and logs to `agent_runs`
 
----
+## Built-in Agent Templates
 
-### Database
+Three starter templates the user can one-click create:
 
-New table: `daily_reports`
+1. **Data QA Agent** — Pulls yesterday's ad spend, CRM leads, booked calls, showed calls, funded investors, and commitments. Cross-checks counts against daily_metrics. Overwrites/corrects the daily_metrics row. Posts a summary to Slack.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| member_id | uuid FK→agency_members | |
-| report_date | date | |
-| report_type | text | 'sod' or 'eod' |
-| top_priorities | jsonb | array of task IDs picked for the day |
-| tasks_snapshot | jsonb | array of `{task_id, status, blocker_reason, blocker_next_step}` |
-| touchpoint_count | int | nullable, AM-only |
-| touchpoint_notes | text | nullable, AM-only |
-| client_experience_done | bool | nullable, AM-only |
-| wins_shared | text | |
-| self_assessment | int | 1-10 |
-| created_at | timestamptz | default now() |
+2. **Creatives Performance Agent** — Checks last 7 days of CPL from Meta. Identifies top/bottom performing ads. Suggests new creative directions. Can trigger static ad generation.
 
-RLS: public full access (matches existing project pattern).
+3. **Client Onboarding QA Agent** — Triggers when a new client is added (or on schedule). Validates all required fields are populated (GHL keys, Meta tokens, calendar IDs, pipeline stages, offers). Creates tasks for any missing items.
 
----
+## Frontend Components
 
-### Files
+1. **`AgentsTab.tsx`** — Main tab with agent list + detail panel
+2. **`AgentCard.tsx`** — Summary card showing name, schedule, last run status, client scope
+3. **`AgentEditor.tsx`** — Full editor: name, description, prompt template (with variable chips), cron schedule builder, model dropdown, client selector, connector toggles
+4. **`AgentRunHistory.tsx`** — Table of past runs with status, duration, summary, actions taken
+5. **`AgentTemplateGallery.tsx`** — Grid of built-in templates with one-click create
 
-1. **Database migration** — Create `daily_reports` table
-2. **`src/pages/DailyReportPage.tsx`** — Main page: member auto-select from `TeamMemberContext`, SOD/EOD toggle (auto by time with manual override)
-3. **`src/components/daily/SODView.tsx`** — Today's + overdue tasks, blocked carry-overs highlighted, top-3 priority picker from task list, AM-only touchpoints
-4. **`src/components/daily/EODView.tsx`** — Task checklist with completed/in-progress/blocked status per task; blocked tasks get inline root-cause + next-step fields; wins and self-assessment form
-5. **`src/components/daily/ReportHistory.tsx`** — Past report viewer with date picker
-6. **`src/hooks/useDailyReports.ts`** — Fetch member's tasks for today (via `task_assignees` join), CRUD for `daily_reports`
-7. **`src/App.tsx`** — Add `/daily` route
+## Sidebar Integration
 
-### Key Technical Details
+Add to `AppSidebar.tsx` nav structure:
+```
+{ title: 'Agents', value: 'agents', icon: Cpu }
+```
 
-- Tasks fetched by querying `task_assignees` where `member_id = currentMember.id`, then joining `tasks` where `due_date <= today` and `status != 'completed'`
-- Pod detection: `currentMember.pod?.name` checked for "Account Management" to conditionally render touchpoint fields
-- `tasks_snapshot` in the report stores each task's ID plus the member's EOD status choice and any blocker notes — this links reports directly to real tasks
-- "Problem clients" section in EOD is auto-generated by grouping blocked tasks by their `client_id` and showing the client name
-- SOD/EOD auto-toggle: before 2 PM = SOD, after = EOD, with manual switch
+Add to `Index.tsx`:
+```
+{activeTab === 'agents' && <AgentsTab clients={clients} />}
+```
+
+## Schedule Execution
+
+Use `pg_cron` + `pg_net` to trigger the edge function. When an agent is enabled/updated, upsert a cron job:
+```sql
+SELECT cron.schedule(
+  'agent-{id}',
+  '{schedule_cron}',
+  $$ SELECT net.http_post(...run-agent..., body=>'{"agent_id":"..."}') $$
+);
+```
+
+When disabled, unschedule it. Manual "Run Now" button calls the edge function directly.
+
+## Implementation Order
+
+1. Create `agents` + `agent_runs` tables (migration)
+2. Build frontend: `AgentsTab`, `AgentEditor`, `AgentCard`, templates gallery
+3. Add sidebar nav entry + Index.tsx routing
+4. Build `run-agent` edge function with connector data fetching + AI execution
+5. Wire up pg_cron scheduling for enabled agents
+6. Add agent run history panel
+
+## Technical Notes
+- Prompt variables use `{{variable}}` syntax, replaced at runtime
+- Connector data fetchers are modular functions within the edge function
+- Model selector uses the same `GATEWAY_MODEL_MAP` from `ai-agent-full-context`
+- Agent runs for "all clients" iterate over active clients, creating one `agent_runs` row per client
+- The `run-agent` function uses `LOVABLE_API_KEY` for AI gateway and `ORIGINAL_SUPABASE_*` for production DB access
 
