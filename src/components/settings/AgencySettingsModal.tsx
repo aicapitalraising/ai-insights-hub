@@ -17,7 +17,8 @@ import { useAgencySettings, useUpdateAgencySettings } from '@/hooks/useAgencySet
 import { useSyncMeetings } from '@/hooks/useMeetings';
 import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
-import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Puzzle, AlertTriangle } from 'lucide-react';
+import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Puzzle, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { ApiReferenceTab } from './ApiReferenceTab';
 import { ErrorLogTab } from './ErrorLogTab';
 
