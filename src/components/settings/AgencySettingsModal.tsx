@@ -55,6 +55,8 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
   const [saving, setSaving] = useState(false);
   const [agencyPrompt, setAgencyPrompt] = useState('');
   const [clientPrompt, setClientPrompt] = useState('');
+  const [slackDmUserId, setSlackDmUserId] = useState('');
+  const [agentDmEnabled, setAgentDmEnabled] = useState(true);
   
   // API Keys
   const [openaiKey, setOpenaiKey] = useState('');
