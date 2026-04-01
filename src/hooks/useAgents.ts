@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as cloudSupabase } from '@/integrations/supabase/client';
-import { supabase as prodSupabase } from '@/integrations/supabase/db';
+import { supabase as cloudDb } from '@/integrations/supabase/client';
+import { supabase as prodDb } from '@/integrations/supabase/db';
 import { toast } from 'sonner';
 import { invokeCloudFunction } from '@/lib/cloudFunctions';
 
@@ -37,16 +37,33 @@ export interface AgentRun {
   client?: { id: string; name: string } | null;
 }
 
+// Helper to enrich records with client names from production DB
+async function enrichWithClientNames<T extends { client_id?: string | null }>(records: T[]): Promise<(T & { client?: { id: string; name: string } | null })[]> {
+  const clientIds = [...new Set(records.map(r => r.client_id).filter(Boolean))] as string[];
+  if (!clientIds.length) return records.map(r => ({ ...r, client: null }));
+
+  const { data: clients } = await prodDb
+    .from('clients')
+    .select('id, name')
+    .in('id', clientIds);
+
+  const clientMap = new Map((clients || []).map(c => [c.id, c]));
+  return records.map(r => ({
+    ...r,
+    client: r.client_id ? clientMap.get(r.client_id) || null : null,
+  }));
+}
+
 export function useAgents() {
   return useQuery({
     queryKey: ['agents'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await cloudDb
         .from('agents')
-        .select('*, client:clients(id, name)')
+        .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []) as Agent[];
+      return enrichWithClientNames(data || []) as Promise<Agent[]>;
     },
   });
 }
@@ -56,14 +73,14 @@ export function useAgentRuns(agentId: string | null) {
     queryKey: ['agent-runs', agentId],
     queryFn: async () => {
       if (!agentId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await cloudDb
         .from('agent_runs')
-        .select('*, client:clients(id, name)')
+        .select('*')
         .eq('agent_id', agentId)
         .order('started_at', { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data || []) as AgentRun[];
+      return enrichWithClientNames(data || []) as Promise<AgentRun[]>;
     },
     enabled: !!agentId,
   });
@@ -73,7 +90,7 @@ export function useCreateAgent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (agent: Partial<Agent>) => {
-      const { data, error } = await supabase
+      const { data, error } = await cloudDb
         .from('agents')
         .insert(agent as any)
         .select()
@@ -93,7 +110,7 @@ export function useUpdateAgent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Agent> & { id: string }) => {
-      const { error } = await supabase
+      const { error } = await cloudDb
         .from('agents')
         .update({ ...updates, updated_at: new Date().toISOString() } as any)
         .eq('id', id);
@@ -111,7 +128,7 @@ export function useDeleteAgent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('agents').delete().eq('id', id);
+      const { error } = await cloudDb.from('agents').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
