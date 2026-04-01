@@ -1245,6 +1245,9 @@ export function CreativesTab() {
           <Suspense fallback={<CashBagLoader message="Loading styles..." />}>
             <ManageStylesTabLazy embedded />
           </Suspense>
+        </TabsContent>
+
+        {/* B-Roll Library */}
         <TabsContent value="broll" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading B-Roll library..." />}>
             <BrollPage embedded />
