@@ -445,7 +445,8 @@ export function useAddCreativeComment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creatives', variables.clientId] });
       queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
-      toast.success('Comment added');
+      const isClientComment = variables.comment.author === 'Client';
+      toast.success(isClientComment ? 'Comment added — marked for revisions' : 'Comment added');
     },
     onError: (error: Error) => {
       toast.error('Failed to add comment: ' + error.message);
