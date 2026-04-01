@@ -25,9 +25,11 @@ import {
 
 interface CreativeAIActionsProps {
   creative: Creative;
+  onCreativeUpdated?: () => void;
 }
 
-export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
+export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIActionsProps) {
+  const [saving, setSaving] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [auditing, setAuditing] = useState(false);
   const [transcript, setTranscript] = useState<string | null>(null);
