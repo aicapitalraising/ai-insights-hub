@@ -134,7 +134,7 @@ export default function DailyReportPage() {
               tasks={tasks}
               isAccountManager={isAccountManager}
               existingReport={existingReport}
-              onSubmit={data => submitReport.mutate(data)}
+              onSubmit={data => submitReport.mutate({ report: data, member_name: activeMember?.name || currentMember?.name || 'Unknown' })}
               memberId={activeMemberId!}
               isSubmitting={submitReport.isPending}
             />
