@@ -227,6 +227,26 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
     }
   };
 
+  const pollForVideo = async (operationId: string, apiKey?: string) => {
+    const maxAttempts = 60;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      try {
+        const { data, error } = await invokeCloudFunction('poll-video-status', {
+          body: { operationId, apiKey },
+        });
+        if (error) { console.error('Poll error:', error); continue; }
+        if (data?.status === 'completed' && data?.videoUrl) return data.videoUrl;
+        if (data?.status === 'failed') throw new Error(data.error || 'Video generation failed');
+        console.log(`⏳ Polling video (${i + 1}/${maxAttempts})...`);
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('failed')) throw err;
+        console.error('Poll error:', err);
+      }
+    }
+    throw new Error('Video generation timed out after 5 minutes');
+  };
+
   const handleAIVideo = async () => {
     if (!videoPrompt.trim()) {
       toast.error('Please describe the video animation');
@@ -240,26 +260,29 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
         body: {
           imageUrl: creative.file_url,
           prompt: videoPrompt,
-          aspectRatio: creative.aspect_ratio || '1:1',
+          aspectRatio: creative.aspect_ratio || '16:9',
           duration: 5,
-          clientId: creative.client_id,
-          projectId: creative.id,
         }
       });
 
       if (error) throw error;
 
-      if (data?.videoUrl) {
+      if (data?.status === 'processing' && data?.operationId) {
+        toast.info('Video generation started — this may take a few minutes...');
+        const videoUrl = await pollForVideo(data.operationId);
+        setGeneratedVideoUrl(videoUrl);
+        toast.success('Video generated successfully!');
+      } else if (data?.videoUrl) {
         setGeneratedVideoUrl(data.videoUrl);
         toast.success('Video generated successfully!');
       } else if (data?.error) {
         toast.error(data.error);
       } else {
-        throw new Error('No video returned');
+        throw new Error('Unexpected response');
       }
     } catch (error) {
       console.error('AI Video error:', error);
-      toast.error('Failed to generate video');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate video');
     } finally {
       setGeneratingVideo(false);
     }
