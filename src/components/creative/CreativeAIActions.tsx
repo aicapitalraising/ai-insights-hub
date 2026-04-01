@@ -27,9 +27,10 @@ import {
 interface CreativeAIActionsProps {
   creative: Creative;
   onCreativeUpdated?: () => void;
+  compact?: boolean;
 }
 
-export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIActionsProps) {
+export function CreativeAIActions({ creative, onCreativeUpdated, compact = false }: CreativeAIActionsProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
