@@ -90,7 +90,7 @@ function PublicReportContent() {
     }
   }, [dataErrors.length]);
   
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState<string>(() => {
     // Deep-link: if ?task= is present, auto-switch to tasks section
     if (searchParams.get('task')) return 'tasks';
