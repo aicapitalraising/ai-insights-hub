@@ -1336,6 +1336,51 @@ export type Database = {
           },
         ]
       }
+      daily_reports: {
+        Row: {
+          client_experience_done: boolean | null
+          created_at: string
+          id: string
+          member_id: string
+          report_date: string
+          report_type: string
+          self_assessment: number | null
+          tasks_snapshot: Json | null
+          top_priorities: Json | null
+          touchpoint_count: number | null
+          touchpoint_notes: string | null
+          wins_shared: string | null
+        }
+        Insert: {
+          client_experience_done?: boolean | null
+          created_at?: string
+          id?: string
+          member_id: string
+          report_date: string
+          report_type?: string
+          self_assessment?: number | null
+          tasks_snapshot?: Json | null
+          top_priorities?: Json | null
+          touchpoint_count?: number | null
+          touchpoint_notes?: string | null
+          wins_shared?: string | null
+        }
+        Update: {
+          client_experience_done?: boolean | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          report_date?: string
+          report_type?: string
+          self_assessment?: number | null
+          tasks_snapshot?: Json | null
+          top_priorities?: Json | null
+          touchpoint_count?: number | null
+          touchpoint_notes?: string | null
+          wins_shared?: string | null
+        }
+        Relationships: []
+      }
       dashboard_preferences: {
         Row: {
           client_id: string | null
