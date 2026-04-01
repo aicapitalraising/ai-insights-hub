@@ -90,7 +90,7 @@ function PublicReportContent() {
     }
   }, [dataErrors.length]);
   
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState<string>(() => {
     // Deep-link: if ?task= is present, auto-switch to tasks section
     if (searchParams.get('task')) return 'tasks';
@@ -110,6 +110,7 @@ function PublicReportContent() {
 
   const handleActivityClick = (activityId: string, type: string) => {
     if (type.startsWith('task_')) {
+      setSearchParams({ task: activityId, section: 'tasks' }, { replace: true });
       setActiveSection('tasks');
     } else if (type.startsWith('creative_')) {
       setActiveSection('creatives');

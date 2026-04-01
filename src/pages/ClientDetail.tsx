@@ -83,7 +83,7 @@ import {
 export default function ClientDetail() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [csvImportType, setCsvImportType] = useState<ImportType>('ad_spend');
@@ -134,10 +134,14 @@ export default function ClientDetail() {
 
   const handleActivityClick = (activityId: string, type: string) => {
     if (type.startsWith('task_')) {
-      setSelectedTaskId(activityId);
-      setActiveTab('performance');
+      setSearchParams({ task: activityId }, { replace: true });
+      setActiveTab('tasks');
     } else if (type.startsWith('creative_')) {
       setActiveTab('creatives');
+    } else if (type === 'voice_note_recorded') {
+      // Voice notes handled by ActivityPanel's modal
+    } else if (type === 'meeting_synced') {
+      // Meetings handled by ActivityPanel's modal
     }
   };
 
