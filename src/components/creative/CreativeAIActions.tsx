@@ -31,6 +31,7 @@ interface CreativeAIActionsProps {
 }
 
 export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIActionsProps) {
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [auditing, setAuditing] = useState(false);
