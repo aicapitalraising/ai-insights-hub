@@ -96,6 +96,8 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
       setSelectedOpenaiModel((settings as any).selected_openai_model || 'gpt-5');
       setSelectedGeminiModel((settings as any).selected_gemini_model || 'gemini-2.5-pro');
       setSelectedGrokModel((settings as any).selected_grok_model || 'grok-3');
+      setSlackDmUserId((settings as any).slack_dm_user_id || '');
+      setAgentDmEnabled((settings as any).agent_notification_slack_dm !== false);
     }
   }, [settings]);
 
