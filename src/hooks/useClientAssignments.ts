@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
+import { supabase as prodClient } from '@/integrations/supabase/db';
 import { supabase as cloudClient } from '@/integrations/supabase/client';
 
 export interface ClientAssignment {
@@ -9,19 +9,28 @@ export interface ClientAssignment {
 }
 
 /**
- * Reads media_buyer & account_manager from client_assignments table
- * on production DB (primary), with Cloud as secondary.
+ * Reads media_buyer & account_manager from client_assignments table.
+ * Tries Cloud first (reliable RLS), falls back to production DB.
  */
 export function useClientAssignments() {
   return useQuery({
     queryKey: ['client-assignments'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('client_assignments')
+      // Try Cloud first
+      const { data: cloudData, error: cloudErr } = await cloudClient
+        .from('client_assignments' as any)
         .select('client_id, media_buyer, account_manager');
-      if (error) throw error;
+
+      // Fallback to production if Cloud fails
+      const rows = (!cloudErr && cloudData && cloudData.length > 0)
+        ? cloudData
+        : await prodClient
+            .from('client_assignments')
+            .select('client_id, media_buyer, account_manager')
+            .then(({ data }) => data || []);
+
       const map: Record<string, ClientAssignment> = {};
-      for (const row of (data || []) as any[]) {
+      for (const row of (rows || []) as any[]) {
         map[row.client_id] = row as ClientAssignment;
       }
       return map;
@@ -39,18 +48,22 @@ export function useUpdateClientAssignment() {
       if (media_buyer !== undefined) updates.media_buyer = media_buyer;
       if (account_manager !== undefined) updates.account_manager = account_manager;
 
-      const { error } = await supabase
-        .from('client_assignments')
+      // Write to Cloud (primary)
+      const { error: cloudError } = await cloudClient
+        .from('client_assignments' as any)
         .upsert(updates, { onConflict: 'client_id' });
 
-      if (error) throw error;
+      if (cloudError) {
+        console.error('Cloud client_assignments write failed:', cloudError.message);
+        throw cloudError;
+      }
 
-      // Dual-write to Cloud
-      cloudClient
-        .from('client_assignments' as any)
+      // Dual-write to production (best-effort)
+      prodClient
+        .from('client_assignments')
         .upsert(updates, { onConflict: 'client_id' })
         .then(({ error: e }) => {
-          if (e) console.warn('Cloud dual-write client_assignments:', e.message);
+          if (e) console.warn('Production dual-write client_assignments:', e.message);
         });
     },
     onSuccess: () => {
