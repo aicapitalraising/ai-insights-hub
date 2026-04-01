@@ -26,6 +26,7 @@ import {
   Megaphone,
   FileText,
   Plug,
+  Cpu,
 } from 'lucide-react';
 import {
   Sidebar,
