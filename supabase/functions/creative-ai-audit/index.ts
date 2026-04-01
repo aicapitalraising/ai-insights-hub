@@ -305,7 +305,6 @@ ${creativeDetails}`
 
     // AI Edit: Image-to-image editing using Lovable AI Gateway
     if (action === "ai_edit") {
-      const { imageUrl, editPrompt } = await req.json().catch(() => ({ imageUrl: undefined, editPrompt: undefined }));
       const actualImageUrl = imageUrl || creative?.file_url;
       const actualEditPrompt = editPrompt || "";
 
