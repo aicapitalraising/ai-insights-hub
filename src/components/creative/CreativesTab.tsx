@@ -59,6 +59,8 @@ import {
   Calendar,
   BarChart3,
   FolderArchive,
+  Trophy,
+  Palette,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
@@ -78,6 +80,8 @@ const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const ExportHubPage = lazy(() => import('@/pages/ExportHubPage'));
 const CreativeCalendarLazy = lazy(() => import('@/components/creative/CreativeCalendar').then(m => ({ default: m.CreativeCalendar })));
 const CreativeAnalyticsLazy = lazy(() => import('@/components/creative/CreativeAnalytics').then(m => ({ default: m.CreativeAnalytics })));
+const WinningAdsGalleryLazy = lazy(() => import('@/components/creative/WinningAdsGallery').then(m => ({ default: m.WinningAdsGallery })));
+const ManageStylesTabLazy = lazy(() => import('@/components/creative/ManageStylesTab').then(m => ({ default: m.ManageStylesTab })));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
@@ -413,6 +417,14 @@ export function CreativesTab() {
           <TabsTrigger value="broll" className="gap-2">
             <Film className="h-4 w-4" />
             B-Roll
+          </TabsTrigger>
+          <TabsTrigger value="winning-ads" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            Winning Ads
+          </TabsTrigger>
+          <TabsTrigger value="manage-styles" className="gap-2">
+            <Palette className="h-4 w-4" />
+            Styles
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
@@ -1218,6 +1230,20 @@ export function CreativesTab() {
         <TabsContent value="video-editor" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading video editor..." />}>
             <VideoEditorPage embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Winning Ads */}
+        <TabsContent value="winning-ads" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading winning ads..." />}>
+            <WinningAdsGalleryLazy embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Manage Styles */}
+        <TabsContent value="manage-styles" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading styles..." />}>
+            <ManageStylesTabLazy embedded />
           </Suspense>
         </TabsContent>
 
