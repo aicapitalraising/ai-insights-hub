@@ -31,7 +31,7 @@ interface TaskEntry {
   blocker_next_step: string;
 }
 
-export function EODView({ tasks, isAccountManager, existingReport, onSubmit, memberId, isSubmitting }: EODViewProps) {
+export function EODView({ tasks, isAccountManager, existingReport, onSubmit, memberId, memberName, isSubmitting }: EODViewProps) {
   // Initialize task entries from existing report or defaults
   const initialEntries = useMemo(() => {
     const map: Record<string, TaskEntry> = {};
