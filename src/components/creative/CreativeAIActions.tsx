@@ -244,14 +244,14 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
             size="sm" 
             onClick={handleTranscribe}
             disabled={transcribing}
-            className="gap-2"
+            className={compact ? "h-7 text-xs gap-1" : "gap-2"}
           >
             {transcribing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className={compact ? "h-3 w-3 animate-spin" : "h-4 w-4 animate-spin"} />
             ) : (
-              <Video className="h-4 w-4" />
+              <Video className={compact ? "h-3 w-3" : "h-4 w-4"} />
             )}
-            {transcribing ? 'Transcribing...' : 'Transcribe Video'}
+            {transcribing ? 'Transcribing...' : 'Transcribe'}
           </Button>
         )}
 
@@ -260,12 +260,12 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
           size="sm" 
           onClick={handleAudit}
           disabled={auditing}
-          className="gap-2"
+          className={compact ? "h-7 text-xs gap-1" : "gap-2"}
         >
           {auditing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className={compact ? "h-3 w-3 animate-spin" : "h-4 w-4 animate-spin"} />
           ) : (
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className={compact ? "h-3 w-3" : "h-4 w-4"} />
           )}
           {auditing ? 'Analyzing...' : 'AI Audit'}
         </Button>
@@ -276,9 +276,9 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
             variant="outline" 
             size="sm" 
             onClick={() => setEditOpen(true)}
-            className="gap-2"
+            className={compact ? "h-7 text-xs gap-1" : "gap-2"}
           >
-            <Paintbrush className="h-4 w-4" />
+            <Paintbrush className={compact ? "h-3 w-3" : "h-4 w-4"} />
             AI Edit
           </Button>
         )}
@@ -290,19 +290,19 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
             size="sm" 
             onClick={() => { setVariationsOpen(true); handleAIVariations(); }}
             disabled={generatingVariations}
-            className="gap-2"
+            className={compact ? "h-7 text-xs gap-1" : "gap-2"}
           >
             {generatingVariations ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className={compact ? "h-3 w-3 animate-spin" : "h-4 w-4 animate-spin"} />
             ) : (
-              <Copy className="h-4 w-4" />
+              <Copy className={compact ? "h-3 w-3" : "h-4 w-4"} />
             )}
-            {generatingVariations ? 'Generating...' : 'AI Variations'}
+            {generatingVariations ? 'Generating...' : 'Variations'}
           </Button>
         )}
 
         {/* Quick indicators */}
-        {transcript && (
+        {!compact && transcript && (
           <Button 
             variant="ghost" 
             size="sm" 
@@ -314,7 +314,7 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
           </Button>
         )}
 
-        {audit && score !== null && (
+        {!compact && audit && score !== null && (
           <Button 
             variant="ghost" 
             size="sm" 
