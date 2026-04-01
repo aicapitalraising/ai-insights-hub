@@ -12,6 +12,10 @@ import { Sun, Moon, History, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
+function navigateToThankYou(navigate: ReturnType<typeof useNavigate>, name: string, type: 'sod' | 'eod') {
+  navigate(`/daily/thank-you?name=${encodeURIComponent(name)}&type=${type}`);
+}
+
 function getDefaultMode(): 'sod' | 'eod' {
   const hour = new Date().getHours();
   return hour < 14 ? 'sod' : 'eod';
@@ -119,7 +123,12 @@ export default function DailyReportPage() {
               tasks={tasks}
               isAccountManager={isAccountManager}
               existingReport={existingReport}
-              onSubmit={data => submitReport.mutate({ report: data, member_name: activeMember?.name || currentMember?.name || 'Unknown' })}
+              onSubmit={data => {
+                const memberName = activeMember?.name || currentMember?.name || 'Unknown';
+                submitReport.mutate({ report: data, member_name: memberName }, {
+                  onSuccess: () => navigateToThankYou(navigate, memberName, 'sod'),
+                });
+              }}
               memberId={activeMemberId!}
               isSubmitting={submitReport.isPending}
             />
@@ -134,7 +143,12 @@ export default function DailyReportPage() {
               tasks={tasks}
               isAccountManager={isAccountManager}
               existingReport={existingReport}
-              onSubmit={data => submitReport.mutate({ report: data, member_name: activeMember?.name || currentMember?.name || 'Unknown' })}
+              onSubmit={data => {
+                const memberName = activeMember?.name || currentMember?.name || 'Unknown';
+                submitReport.mutate({ report: data, member_name: memberName }, {
+                  onSuccess: () => navigateToThankYou(navigate, memberName, 'eod'),
+                });
+              }}
               memberId={activeMemberId!}
               memberName={activeMember?.name || currentMember?.name || 'Unknown'}
               isSubmitting={submitReport.isPending}
