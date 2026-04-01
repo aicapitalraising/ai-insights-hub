@@ -169,7 +169,7 @@ export function SODView({ tasks, isAccountManager, existingReport, onSubmit, mem
             <Sun className="h-4 w-4 text-yellow-500" />
             Today's Tasks ({todayTasks.length})
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Click the star to pick your Top 3 priorities ({topPriorities.length}/3 selected)</p>
+          <p className="text-xs text-muted-foreground">Click the star to pick your top priorities ({topPriorities.length} selected)</p>
         </CardHeader>
         <CardContent className="space-y-2">
           {todayTasks.length === 0 && (
