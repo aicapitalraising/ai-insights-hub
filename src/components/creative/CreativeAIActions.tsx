@@ -392,7 +392,25 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
           </Button>
         )}
 
-        {/* Quick indicators */}
+        {/* AI Video - image only */}
+        {isImageCreative && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setVideoOpen(true)}
+            disabled={generatingVideo}
+            className={compact ? "h-7 text-xs gap-1" : "gap-2"}
+          >
+            {generatingVideo ? (
+              <Loader2 className={compact ? "h-3 w-3 animate-spin" : "h-4 w-4 animate-spin"} />
+            ) : (
+              <Film className={compact ? "h-3 w-3" : "h-4 w-4"} />
+            )}
+            {generatingVideo ? 'Generating...' : 'AI Video'}
+          </Button>
+        )}
+
+
         {!compact && transcript && (
           <Button 
             variant="ghost" 
