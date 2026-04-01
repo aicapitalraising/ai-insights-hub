@@ -173,6 +173,10 @@ export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIAct
       setEditOpen(false);
       setEditedImageUrl(null);
       setEditPrompt('');
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
+      queryClient.invalidateQueries({ queryKey: ['creatives'] });
+      onCreativeUpdated?.();
+      setEditPrompt('');
       onCreativeUpdated?.();
     } catch (error) {
       console.error('Save edit error:', error);
