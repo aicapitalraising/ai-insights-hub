@@ -61,6 +61,7 @@ import CreativeBriefs from './CreativeBriefs';
 import { AdminAdsManagerTab } from '@/components/ads-manager/AdminAdsManagerTab';
 import { AdminOffersTab } from '@/components/offers/AdminOffersTab';
 import { QuizBuilderTab } from '@/components/quiz/QuizBuilderTab';
+import { AgentsTab } from '@/components/agents/AgentsTab';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -494,6 +495,13 @@ const Index = () => {
             {activeTab === 'data-audit' && currentMember?.role === 'admin' && (
               <SectionErrorBoundary sectionName="DataAccuracyAudit">
                 <DataAccuracyAuditPanel />
+              </SectionErrorBoundary>
+            )}
+
+            {/* Agents */}
+            {activeTab === 'agents' && (
+              <SectionErrorBoundary sectionName="Agents">
+                <AgentsTab clients={clients} />
               </SectionErrorBoundary>
             )}
 

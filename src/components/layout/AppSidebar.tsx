@@ -26,6 +26,7 @@ import {
   Megaphone,
   FileText,
   Plug,
+  Cpu,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -73,6 +74,11 @@ const navStructure = [
       { title: 'Deals', value: 'deals', icon: Handshake },
       { title: 'Outreach', value: 'outreach', icon: MessageSquare },
     ],
+  },
+  {
+    title: 'Agents',
+    value: 'agents',
+    icon: Cpu,
   },
   {
     title: 'Ads Manager',

@@ -256,6 +256,122 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_runs: {
+        Row: {
+          actions_taken: Json | null
+          agent_id: string
+          client_id: string | null
+          completed_at: string | null
+          error: string | null
+          id: string
+          input_summary: string | null
+          output_summary: string | null
+          started_at: string | null
+          status: string
+          tokens_used: number | null
+        }
+        Insert: {
+          actions_taken?: Json | null
+          agent_id: string
+          client_id?: string | null
+          completed_at?: string | null
+          error?: string | null
+          id?: string
+          input_summary?: string | null
+          output_summary?: string | null
+          started_at?: string | null
+          status?: string
+          tokens_used?: number | null
+        }
+        Update: {
+          actions_taken?: Json | null
+          agent_id?: string
+          client_id?: string | null
+          completed_at?: string | null
+          error?: string | null
+          id?: string
+          input_summary?: string | null
+          output_summary?: string | null
+          started_at?: string | null
+          status?: string
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agents: {
+        Row: {
+          client_id: string | null
+          connectors: Json | null
+          created_at: string
+          description: string | null
+          enabled: boolean | null
+          icon: string | null
+          id: string
+          model: string | null
+          name: string
+          prompt_template: string
+          schedule_cron: string | null
+          schedule_timezone: string | null
+          template_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          connectors?: Json | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean | null
+          icon?: string | null
+          id?: string
+          model?: string | null
+          name: string
+          prompt_template?: string
+          schedule_cron?: string | null
+          schedule_timezone?: string | null
+          template_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          connectors?: Json | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean | null
+          icon?: string | null
+          id?: string
+          model?: string | null
+          name?: string
+          prompt_template?: string
+          schedule_cron?: string | null
+          schedule_timezone?: string | null
+          template_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_configs: {
         Row: {
           client_id: string
