@@ -664,6 +664,127 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
           )}
         </DialogContent>
       </Dialog>
+
+      {/* AI Video Dialog */}
+      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Film className="h-5 w-5 text-primary" />
+              AI Video Generation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Source Image */}
+            <div>
+              <p className="text-sm font-medium mb-2">Source Image</p>
+              <div className="border rounded-lg overflow-hidden bg-muted">
+                <img 
+                  src={creative.file_url!} 
+                  alt="Source" 
+                  className="w-full h-auto object-contain max-h-[400px]"
+                />
+              </div>
+            </div>
+
+            {/* Generated Video or Prompt */}
+            <div>
+              <p className="text-sm font-medium mb-2">
+                {generatedVideoUrl ? 'Generated Video' : 'Describe the animation'}
+              </p>
+              {generatedVideoUrl ? (
+                <div className="border rounded-lg overflow-hidden bg-muted">
+                  <video 
+                    src={generatedVideoUrl} 
+                    controls 
+                    autoPlay
+                    loop
+                    className="w-full h-auto max-h-[400px]"
+                  />
+                  <div className="p-2 flex gap-2">
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={generatedVideoUrl} download target="_blank" rel="noreferrer">
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
+                      </a>
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleSaveVideoToCreative}
+                      disabled={savingVideo}
+                    >
+                      {savingVideo ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      )}
+                      {savingVideo ? 'Saving...' : 'Save to Creative'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Textarea
+                    value={videoPrompt}
+                    onChange={(e) => setVideoPrompt(e.target.value)}
+                    placeholder="e.g., Slowly zoom in with gentle parallax motion, text gently fades in, background softly animates..."
+                    rows={6}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {['Subtle zoom and parallax', 'Floating elements with fade-in', 'Cinematic slow pan', 'Text reveal animation'].map((suggestion) => (
+                      <Button
+                        key={suggestion}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => setVideoPrompt(prev => prev ? `${prev}, ${suggestion.toLowerCase()}` : suggestion)}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                  {generatingVideo && (
+                    <div className="flex flex-col items-center gap-2 py-4">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground">Generating video... this may take up to 2 minutes</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            {generatedVideoUrl && (
+              <Button 
+                variant="outline"
+                onClick={() => { setGeneratedVideoUrl(null); setVideoPrompt(''); }}
+              >
+                Generate Again
+              </Button>
+            )}
+            {!generatedVideoUrl && (
+              <Button 
+                onClick={handleAIVideo}
+                disabled={generatingVideo || !videoPrompt.trim()}
+              >
+                {generatingVideo ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating Video...
+                  </>
+                ) : (
+                  <>
+                    <Film className="h-4 w-4 mr-2" />
+                    Generate Video
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
