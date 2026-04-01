@@ -158,6 +158,74 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_members: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          last_login_at: string | null
+          name: string
+          pod_id: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_login_at?: string | null
+          name: string
+          pod_id?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_login_at?: string | null
+          name?: string
+          pod_id?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_members_pod_id_fkey"
+            columns: ["pod_id"]
+            isOneToOne: false
+            referencedRelation: "agency_pods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agency_pods: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agency_settings: {
         Row: {
           agency_name: string | null
@@ -2276,42 +2344,244 @@ export type Database = {
         }
         Relationships: []
       }
+      task_assignees: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string
+          pod_id: string | null
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id: string
+          pod_id?: string | null
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          pod_id?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignees_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "agency_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_pod_id_fkey"
+            columns: ["pod_id"]
+            isOneToOne: false
+            referencedRelation: "agency_pods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          audio_url: string | null
+          author_name: string
+          comment_type: string
+          content: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          task_id: string
+          transcript: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          author_name: string
+          comment_type?: string
+          content?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          task_id: string
+          transcript?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          author_name?: string
+          comment_type?: string
+          content?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          task_id?: string
+          transcript?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_type: string | null
+          file_url: string
+          id: string
+          task_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_type?: string | null
+          file_url: string
+          id?: string
+          task_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          task_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_files_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_history: {
+        Row: {
+          action: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          task_id: string
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          task_id: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
+          assigned_client_name: string | null
+          assigned_to: string | null
           client_id: string
           completed_at: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           due_date: string | null
           id: string
+          meeting_id: string | null
+          parent_task_id: string | null
           priority: string | null
+          recurrence_interval: number | null
+          recurrence_next_at: string | null
+          recurrence_parent_id: string | null
+          recurrence_type: string | null
+          show_subtasks_to_client: boolean
+          stage: string
           status: string
           title: string
           updated_at: string
+          visible_to_client: boolean
         }
         Insert: {
+          assigned_client_name?: string | null
+          assigned_to?: string | null
           client_id: string
           completed_at?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          meeting_id?: string | null
+          parent_task_id?: string | null
           priority?: string | null
+          recurrence_interval?: number | null
+          recurrence_next_at?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_type?: string | null
+          show_subtasks_to_client?: boolean
+          stage?: string
           status?: string
           title: string
           updated_at?: string
+          visible_to_client?: boolean
         }
         Update: {
+          assigned_client_name?: string | null
+          assigned_to?: string | null
           client_id?: string
           completed_at?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          meeting_id?: string | null
+          parent_task_id?: string | null
           priority?: string | null
+          recurrence_interval?: number | null
+          recurrence_next_at?: string | null
+          recurrence_parent_id?: string | null
+          recurrence_type?: string | null
+          show_subtasks_to_client?: boolean
+          stage?: string
           status?: string
           title?: string
           updated_at?: string
+          visible_to_client?: boolean
         }
         Relationships: [
           {
@@ -2319,6 +2589,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
