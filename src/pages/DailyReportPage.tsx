@@ -143,7 +143,12 @@ export default function DailyReportPage() {
               tasks={tasks}
               isAccountManager={isAccountManager}
               existingReport={existingReport}
-              onSubmit={data => submitReport.mutate({ report: data, member_name: activeMember?.name || currentMember?.name || 'Unknown' })}
+              onSubmit={data => {
+                const memberName = activeMember?.name || currentMember?.name || 'Unknown';
+                submitReport.mutate({ report: data, member_name: memberName }, {
+                  onSuccess: () => navigateToThankYou(navigate, memberName, 'eod'),
+                });
+              }}
               memberId={activeMemberId!}
               memberName={activeMember?.name || currentMember?.name || 'Unknown'}
               isSubmitting={submitReport.isPending}
