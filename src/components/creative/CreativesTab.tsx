@@ -59,6 +59,8 @@ import {
   Calendar,
   BarChart3,
   FolderArchive,
+  Trophy,
+  Palette,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
