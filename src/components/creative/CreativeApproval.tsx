@@ -1091,19 +1091,18 @@ function CreativeCard({
       
       const { supabase: prodDb } = await import('@/integrations/supabase/db');
       const { supabase: cloudDb } = await import('@/integrations/supabase/client');
-      const updatePayload = { 
+      const updatePayload: Record<string, any> = { 
         file_url: newUrl, 
         aspect_ratio: aspectRatio,
-        comments: updatedComments as unknown as import('@/integrations/supabase/types').Json,
+        comments: updatedComments,
         updated_at: new Date().toISOString(),
-        status: 'pending' as const,
+        status: 'pending',
       };
       await prodDb.from('creatives').update(updatePayload).eq('id', creative.id);
       cloudDb.from('creatives').update(updatePayload).eq('id', creative.id).then(() => {});
       
-      const { useQueryClient } = await import('@tanstack/react-query');
-      // Can't use hook here, force refetch via window
       toast.success('New version uploaded — moved to pending');
+      // Force page refresh to reflect changes
       window.location.reload();
     } catch (err) {
       console.error('Replace file error:', err);
