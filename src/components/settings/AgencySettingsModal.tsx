@@ -116,6 +116,8 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         selected_openai_model: selectedOpenaiModel,
         selected_gemini_model: selectedGeminiModel,
         selected_grok_model: selectedGrokModel,
+        slack_dm_user_id: slackDmUserId || null,
+        agent_notification_slack_dm: agentDmEnabled,
       } as any);
       toast.success('Agency settings saved');
       onOpenChange(false);
