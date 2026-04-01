@@ -1029,6 +1029,9 @@ function CreativeCard({
   onCommentTextChange: (t: string) => void;
   addCommentMutation: ReturnType<typeof useAddCreativeComment>;
 }) {
+  const replaceFileRef = useRef<HTMLInputElement>(null);
+  const [replacing, setReplacing] = useState(false);
+
   const handleCardComment = () => {
     if (!commentText.trim()) return;
     const comment: CreativeComment = {
@@ -1039,6 +1042,47 @@ function CreativeCard({
     };
     addCommentMutation.mutate({ id: creative.id, comment, clientId });
     onCommentTextChange('');
+  };
+
+  const handleReplaceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReplacing(true);
+    try {
+      const newUrl = await uploadCreativeFile(file, clientId);
+      const aspectRatio = await detectAspectRatio(file);
+      // Save old version as a comment
+      const versionComment: CreativeComment = {
+        id: Date.now().toString(),
+        author: 'System',
+        text: `📎 Previous version: ${creative.file_url}`,
+        createdAt: new Date().toISOString(),
+      };
+      const existingComments = creative.comments || [];
+      const updatedComments = [...existingComments, versionComment];
+      
+      const { supabase: prodDb } = await import('@/integrations/supabase/db');
+      const { supabase: cloudDb } = await import('@/integrations/supabase/client');
+      const updatePayload = { 
+        file_url: newUrl, 
+        aspect_ratio: aspectRatio,
+        comments: updatedComments as unknown as import('@/integrations/supabase/types').Json,
+        updated_at: new Date().toISOString(),
+        status: 'pending' as const,
+      };
+      await prodDb.from('creatives').update(updatePayload).eq('id', creative.id);
+      cloudDb.from('creatives').update(updatePayload).eq('id', creative.id).then(() => {});
+      
+      const { useQueryClient } = await import('@tanstack/react-query');
+      // Can't use hook here, force refetch via window
+      toast.success('New version uploaded — moved to pending');
+      window.location.reload();
+    } catch (err) {
+      console.error('Replace file error:', err);
+      toast.error('Failed to upload new version');
+    } finally {
+      setReplacing(false);
+    }
   };
 
   const commentCount = creative.comments?.length || 0;
@@ -1164,6 +1208,35 @@ function CreativeCard({
               Download
             </Button>
           )}
+          {/* Upload New Version - agency only */}
+          {!isPublicView && creative.file_url && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                disabled={replacing}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  replaceFileRef.current?.click();
+                }}
+              >
+                {replacing ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Upload className="h-3 w-3" />
+                )}
+                {replacing ? 'Uploading...' : 'Upload New'}
+              </Button>
+              <input
+                ref={replaceFileRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleReplaceFile}
+                className="hidden"
+              />
+            </>
+          )}
           <Button
             variant="secondary"
             size="sm"
@@ -1184,6 +1257,16 @@ function CreativeCard({
             </Button>
           )}
         </div>
+
+        {/* AI Tools row - agency only */}
+        {!isPublicView && (
+          <div className="px-4 pb-2 border-t border-border pt-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Sparkles className="h-3 w-3 text-primary" />
+              <CreativeAIActions creative={creative} compact />
+            </div>
+          </div>
+        )}
 
         {/* Inline comment section */}
         <div className="px-4 pb-3 border-t border-border mt-1 pt-2">
