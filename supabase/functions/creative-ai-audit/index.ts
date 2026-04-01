@@ -388,8 +388,7 @@ ${creativeDetails}`
 
     // AI Variations: Generate 3 variations with different headlines/backgrounds/colors
     if (action === "ai_variations") {
-      const { imageUrl: varImageUrl } = await req.json().catch(() => ({ imageUrl: undefined }));
-      const actualVarImageUrl = varImageUrl || creative?.file_url;
+      const actualVarImageUrl = imageUrl || creative?.file_url;
 
       if (!actualVarImageUrl) {
         return new Response(
