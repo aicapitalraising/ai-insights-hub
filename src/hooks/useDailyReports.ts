@@ -140,7 +140,7 @@ export function useSubmitDailyReport() {
       }
 
       // Fire-and-forget Slack notification
-      cloudClient.functions.invoke('slack-daily-report', {
+      supabase.functions.invoke('slack-daily-report', {
         body: { report, member_name },
       }).then(({ error: slackErr }) => {
         if (slackErr) console.warn('Slack daily report notification failed:', slackErr.message);
