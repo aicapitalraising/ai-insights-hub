@@ -109,7 +109,7 @@ export function useSubmitDailyReport() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (report: Omit<DailyReport, 'id' | 'created_at'>) => {
+    mutationFn: async ({ report, member_name }: { report: Omit<DailyReport, 'id' | 'created_at'>; member_name: string }) => {
       // Check if report already exists for this date/type
       const { data: existing } = await supabase
         .from('daily_reports')
@@ -119,6 +119,7 @@ export function useSubmitDailyReport() {
         .eq('report_type', report.report_type)
         .maybeSingle();
 
+      let savedReport;
       if (existing) {
         const { data, error } = await supabase
           .from('daily_reports')
@@ -127,7 +128,7 @@ export function useSubmitDailyReport() {
           .select()
           .single();
         if (error) throw error;
-        return data;
+        savedReport = data;
       } else {
         const { data, error } = await supabase
           .from('daily_reports')
@@ -135,8 +136,17 @@ export function useSubmitDailyReport() {
           .select()
           .single();
         if (error) throw error;
-        return data;
+        savedReport = data;
       }
+
+      // Fire-and-forget Slack notification
+      cloudClient.functions.invoke('slack-daily-report', {
+        body: { report, member_name },
+      }).then(({ error: slackErr }) => {
+        if (slackErr) console.warn('Slack daily report notification failed:', slackErr.message);
+      });
+
+      return savedReport;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-report-today'] });
