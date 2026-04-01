@@ -110,6 +110,7 @@ function PublicReportContent() {
 
   const handleActivityClick = (activityId: string, type: string) => {
     if (type.startsWith('task_')) {
+      setSearchParams({ task: activityId, section: 'tasks' }, { replace: true });
       setActiveSection('tasks');
     } else if (type.startsWith('creative_')) {
       setActiveSection('creatives');
