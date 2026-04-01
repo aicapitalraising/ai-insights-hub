@@ -48,7 +48,7 @@ export function useMemberTasks(memberId?: string) {
       const taskIds = assignments.map((a: any) => a.task_id);
 
       // Fetch those tasks that are not completed
-      const { data: tasks, error: taskErr } = await supabase
+      const { data: tasks, error: taskErr } = await prodClient
         .from('tasks')
         .select('*')
         .in('id', taskIds)
