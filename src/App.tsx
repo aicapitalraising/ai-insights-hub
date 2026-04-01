@@ -65,6 +65,7 @@ const FunnelInvestPage = lazyRetry(() => import("./pages/FunnelInvestPage"));
 const FunnelKickoffPage = lazyRetry(() => import("./pages/FunnelKickoffPage"));
 const FunnelAccessPage = lazyRetry(() => import("./pages/FunnelAccessPage"));
 const SyncHealthPage = lazyRetry(() => import("./pages/SyncHealthPage"));
+const DailyReportPage = lazyRetry(() => import("./pages/DailyReportPage"));
 
 function PageLoader() {
   return (
