@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Creative } from '@/hooks/useCreatives';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,9 +26,12 @@ import {
 
 interface CreativeAIActionsProps {
   creative: Creative;
+  onCreativeUpdated?: () => void;
 }
 
-export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
+export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIActionsProps) {
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [auditing, setAuditing] = useState(false);
   const [transcript, setTranscript] = useState<string | null>(null);
@@ -152,6 +156,32 @@ export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
       toast.error('Failed to apply AI edits');
     } finally {
       setEditing(false);
+    }
+  };
+
+  const handleSaveEditToCreative = async () => {
+    if (!editedImageUrl) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('creatives')
+        .update({ file_url: editedImageUrl, updated_at: new Date().toISOString() })
+        .eq('id', creative.id);
+      if (error) throw error;
+      toast.success('Creative updated with edited image');
+      setEditOpen(false);
+      setEditedImageUrl(null);
+      setEditPrompt('');
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
+      queryClient.invalidateQueries({ queryKey: ['creatives'] });
+      onCreativeUpdated?.();
+      setEditPrompt('');
+      onCreativeUpdated?.();
+    } catch (error) {
+      console.error('Save edit error:', error);
+      toast.error('Failed to save edited image to creative');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -388,6 +418,18 @@ export function CreativeAIActions({ creative }: CreativeAIActionsProps) {
                         <Download className="h-4 w-4 mr-1" />
                         Download
                       </a>
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleSaveEditToCreative}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      )}
+                      {saving ? 'Saving...' : 'Save to Creative'}
                     </Button>
                   </div>
                 </div>
