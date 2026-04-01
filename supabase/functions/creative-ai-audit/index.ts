@@ -12,22 +12,28 @@ serve(async (req) => {
   }
 
   try {
-    const { action, creative, videoUrl, transcript } = await req.json();
+    const body = await req.json();
+    const { action, creative, videoUrl, transcript, imageUrl, editPrompt } = body;
 
-    // Fetch API key from agency_settings first, fallback to env var
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: settings } = await supabase
-      .from('agency_settings')
-      .select('gemini_api_key')
-      .limit(1)
-      .maybeSingle();
+    // AI Edit and Variations use LOVABLE_API_KEY, not GEMINI_API_KEY
+    const needsGeminiKey = !["ai_edit", "ai_variations"].includes(action);
 
-    const GEMINI_API_KEY = settings?.gemini_api_key || Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured. Please add it in Agency Settings.");
+    let GEMINI_API_KEY: string | undefined;
+    if (needsGeminiKey) {
+      const { data: settings } = await supabase
+        .from('agency_settings')
+        .select('gemini_api_key')
+        .limit(1)
+        .maybeSingle();
+
+      GEMINI_API_KEY = settings?.gemini_api_key || Deno.env.get("GEMINI_API_KEY");
+      if (!GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is not configured. Please add it in Agency Settings.");
+      }
     }
 
     // New action: Spelling and grammar check for ad copy (text, images, and videos)
