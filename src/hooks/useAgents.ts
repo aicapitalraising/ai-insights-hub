@@ -171,6 +171,7 @@ export const AVAILABLE_CONNECTORS = [
   { key: 'meta_ads', label: 'Meta Ads', description: 'Pull ad spend and campaign data from Meta' },
   { key: 'ghl_crm', label: 'GHL CRM', description: 'Access GoHighLevel contacts, pipelines, calendars' },
   { key: 'slack', label: 'Slack', description: 'Send messages and reports to Slack channels' },
+  { key: 'claude_code', label: 'Claude Code', description: 'Connect to Claude Code Desktop for automations via MCP' },
 ];
 
 export const AGENT_TEMPLATES = [
