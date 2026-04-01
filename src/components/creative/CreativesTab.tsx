@@ -78,6 +78,8 @@ const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 const ExportHubPage = lazy(() => import('@/pages/ExportHubPage'));
 const CreativeCalendarLazy = lazy(() => import('@/components/creative/CreativeCalendar').then(m => ({ default: m.CreativeCalendar })));
 const CreativeAnalyticsLazy = lazy(() => import('@/components/creative/CreativeAnalytics').then(m => ({ default: m.CreativeAnalytics })));
+const WinningAdsGalleryLazy = lazy(() => import('@/components/creative/WinningAdsGallery').then(m => ({ default: m.WinningAdsGallery })));
+const ManageStylesTabLazy = lazy(() => import('@/components/creative/ManageStylesTab').then(m => ({ default: m.ManageStylesTab })));
 
 interface CreativeWithClient extends Creative {
   clientName?: string;
