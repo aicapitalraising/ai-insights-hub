@@ -105,6 +105,7 @@ const App = () => (
             <Route path="/database" element={<PasswordGate><DatabaseView /></PasswordGate>} />
             <Route path="/spam-blacklist" element={<PasswordGate><SpamBlacklist /></PasswordGate>} />
             <Route path="/sync-health" element={<PasswordGate><SyncHealthPage /></PasswordGate>} />
+            <Route path="/daily" element={<PasswordGate><DailyReportPage /></PasswordGate>} />
             <Route path="/briefs" element={<PasswordGate><CreativeBriefs /></PasswordGate>} />
 
             {/* Creative Tools - from ad-verse-ally */}
