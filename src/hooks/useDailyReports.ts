@@ -37,7 +37,7 @@ export function useMemberTasks(memberId?: string) {
       if (!memberId) return [];
 
       // Get task IDs assigned to this member
-      const { data: assignments, error: assignErr } = await supabase
+      const { data: assignments, error: assignErr } = await prodClient
         .from('task_assignees')
         .select('task_id')
         .eq('member_id', memberId);
