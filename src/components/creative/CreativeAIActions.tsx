@@ -21,7 +21,8 @@ import {
   Star,
   Paintbrush,
   Copy,
-  Download
+  Download,
+  Film
 } from 'lucide-react';
 
 interface CreativeAIActionsProps {
