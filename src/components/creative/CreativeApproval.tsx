@@ -891,22 +891,50 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
                     )}
                   </div>
 
+                  {/* Previous Versions - agency only */}
+                  {!isPublicView && selectedCreative.comments && selectedCreative.comments.some(c => c.author === 'System' && c.text.startsWith('📎 Previous version:')) && (
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-medium mb-2">Version History</h4>
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {selectedCreative.comments
+                          .filter(c => c.author === 'System' && c.text.startsWith('📎 Previous version:'))
+                          .map((c, i) => {
+                            const url = c.text.replace('📎 Previous version: ', '');
+                            return (
+                              <div key={c.id} className="flex-shrink-0 border rounded-lg overflow-hidden w-32">
+                                <img src={url} alt={`Version ${i + 1}`} className="w-full h-24 object-cover bg-muted" />
+                                <p className="text-xs text-muted-foreground p-1 text-center">v{i + 1}</p>
+                              </div>
+                            );
+                          })}
+                        <div className="flex-shrink-0 border-2 border-primary rounded-lg overflow-hidden w-32">
+                          {selectedCreative.file_url && (
+                            <img src={selectedCreative.file_url} alt="Current" className="w-full h-24 object-cover bg-muted" />
+                          )}
+                          <p className="text-xs text-primary font-medium p-1 text-center">Current</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Comments */}
                   <div className="border-t pt-4">
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                       <MessageSquare className="h-4 w-4" />
-                      Comments ({selectedCreative.comments?.length || 0})
+                      Comments ({(selectedCreative.comments || []).filter(c => c.author !== 'System').length})
                     </h4>
-                    {selectedCreative.comments && selectedCreative.comments.length > 0 ? (
+                    {selectedCreative.comments && selectedCreative.comments.filter(c => c.author !== 'System').length > 0 ? (
                       <ScrollArea className="h-[200px] border rounded-lg p-3 mb-2">
                         <div className="space-y-2">
-                          {selectedCreative.comments.map((comment) => (
+                          {selectedCreative.comments.filter(c => c.author !== 'System').map((comment) => (
                             <div 
                               key={comment.id}
                               className={`p-2 rounded-lg text-sm ${
                                 comment.author === 'Client' 
                                   ? 'bg-primary/10 ml-4' 
-                                  : 'bg-muted mr-4'
+                                  : comment.author === 'AI Review'
+                                    ? 'bg-accent/50 border border-accent'
+                                    : 'bg-muted mr-4'
                               }`}
                             >
                               <div className="flex justify-between mb-0.5">
@@ -1029,6 +1057,9 @@ function CreativeCard({
   onCommentTextChange: (t: string) => void;
   addCommentMutation: ReturnType<typeof useAddCreativeComment>;
 }) {
+  const replaceFileRef = useRef<HTMLInputElement>(null);
+  const [replacing, setReplacing] = useState(false);
+
   const handleCardComment = () => {
     if (!commentText.trim()) return;
     const comment: CreativeComment = {
@@ -1039,6 +1070,46 @@ function CreativeCard({
     };
     addCommentMutation.mutate({ id: creative.id, comment, clientId });
     onCommentTextChange('');
+  };
+
+  const handleReplaceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReplacing(true);
+    try {
+      const newUrl = await uploadCreativeFile(file, clientId);
+      const aspectRatio = await detectAspectRatio(file);
+      // Save old version as a comment
+      const versionComment: CreativeComment = {
+        id: Date.now().toString(),
+        author: 'System',
+        text: `📎 Previous version: ${creative.file_url}`,
+        createdAt: new Date().toISOString(),
+      };
+      const existingComments = creative.comments || [];
+      const updatedComments = [...existingComments, versionComment];
+      
+      const { supabase: prodDb } = await import('@/integrations/supabase/db');
+      const { supabase: cloudDb } = await import('@/integrations/supabase/client');
+      const updatePayload: Record<string, any> = { 
+        file_url: newUrl, 
+        aspect_ratio: aspectRatio,
+        comments: updatedComments,
+        updated_at: new Date().toISOString(),
+        status: 'pending',
+      };
+      await prodDb.from('creatives').update(updatePayload).eq('id', creative.id);
+      cloudDb.from('creatives').update(updatePayload).eq('id', creative.id).then(() => {});
+      
+      toast.success('New version uploaded — moved to pending');
+      // Force page refresh to reflect changes
+      window.location.reload();
+    } catch (err) {
+      console.error('Replace file error:', err);
+      toast.error('Failed to upload new version');
+    } finally {
+      setReplacing(false);
+    }
   };
 
   const commentCount = creative.comments?.length || 0;
@@ -1164,6 +1235,35 @@ function CreativeCard({
               Download
             </Button>
           )}
+          {/* Upload New Version - agency only */}
+          {!isPublicView && creative.file_url && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                disabled={replacing}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  replaceFileRef.current?.click();
+                }}
+              >
+                {replacing ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Upload className="h-3 w-3" />
+                )}
+                {replacing ? 'Uploading...' : 'Upload New'}
+              </Button>
+              <input
+                ref={replaceFileRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleReplaceFile}
+                className="hidden"
+              />
+            </>
+          )}
           <Button
             variant="secondary"
             size="sm"
@@ -1184,6 +1284,16 @@ function CreativeCard({
             </Button>
           )}
         </div>
+
+        {/* AI Tools row - agency only */}
+        {!isPublicView && (
+          <div className="px-4 pb-2 border-t border-border pt-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Sparkles className="h-3 w-3 text-primary" />
+              <CreativeAIActions creative={creative} compact />
+            </div>
+          </div>
+        )}
 
         {/* Inline comment section */}
         <div className="px-4 pb-3 border-t border-border mt-1 pt-2">
