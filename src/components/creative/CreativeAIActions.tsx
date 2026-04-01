@@ -158,7 +158,28 @@ export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIAct
     }
   };
 
-  const handleAIVariations = async () => {
+  const handleSaveEditToCreative = async () => {
+    if (!editedImageUrl) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('creatives')
+        .update({ file_url: editedImageUrl, updated_at: new Date().toISOString() })
+        .eq('id', creative.id);
+      if (error) throw error;
+      toast.success('Creative updated with edited image');
+      setEditOpen(false);
+      setEditedImageUrl(null);
+      setEditPrompt('');
+      onCreativeUpdated?.();
+    } catch (error) {
+      console.error('Save edit error:', error);
+      toast.error('Failed to save edited image to creative');
+    } finally {
+      setSaving(false);
+    }
+  };
+
     setGeneratingVariations(true);
     setVariations([]);
     try {
