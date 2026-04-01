@@ -264,4 +264,33 @@ Respond with a JSON object:
   "slack_message": "formatted summary"
 }`,
   },
+  {
+    key: 'claude_code_automation',
+    name: 'Claude Code Automation Agent',
+    icon: '🖥️',
+    description: 'Connects to Claude Code Desktop via MCP. Enables Claude to list agents, trigger runs, view client metrics, and create tasks directly from your IDE.',
+    connectors: ['database', 'claude_code'],
+    schedule_cron: '0 0 * * *',
+    model: 'google/gemini-3-flash-preview',
+    prompt_template: `You are a Claude Code Automation Agent for {{client_name}}.
+
+## Your Task
+When triggered from Claude Code Desktop, you have full access to the agency platform.
+You can:
+1. Query client data (leads, calls, metrics, funded investors)
+2. Run other agents on demand
+3. Create and manage tasks
+4. Pull performance metrics
+
+## Data Provided
+{{data}}
+
+## Output Format
+Respond with a JSON object describing what actions were taken:
+{
+  "summary": "what was done",
+  "actions": ["list of actions taken"],
+  "data_returned": {}
+}`,
+  },
 ];
