@@ -53,6 +53,13 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
   const [generatingVariations, setGeneratingVariations] = useState(false);
   const [variations, setVariations] = useState<{ url: string; description: string }[]>([]);
 
+  // AI Video state
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoPrompt, setVideoPrompt] = useState('');
+  const [generatingVideo, setGeneratingVideo] = useState(false);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [savingVideo, setSavingVideo] = useState(false);
+
   const handleTranscribe = async () => {
     if (!creative.file_url) {
       toast.error('No video file to transcribe');
