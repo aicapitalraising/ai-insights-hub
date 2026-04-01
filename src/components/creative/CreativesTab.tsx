@@ -418,6 +418,14 @@ export function CreativesTab() {
             <Film className="h-4 w-4" />
             B-Roll
           </TabsTrigger>
+          <TabsTrigger value="winning-ads" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            Winning Ads
+          </TabsTrigger>
+          <TabsTrigger value="manage-styles" className="gap-2">
+            <Palette className="h-4 w-4" />
+            Styles
+          </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
             History
