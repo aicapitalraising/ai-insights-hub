@@ -416,9 +416,16 @@ export function useAddCreativeComment() {
       const existingComments = (current?.comments as unknown as CreativeComment[]) || [];
       const updatedComments = [...existingComments, comment];
       
+      // If the comment is from the client, auto-mark as revisions
+      const isClientComment = comment.author === 'Client';
+      const updatePayload: Record<string, any> = { comments: updatedComments as unknown as Json };
+      if (isClientComment) {
+        updatePayload.status = 'revisions';
+      }
+
       const { data, error } = await supabase
         .from('creatives')
-        .update({ comments: updatedComments as unknown as Json })
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single();
@@ -427,7 +434,7 @@ export function useAddCreativeComment() {
 
       // Dual-write comments to Cloud
       cloudClient.from('creatives')
-        .update({ comments: updatedComments as unknown as Json })
+        .update(updatePayload)
         .eq('id', id)
         .then(({ error: cloudErr }) => {
           if (cloudErr) console.warn('Cloud comment dual-write failed:', cloudErr.message);
