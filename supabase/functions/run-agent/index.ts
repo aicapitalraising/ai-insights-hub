@@ -238,8 +238,8 @@ serve(async (req) => {
           const slackApiKey = Deno.env.get('SLACK_API_KEY');
           const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
           if (slackApiKey && lovableApiKey) {
-            // Check agency_settings for DM user ID
-            const { data: agencySettings } = await prodDb
+            // Check agency_settings for DM user ID (on Cloud DB where settings live)
+            const { data: agencySettings } = await cloudDb
               .from('agency_settings')
               .select('slack_dm_user_id, agent_notification_slack_dm')
               .limit(1)
