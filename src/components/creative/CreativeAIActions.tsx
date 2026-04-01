@@ -392,6 +392,18 @@ export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIAct
                         Download
                       </a>
                     </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleSaveEditToCreative}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      )}
+                      {saving ? 'Saving...' : 'Save to Creative'}
+                    </Button>
                   </div>
                 </div>
               ) : (
