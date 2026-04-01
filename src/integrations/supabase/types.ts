@@ -229,29 +229,35 @@ export type Database = {
       agency_settings: {
         Row: {
           agency_name: string | null
+          agent_notification_slack_dm: boolean | null
           created_at: string | null
           id: string
           logo_url: string | null
           primary_color: string | null
           settings: Json | null
+          slack_dm_user_id: string | null
           updated_at: string | null
         }
         Insert: {
           agency_name?: string | null
+          agent_notification_slack_dm?: boolean | null
           created_at?: string | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null
           settings?: Json | null
+          slack_dm_user_id?: string | null
           updated_at?: string | null
         }
         Update: {
           agency_name?: string | null
+          agent_notification_slack_dm?: boolean | null
           created_at?: string | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null
           settings?: Json | null
+          slack_dm_user_id?: string | null
           updated_at?: string | null
         }
         Relationships: []

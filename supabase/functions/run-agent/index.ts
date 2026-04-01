@@ -212,7 +212,7 @@ serve(async (req) => {
             actionsTaken.push({ type: 'daily_metrics_update', corrections: parsed.corrections });
           }
 
-          // Post Slack message if configured
+          // Post Slack message to client channel if configured
           if (parsed.slack_message && connectors.includes('slack')) {
             const slackApiKey = Deno.env.get('SLACK_API_KEY');
             const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
@@ -229,7 +229,53 @@ serve(async (req) => {
                   },
                   body: JSON.stringify({ channel: channelId, text: parsed.slack_message }),
                 });
-                actionsTaken.push({ type: 'slack_message', channel: channelId });
+                actionsTaken.push({ type: 'slack_channel_message', channel: channelId });
+              }
+            }
+          }
+
+          // Always DM Zac after agent completion
+          const slackApiKey = Deno.env.get('SLACK_API_KEY');
+          const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+          if (slackApiKey && lovableApiKey) {
+            // Check agency_settings for DM user ID (on Cloud DB where settings live)
+            const { data: agencySettings } = await cloudDb
+              .from('agency_settings')
+              .select('slack_dm_user_id, agent_notification_slack_dm')
+              .limit(1)
+              .maybeSingle();
+
+            const dmUserId = agencySettings?.slack_dm_user_id;
+            const dmEnabled = agencySettings?.agent_notification_slack_dm !== false;
+
+            if (dmUserId && dmEnabled) {
+              // Open DM channel
+              const dmOpenRes = await fetch('https://connector-gateway.lovable.dev/slack/api/conversations.open', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${lovableApiKey}`,
+                  'X-Connection-Api-Key': slackApiKey,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ users: dmUserId }),
+              });
+              const dmOpenData = await dmOpenRes.json();
+              const dmChannelId = dmOpenData?.channel?.id;
+
+              if (dmChannelId) {
+                const statusEmoji = '✅';
+                const dmMessage = `${statusEmoji} *Agent Run Complete: ${agent.name}*\n*Client:* ${client.name}\n*Tokens Used:* ${tokensUsed}\n*Actions Taken:* ${actionsTaken.length}\n\n${parsed?.slack_message || parsed?.findings || aiOutput.slice(0, 500)}`;
+
+                await fetch('https://connector-gateway.lovable.dev/slack/api/chat.postMessage', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${lovableApiKey}`,
+                    'X-Connection-Api-Key': slackApiKey,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ channel: dmChannelId, text: dmMessage }),
+                });
+                actionsTaken.push({ type: 'slack_dm', user: dmUserId });
               }
             }
           }

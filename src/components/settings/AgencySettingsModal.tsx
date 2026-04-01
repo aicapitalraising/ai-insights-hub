@@ -17,7 +17,8 @@ import { useAgencySettings, useUpdateAgencySettings } from '@/hooks/useAgencySet
 import { useSyncMeetings } from '@/hooks/useMeetings';
 import { TeamManagementTab } from './TeamManagementTab';
 import { SyncQueueStatus } from './SyncQueueStatus';
-import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Puzzle, AlertTriangle } from 'lucide-react';
+import { Brain, Settings2, Key, DollarSign, Eye, EyeOff, Video, Copy, RefreshCw, Users, Database, Cpu, Code2, Puzzle, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { ApiReferenceTab } from './ApiReferenceTab';
 import { ErrorLogTab } from './ErrorLogTab';
 
@@ -55,6 +56,8 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
   const [saving, setSaving] = useState(false);
   const [agencyPrompt, setAgencyPrompt] = useState('');
   const [clientPrompt, setClientPrompt] = useState('');
+  const [slackDmUserId, setSlackDmUserId] = useState('');
+  const [agentDmEnabled, setAgentDmEnabled] = useState(true);
   
   // API Keys
   const [openaiKey, setOpenaiKey] = useState('');
@@ -94,6 +97,8 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
       setSelectedOpenaiModel((settings as any).selected_openai_model || 'gpt-5');
       setSelectedGeminiModel((settings as any).selected_gemini_model || 'gemini-2.5-pro');
       setSelectedGrokModel((settings as any).selected_grok_model || 'grok-3');
+      setSlackDmUserId((settings as any).slack_dm_user_id || '');
+      setAgentDmEnabled((settings as any).agent_notification_slack_dm !== false);
     }
   }, [settings]);
 
@@ -112,6 +117,8 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
         selected_openai_model: selectedOpenaiModel,
         selected_gemini_model: selectedGeminiModel,
         selected_grok_model: selectedGrokModel,
+        slack_dm_user_id: slackDmUserId || null,
+        agent_notification_slack_dm: agentDmEnabled,
       } as any);
       toast.success('Agency settings saved');
       onOpenChange(false);
@@ -512,6 +519,39 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
                     Enter your API key and save settings first
                   </p>
                 )}
+              </div>
+            </div>
+            {/* Agent Slack DM Notifications */}
+            <div className="border-2 border-border p-4 space-y-4">
+              <div>
+                <h4 className="font-medium mb-1 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Agent Slack DM Notifications
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Get a Slack DM every time an AI agent completes a run with results and actions taken.
+                </p>
+                
+                <div className="flex items-center justify-between mb-3">
+                  <Label htmlFor="agentDmEnabled">Enable DM Notifications</Label>
+                  <Switch 
+                    id="agentDmEnabled"
+                    checked={agentDmEnabled} 
+                    onCheckedChange={setAgentDmEnabled} 
+                  />
+                </div>
+
+                <Label htmlFor="slackDmUserId">Slack User ID</Label>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Find your Slack user ID: Click your profile → "..." menu → Copy member ID
+                </p>
+                <Input
+                  id="slackDmUserId"
+                  value={slackDmUserId}
+                  onChange={(e) => setSlackDmUserId(e.target.value)}
+                  placeholder="U014Y02CNLS"
+                  className="font-mono"
+                />
               </div>
             </div>
             {/* Composio Integration */}
