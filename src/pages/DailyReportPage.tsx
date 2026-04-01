@@ -136,6 +136,7 @@ export default function DailyReportPage() {
               existingReport={existingReport}
               onSubmit={data => submitReport.mutate({ report: data, member_name: activeMember?.name || currentMember?.name || 'Unknown' })}
               memberId={activeMemberId!}
+              memberName={activeMember?.name || currentMember?.name || 'Unknown'}
               isSubmitting={submitReport.isPending}
             />
           )}

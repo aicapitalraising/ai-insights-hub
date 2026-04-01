@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Task } from '@/hooks/useTasks';
+import { Task, useUpdateTask, useAddTaskComment } from '@/hooks/useTasks';
 import { DailyReport, TaskSnapshot, useClientNames } from '@/hooks/useDailyReports';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ interface EODViewProps {
   existingReport: DailyReport | null;
   onSubmit: (data: Omit<DailyReport, 'id' | 'created_at'>) => void;
   memberId: string;
+  memberName: string;
   isSubmitting: boolean;
 }
 
@@ -30,7 +31,7 @@ interface TaskEntry {
   blocker_next_step: string;
 }
 
-export function EODView({ tasks, isAccountManager, existingReport, onSubmit, memberId, isSubmitting }: EODViewProps) {
+export function EODView({ tasks, isAccountManager, existingReport, onSubmit, memberId, memberName, isSubmitting }: EODViewProps) {
   // Initialize task entries from existing report or defaults
   const initialEntries = useMemo(() => {
     const map: Record<string, TaskEntry> = {};
@@ -105,6 +106,9 @@ export function EODView({ tasks, isAccountManager, existingReport, onSubmit, mem
     }
   };
 
+  const updateTask = useUpdateTask();
+  const addComment = useAddTaskComment();
+
   const handleSubmit = () => {
     const snapshot: TaskSnapshot[] = Object.values(taskEntries).map(entry => {
       const task = tasks.find(t => t.id === entry.task_id);
@@ -117,6 +121,36 @@ export function EODView({ tasks, isAccountManager, existingReport, onSubmit, mem
         blocker_reason: entry.status === 'blocked' ? entry.blocker_reason : undefined,
         blocker_next_step: entry.status === 'blocked' ? entry.blocker_next_step : undefined,
       };
+    });
+
+    // Sync each task's status to the actual tasks table + add blocker comments
+    Object.values(taskEntries).forEach(entry => {
+      const task = tasks.find(t => t.id === entry.task_id);
+      if (!task) return;
+
+      // Map EOD status to task table status/stage
+      const statusMap: Record<TaskStatus, { status: string; stage: string }> = {
+        completed: { status: 'completed', stage: 'done' },
+        in_progress: { status: 'in_progress', stage: 'in_progress' },
+        blocked: { status: 'blocked', stage: 'blocked' },
+      };
+
+      const mapped = statusMap[entry.status];
+      const updates: any = { id: task.id, status: mapped.status, stage: mapped.stage };
+      if (entry.status === 'completed') {
+        updates.completed_at = new Date().toISOString();
+      }
+
+      // Only update if status actually changed
+      if (task.status !== mapped.status) {
+        updateTask.mutate(updates);
+      }
+
+      // Add a comment for blocked tasks with a reason
+      if (entry.status === 'blocked' && entry.blocker_reason) {
+        const commentText = `🚫 **Blocked** (EOD Report)\n**Reason:** ${entry.blocker_reason}${entry.blocker_next_step ? `\n**Next Step:** ${entry.blocker_next_step}` : ''}`;
+        addComment.mutate({ taskId: task.id, authorName: memberName, content: commentText });
+      }
     });
 
     onSubmit({
