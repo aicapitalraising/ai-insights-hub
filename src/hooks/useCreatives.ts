@@ -477,23 +477,62 @@ export function useDeleteCreative() {
   });
 }
 
+async function compressPngToWebp(file: File, quality = 0.85): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(file); return; }
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            // If WebP is somehow larger, keep original
+            resolve(file);
+            return;
+          }
+          const compressed = new File(
+            [blob],
+            file.name.replace(/\.png$/i, '.webp'),
+            { type: 'image/webp' }
+          );
+          resolve(compressed);
+        },
+        'image/webp',
+        quality,
+      );
+    };
+    img.onerror = () => resolve(file); // fallback to original on error
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export async function uploadCreativeFile(
   file: File, 
   clientId: string,
   onProgress?: (percent: number) => void
 ): Promise<string> {
-  const fileExt = file.name.split('.').pop();
+  // Compress PNG files to WebP for quality delivery
+  let uploadFile = file;
+  if (file.type === 'image/png') {
+    uploadFile = await compressPngToWebp(file);
+  }
+
+  const fileExt = uploadFile.name.split('.').pop();
   const fileName = `${clientId}/${Date.now()}.${fileExt}`;
   
   // Use progress-tracking upload for large files (>5MB), standard for smaller ones
-  if (file.size > 5 * 1024 * 1024) {
+  if (uploadFile.size > 5 * 1024 * 1024) {
     const { uploadWithProgress } = await import('@/lib/uploadWithProgress');
-    return uploadWithProgress('creatives', fileName, file, onProgress);
+    return uploadWithProgress('creatives', fileName, uploadFile, onProgress);
   }
 
   const { data, error } = await supabase.storage
     .from('creatives')
-    .upload(fileName, file);
+    .upload(fileName, uploadFile);
   
   if (error) throw error;
   
