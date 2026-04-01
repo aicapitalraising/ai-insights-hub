@@ -165,7 +165,7 @@ export function useClientNames(clientIds: string[]) {
     queryKey: ['client-names', clientIds],
     queryFn: async () => {
       if (clientIds.length === 0) return {};
-      const { data, error } = await supabase
+      const { data, error } = await prodClient
         .from('clients')
         .select('id, name')
         .in('id', clientIds);
