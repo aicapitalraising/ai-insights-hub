@@ -1,118 +1,81 @@
 
 
-# Platform Review — Issues & Improvements
+## Revised Daily Report Page (`/daily`) — Tasks-Driven SOD/EOD
 
-## Overview
-After reviewing the full codebase — frontend hooks, edge functions, database schema, auth, sync pipeline, and UI — here are the findings organized by severity.
-
----
-
-## 1. CRITICAL — Data Accuracy & Sync Reliability
-
-### 1a. `pipelineValue` uses `Math.min` instead of SUM
-**File:** `src/hooks/useMetrics.ts` (line 201)
-When `defaultLeadPipelineValue` is not set, the fallback calculates pipeline value using `Math.min(...)` of individual lead values — returning the single smallest value instead of the sum. This makes the pipeline KPI wildly wrong for any client without a default configured.
-**Fix:** Replace `Math.min(...)` with `.reduce((sum, v) => sum + v, 0)`.
-
-### 1b. `recalculate-daily-metrics` only recalculates yesterday+today by default
-**File:** `supabase/functions/recalculate-daily-metrics/index.ts` (lines 41-53)
-When called without explicit dates (i.e., from the daily cron), it only processes yesterday and today. Any backdated lead imports, late-arriving GHL data, or manual corrections older than 1 day are never reflected.
-**Fix:** Expand default window to 7 days back.
-
-### 1c. `daily-accuracy-check` counts non-spam + null-spam as "expected leads" but daily_metrics stores the same
-This is actually consistent now (both count `is_spam=false` + `is_spam IS NULL`). However, the `sync_accuracy_log` insert uses column names (`metric_type`, `expected_count`, `actual_count`) that don't match the table schema (`metric`, `expected_value`, `actual_value`). These inserts silently fail.
-**Fix:** Align column names in the accuracy check insert.
-
-### 1d. No retry logic in `sync-ghl-all-clients`
-**File:** `supabase/functions/sync-ghl-all-clients/index.ts` (line 55+)
-Clients are synced sequentially with no retry. If a single client's GHL API call fails (rate limit, timeout), that client is skipped permanently until the next daily run.
-**Fix:** Add 1-retry with exponential backoff per client.
-
-### 1e. Timezone mismatch: frontend local time vs backend UTC
-The frontend date filters use local time, but all backend queries use UTC timestamps. Leads appearing on "March 29" in PST may show on "March 30" in the database, causing off-by-one day errors in KPIs.
-**Fix:** Ensure date filters send UTC-normalized dates, or adjust queries to account for timezone offset.
+All sections of the SOD and EOD reports pull directly from the member's actual task list, so nothing is invented out of thin air.
 
 ---
 
-## 2. HIGH — Security
+### Core Change from Previous Plan
 
-### 2a. No RLS policies — anon key exposes all 71 tables
-Nearly every table has `USING: true / WITH CHECK: true` for the `public` role. The anon key (visible in `db.ts` source code) can read/write leads, clients, funded investors, API keys, etc. This is a serious data exposure risk.
-**Fix:** Implement proper RLS with authenticated-only access. Move to Supabase Auth instead of the custom `PasswordGate` localStorage approach.
-
-### 2b. Authentication is localStorage-based
-**File:** `src/components/auth/PasswordGate.tsx`
-Auth state is stored as `localStorage.setItem('dashboard_auth', 'true')`. Anyone can set this in DevTools to bypass login. The password itself is verified server-side, but the session is purely client-side with no token/JWT.
-**Fix:** Use proper Supabase Auth with JWTs; the PasswordGate should verify a real session, not a localStorage flag.
-
-### 2c. Production credentials hardcoded in source
-**File:** `src/integrations/supabase/db.ts`
-The production Supabase URL and anon key are hardcoded in frontend code committed to the repo. Combined with open RLS, this gives anyone full read/write access.
-**Fix:** Move to environment variables; lock down RLS policies first.
+Instead of free-text "problem clients" and "blockers" fields, the EOD report lets members **tag tasks from their real task list** as blocked, along with a root cause and next step. The SOD view similarly pulls carry-over blocked tasks so they're visible first thing in the morning.
 
 ---
 
-## 3. MEDIUM — Performance & Architecture
+### How It Works
 
-### 3a. `useLeads` auto-refetches every 30 seconds
-**File:** `src/hooks/useLeads.ts` (line 52)
-Fetches ALL leads (no client filter, no pagination) every 30 seconds. For a growing dataset this is unnecessary load.
-**Fix:** Remove `refetchInterval` or add client-scoped filtering.
+**Member identification**: Auto-detected via `TeamMemberContext`. Their tasks are fetched by joining `task_assignees` where `member_id` matches, filtering to tasks with `due_date <= today` or status not completed.
 
-### 3b. `useMasterSync` polls every 5s with 10-min timeout
-**File:** `src/hooks/useMasterSync.ts` (lines 137-167)
-Polling is a workaround. The platform already has Realtime subscriptions on the `clients` table — use those instead of polling.
-**Fix:** Replace `setInterval` polling with a Supabase Realtime channel subscription on `ghl_sync_status`.
+**SOD — Morning Planning**
+- Shows today's tasks + overdue tasks assigned to the member
+- Blocked tasks from yesterday flagged at the top
+- Member picks their **Top 3 priorities** from the task list (task picker, not free text)
+- Client touchpoints section — only for Account Management pod members
+- Quick-add for ad-hoc tasks (creates a real task via `useCreateTask`)
 
-### 3c. `fetchAllRows` sequential pagination
-**File:** `src/lib/fetchAllRows.ts`
-Pages are fetched sequentially. For 50K+ rows this is slow.
-**Fix:** Parallel page fetches or server-side aggregation for large datasets.
+**EOD — Evening Accountability**
+- Same task list with status toggles: **completed / in-progress / blocked**
+- For any task marked **blocked**: inline fields for root cause + next step (stored in the report snapshot)
+- "Problem clients" derived automatically: clients associated with blocked tasks are surfaced
+- Additional form fields:
+  - Client touchpoints count + notes (AM pod only)
+  - Client experience 3-touch rule executed (AM pod only)
+  - Wins shared (free text — results, stats, testimonials)
+  - Self-assessment (1-10)
+- Submit saves everything to `daily_reports`
 
-### 3d. Cache invalidation scattered across 5+ hooks
-`useMasterSync` manually invalidates 10 query keys. Other hooks do their own invalidation. This is fragile and easy to miss.
-**Fix:** Centralize cache invalidation into a shared utility.
-
-### 3e. No Error Boundaries
-**File:** `src/App.tsx`
-No `<ErrorBoundary>` wraps any route. A single component crash takes down the whole app.
-**Fix:** Add error boundaries around route groups.
+**Report History**: Past submissions viewable per member with date picker.
 
 ---
 
-## 4. LOW — Code Quality & UX
+### Database
 
-### 4a. `sync-ghl-contacts` is 3,882 lines
-Massive single file. Hard to maintain and debug.
-**Fix:** Decompose into modules (contacts, calendar, pipelines, utils).
+New table: `daily_reports`
 
-### 4b. Hardcoded agency client ID in DatabaseView
-**File:** Referenced in backlog — a specific client ID is hardcoded.
-**Fix:** Make it dynamic based on context.
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| member_id | uuid FK→agency_members | |
+| report_date | date | |
+| report_type | text | 'sod' or 'eod' |
+| top_priorities | jsonb | array of task IDs picked for the day |
+| tasks_snapshot | jsonb | array of `{task_id, status, blocker_reason, blocker_next_step}` |
+| touchpoint_count | int | nullable, AM-only |
+| touchpoint_notes | text | nullable, AM-only |
+| client_experience_done | bool | nullable, AM-only |
+| wins_shared | text | |
+| self_assessment | int | 1-10 |
+| created_at | timestamptz | default now() |
 
-### 4c. Duplicate/unused pages
-`src/pages/` has `BriefsPage.tsx`, `ClientsPage.tsx`, `DashboardPage.tsx`, `LoginPage.tsx`, `SignupPage.tsx`, `SettingsPage.tsx`, `ClientOnboardingPage.tsx` — none of which are in `App.tsx` routes. Dead code.
-**Fix:** Remove unused page files.
-
-### 4d. `useSyncHealth` checks `ghl_synced_at` for HubSpot clients
-**File:** `src/hooks/useSyncHealth.ts` (line 176+)
-The leads query always checks `ghl_synced_at` even for HubSpot-sourced clients. HubSpot leads don't set this field, so sync health always shows "critical" for HubSpot clients.
-**Fix:** Check the client's CRM source and query the appropriate sync timestamp.
-
-### 4e. Future-dated daily_metrics rows
-The backlog notes `date=2026-12-31` rows exist. No validation prevents inserting metrics for future dates.
-**Fix:** Add a validation trigger on `daily_metrics` to reject dates > today + 1.
+RLS: public full access (matches existing project pattern).
 
 ---
 
-## Recommended Priority Order
+### Files
 
-1. **Fix `pipelineValue` Math.min bug** — 5 min, immediate accuracy improvement
-2. **Expand recalculate-daily-metrics to 7-day lookback** — 10 min
-3. **Fix sync_accuracy_log column names** — 5 min
-4. **Add Error Boundaries** — 15 min
-5. **Fix useSyncHealth for HubSpot** — 10 min
-6. **Remove useLeads 30s polling** — 2 min
-7. **Replace useMasterSync polling with Realtime** — 30 min
-8. **Security hardening (RLS + auth)** — multi-day effort, plan separately
+1. **Database migration** — Create `daily_reports` table
+2. **`src/pages/DailyReportPage.tsx`** — Main page: member auto-select from `TeamMemberContext`, SOD/EOD toggle (auto by time with manual override)
+3. **`src/components/daily/SODView.tsx`** — Today's + overdue tasks, blocked carry-overs highlighted, top-3 priority picker from task list, AM-only touchpoints
+4. **`src/components/daily/EODView.tsx`** — Task checklist with completed/in-progress/blocked status per task; blocked tasks get inline root-cause + next-step fields; wins and self-assessment form
+5. **`src/components/daily/ReportHistory.tsx`** — Past report viewer with date picker
+6. **`src/hooks/useDailyReports.ts`** — Fetch member's tasks for today (via `task_assignees` join), CRUD for `daily_reports`
+7. **`src/App.tsx`** — Add `/daily` route
+
+### Key Technical Details
+
+- Tasks fetched by querying `task_assignees` where `member_id = currentMember.id`, then joining `tasks` where `due_date <= today` and `status != 'completed'`
+- Pod detection: `currentMember.pod?.name` checked for "Account Management" to conditionally render touchpoint fields
+- `tasks_snapshot` in the report stores each task's ID plus the member's EOD status choice and any blocker notes — this links reports directly to real tasks
+- "Problem clients" section in EOD is auto-generated by grouping blocked tasks by their `client_id` and showing the client name
+- SOD/EOD auto-toggle: before 2 PM = SOD, after = EOD, with manual switch
 
