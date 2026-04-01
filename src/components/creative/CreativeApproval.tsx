@@ -285,6 +285,10 @@ export function CreativeApproval({ clientId, clientName, isPublicView = false }:
 
   const handleStatusChange = (creative: Creative, status: 'approved' | 'revisions' | 'rejected') => {
     updateStatus.mutate({ id: creative.id, status, clientId, creativeTitle: creative.title });
+    // Close detail modal so the creative visually moves to its new tab
+    if (selectedCreative?.id === creative.id) {
+      setSelectedCreative(null);
+    }
   };
 
   const handleAddComment = (creative: Creative) => {

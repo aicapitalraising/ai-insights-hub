@@ -205,6 +205,10 @@ export function CreativesTab() {
       clientId: creative.client_id,
       creativeTitle: creative.title 
     });
+    // Close detail modal so the creative visually moves to its new tab
+    if (selectedCreative?.id === creative.id) {
+      setSelectedCreative(null);
+    }
   };
 
   const handleDelete = (creative: CreativeWithClient) => {
