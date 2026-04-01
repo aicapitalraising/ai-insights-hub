@@ -3,10 +3,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const GATEWAY_URL = 'https://api.lovable.dev/v1/chat/completions';
+const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -14,45 +15,51 @@ serve(async (req) => {
   try {
     const { agent_id, client_id: overrideClientId, password } = await req.json();
     if (password !== 'HPA1234$') {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     if (!agent_id) {
-      return new Response(JSON.stringify({ error: 'agent_id required' }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'agent_id required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Production DB client
-    const supabaseUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const sb = createClient(supabaseUrl, supabaseKey);
+    // Cloud DB for agents/agent_runs tables
+    const cloudUrl = Deno.env.get('SUPABASE_URL')!;
+    const cloudKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const cloudDb = createClient(cloudUrl, cloudKey);
 
-    // Load agent config
-    const { data: agent, error: agentErr } = await sb
+    // Production DB for client data
+    const prodUrl = Deno.env.get('ORIGINAL_SUPABASE_URL') || cloudUrl;
+    const prodKey = Deno.env.get('ORIGINAL_SUPABASE_SERVICE_ROLE_KEY') || cloudKey;
+    const prodDb = createClient(prodUrl, prodKey);
+
+    // Load agent config from Cloud DB
+    const { data: agent, error: agentErr } = await cloudDb
       .from('agents')
-      .select('*, client:clients(id, name, ghl_api_key, ghl_location_id, meta_ad_account_id, meta_access_token)')
+      .select('*')
       .eq('id', agent_id)
       .single();
 
     if (agentErr || !agent) {
-      return new Response(JSON.stringify({ error: 'Agent not found' }), { status: 404, headers: corsHeaders });
+      console.error('Agent not found:', agentErr);
+      return new Response(JSON.stringify({ error: 'Agent not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Determine which clients to run for
+    // Determine which clients to run for (from production DB)
     const targetClientId = overrideClientId || agent.client_id;
     let clientsToProcess: any[] = [];
 
     if (targetClientId) {
-      const { data: c } = await sb.from('clients').select('id, name, ghl_api_key, ghl_location_id, meta_ad_account_id, meta_access_token').eq('id', targetClientId).single();
+      const { data: c } = await prodDb.from('clients').select('id, name, ghl_api_key, ghl_location_id, meta_ad_account_id, meta_access_token').eq('id', targetClientId).single();
       if (c) clientsToProcess = [c];
     } else {
-      const { data: cs } = await sb.from('clients').select('id, name, ghl_api_key, ghl_location_id, meta_ad_account_id, meta_access_token').in('status', ['active', 'onboarding']);
+      const { data: cs } = await prodDb.from('clients').select('id, name, ghl_api_key, ghl_location_id, meta_ad_account_id, meta_access_token').in('status', ['active', 'onboarding']);
       clientsToProcess = cs || [];
     }
 
     const results: any[] = [];
 
     for (const client of clientsToProcess) {
-      // Create run record
-      const { data: run } = await sb.from('agent_runs').insert({
+      // Create run record in Cloud DB
+      const { data: run } = await cloudDb.from('agent_runs').insert({
         agent_id,
         client_id: client.id,
         status: 'running',
@@ -62,56 +69,50 @@ serve(async (req) => {
       const runId = run?.id;
 
       try {
-        // Fetch data based on connectors
         const connectors = agent.connectors || ['database'];
         const dataContext: Record<string, any> = {};
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const todayStr = today.toISOString().split('T')[0];
 
         if (connectors.includes('database')) {
-          // Fetch leads count
-          const { count: leadsCount } = await sb
+          const { count: leadsCount } = await prodDb
             .from('leads')
             .select('*', { count: 'exact', head: true })
             .eq('client_id', client.id)
             .gte('created_at', yesterdayStr)
-            .lt('created_at', today.toISOString().split('T')[0]);
+            .lt('created_at', todayStr);
 
-          // Fetch calls
-          const { data: calls } = await sb
+          const { data: calls } = await prodDb
             .from('calls')
             .select('id, showed, is_reconnect, booked_at, scheduled_at')
             .eq('client_id', client.id)
             .gte('booked_at', yesterdayStr)
-            .lt('booked_at', today.toISOString().split('T')[0]);
+            .lt('booked_at', todayStr);
 
-          // Fetch daily metrics
-          const { data: metrics } = await sb
+          const { data: metrics } = await prodDb
             .from('daily_metrics')
             .select('*')
             .eq('client_id', client.id)
             .eq('date', yesterdayStr)
             .maybeSingle();
 
-          // Fetch funded investors
-          const { data: funded } = await sb
+          const { data: funded } = await prodDb
             .from('funded_investors')
             .select('id, funded_amount, commitment_amount')
             .eq('client_id', client.id)
             .gte('funded_at', yesterdayStr)
-            .lt('funded_at', today.toISOString().split('T')[0]);
+            .lt('funded_at', todayStr);
 
-          // Client settings
-          const { data: settings } = await sb
+          const { data: settings } = await prodDb
             .from('client_settings')
             .select('*')
             .eq('client_id', client.id)
             .maybeSingle();
 
-          // Client offers
-          const { data: offers } = await sb
+          const { data: offers } = await prodDb
             .from('client_offers')
             .select('id, title, offer_type')
             .eq('client_id', client.id);
@@ -146,7 +147,6 @@ serve(async (req) => {
               'Authorization': `Bearer ${client.ghl_api_key}`,
               'Version': '2021-07-28',
             };
-            // Fetch contacts created yesterday
             const contactsRes = await fetch(
               `https://services.leadconnectorhq.com/contacts/?locationId=${client.ghl_location_id}&startAfter=${yesterdayStr}&limit=100`,
               { headers: ghlHeaders }
@@ -161,10 +161,10 @@ serve(async (req) => {
           }
         }
 
-        // Build prompt
+        // Build prompt with variable interpolation
         let prompt = agent.prompt_template;
         prompt = prompt.replace(/\{\{client_name\}\}/g, client.name);
-        prompt = prompt.replace(/\{\{date\}\}/g, today.toISOString().split('T')[0]);
+        prompt = prompt.replace(/\{\{date\}\}/g, todayStr);
         prompt = prompt.replace(/\{\{yesterday\}\}/g, yesterdayStr);
         prompt = prompt.replace(/\{\{data\}\}/g, JSON.stringify(dataContext, null, 2));
 
@@ -174,7 +174,7 @@ serve(async (req) => {
         const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
         if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not set');
 
-        const aiRes = await fetch(GATEWAY_URL, {
+        const aiRes = await fetch(AI_GATEWAY_URL, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -198,10 +198,10 @@ serve(async (req) => {
         let actionsTaken: any[] = [];
         try {
           const parsed = JSON.parse(aiOutput.replace(/```json\n?/g, '').replace(/```\n?/g, ''));
-          
-          // If corrections exist, apply them to daily_metrics
+
+          // Apply corrections to daily_metrics on production DB
           if (parsed.corrections && Object.keys(parsed.corrections).length > 0 && connectors.includes('database')) {
-            await sb
+            await prodDb
               .from('daily_metrics')
               .upsert({
                 client_id: client.id,
@@ -212,13 +212,12 @@ serve(async (req) => {
             actionsTaken.push({ type: 'daily_metrics_update', corrections: parsed.corrections });
           }
 
-          // If slack message and slack connector enabled
+          // Post Slack message if configured
           if (parsed.slack_message && connectors.includes('slack')) {
             const slackApiKey = Deno.env.get('SLACK_API_KEY');
             const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
             if (slackApiKey && lovableApiKey) {
-              // Get client's slack channel
-              const { data: cs } = await sb.from('client_settings').select('slack_channel_id').eq('client_id', client.id).maybeSingle();
+              const { data: cs } = await prodDb.from('client_settings').select('slack_channel_id').eq('client_id', client.id).maybeSingle();
               const channelId = cs?.slack_channel_id;
               if (channelId) {
                 await fetch('https://connector-gateway.lovable.dev/slack/api/chat.postMessage', {
@@ -238,8 +237,8 @@ serve(async (req) => {
           // AI didn't return valid JSON, that's ok
         }
 
-        // Update run as completed
-        await sb.from('agent_runs').update({
+        // Update run as completed in Cloud DB
+        await cloudDb.from('agent_runs').update({
           status: 'completed',
           completed_at: new Date().toISOString(),
           input_summary: inputSummary,
@@ -251,7 +250,7 @@ serve(async (req) => {
         results.push({ client: client.name, status: 'completed', actions: actionsTaken.length });
 
       } catch (runError: any) {
-        await sb.from('agent_runs').update({
+        await cloudDb.from('agent_runs').update({
           status: 'failed',
           completed_at: new Date().toISOString(),
           error: runError.message,
