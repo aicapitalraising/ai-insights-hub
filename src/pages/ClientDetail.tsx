@@ -134,10 +134,14 @@ export default function ClientDetail() {
 
   const handleActivityClick = (activityId: string, type: string) => {
     if (type.startsWith('task_')) {
-      setSelectedTaskId(activityId);
-      setActiveTab('performance');
+      setSearchParams({ task: activityId }, { replace: true });
+      setActiveTab('tasks');
     } else if (type.startsWith('creative_')) {
       setActiveTab('creatives');
+    } else if (type === 'voice_note_recorded') {
+      // Voice notes handled by ActivityPanel's modal
+    } else if (type === 'meeting_synced') {
+      // Meetings handled by ActivityPanel's modal
     }
   };
 
