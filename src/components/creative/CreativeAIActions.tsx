@@ -180,6 +180,7 @@ export function CreativeAIActions({ creative, onCreativeUpdated }: CreativeAIAct
     }
   };
 
+  const handleAIVariations = async () => {
     setGeneratingVariations(true);
     setVariations([]);
     try {
