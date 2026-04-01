@@ -227,7 +227,90 @@ export function CreativeAIActions({ creative, onCreativeUpdated, compact = false
     }
   };
 
-  // Extract score from audit text
+  const handleAIVideo = async () => {
+    if (!videoPrompt.trim()) {
+      toast.error('Please describe the video animation');
+      return;
+    }
+
+    setGeneratingVideo(true);
+    setGeneratedVideoUrl(null);
+    try {
+      const { data, error } = await invokeCloudFunction('generate-video-from-image', {
+        body: {
+          imageUrl: creative.file_url,
+          prompt: videoPrompt,
+          aspectRatio: creative.aspect_ratio || '1:1',
+          duration: 5,
+          clientId: creative.client_id,
+          projectId: creative.id,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.videoUrl) {
+        setGeneratedVideoUrl(data.videoUrl);
+        toast.success('Video generated successfully!');
+      } else if (data?.error) {
+        toast.error(data.error);
+      } else {
+        throw new Error('No video returned');
+      }
+    } catch (error) {
+      console.error('AI Video error:', error);
+      toast.error('Failed to generate video');
+    } finally {
+      setGeneratingVideo(false);
+    }
+  };
+
+  const handleSaveVideoToCreative = async () => {
+    if (!generatedVideoUrl) return;
+    setSavingVideo(true);
+    try {
+      // Store previous file_url as version history comment
+      const previousUrl = creative.file_url;
+      const { error } = await supabase
+        .from('creatives')
+        .update({ 
+          file_url: generatedVideoUrl, 
+          type: 'video',
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', creative.id);
+      if (error) throw error;
+
+      // Add version history comment
+      if (previousUrl) {
+        const existingComments = Array.isArray(creative.comments) ? creative.comments : [];
+        const versionComment = {
+          id: Date.now().toString(),
+          author: 'System',
+          text: `📎 Previous version: ${previousUrl}`,
+          createdAt: new Date().toISOString(),
+        };
+        await supabase
+          .from('creatives')
+          .update({ comments: [...existingComments, versionComment] })
+          .eq('id', creative.id);
+      }
+
+      toast.success('Creative updated with generated video');
+      setVideoOpen(false);
+      setGeneratedVideoUrl(null);
+      setVideoPrompt('');
+      queryClient.invalidateQueries({ queryKey: ['all-creatives'] });
+      queryClient.invalidateQueries({ queryKey: ['creatives'] });
+      onCreativeUpdated?.();
+    } catch (error) {
+      console.error('Save video error:', error);
+      toast.error('Failed to save video to creative');
+    } finally {
+      setSavingVideo(false);
+    }
+  };
+
   const extractScore = (auditText: string): number | null => {
     const match = auditText.match(/Overall Score[:\s]*(\d+)/i);
     return match ? parseInt(match[1], 10) : null;
