@@ -18,6 +18,7 @@ interface EODViewProps {
   existingReport: DailyReport | null;
   onSubmit: (data: Omit<DailyReport, 'id' | 'created_at'>) => void;
   memberId: string;
+  memberName: string;
   isSubmitting: boolean;
 }
 
