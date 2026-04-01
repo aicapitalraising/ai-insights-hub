@@ -1233,7 +1233,18 @@ export function CreativesTab() {
           </Suspense>
         </TabsContent>
 
-        {/* B-Roll Library */}
+        {/* Winning Ads */}
+        <TabsContent value="winning-ads" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading winning ads..." />}>
+            <WinningAdsGalleryLazy embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* Manage Styles */}
+        <TabsContent value="manage-styles" className="mt-4">
+          <Suspense fallback={<CashBagLoader message="Loading styles..." />}>
+            <ManageStylesTabLazy embedded />
+          </Suspense>
         <TabsContent value="broll" className="mt-4">
           <Suspense fallback={<CashBagLoader message="Loading B-Roll library..." />}>
             <BrollPage embedded />
