@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/db';
-import { supabase as cloudClient } from '@/integrations/supabase/client';
+import { supabase as prodClient } from '@/integrations/supabase/db';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Task } from './useTasks';
 
@@ -37,7 +37,7 @@ export function useMemberTasks(memberId?: string) {
       if (!memberId) return [];
 
       // Get task IDs assigned to this member
-      const { data: assignments, error: assignErr } = await supabase
+      const { data: assignments, error: assignErr } = await prodClient
         .from('task_assignees')
         .select('task_id')
         .eq('member_id', memberId);
@@ -48,7 +48,7 @@ export function useMemberTasks(memberId?: string) {
       const taskIds = assignments.map((a: any) => a.task_id);
 
       // Fetch those tasks that are not completed
-      const { data: tasks, error: taskErr } = await supabase
+      const { data: tasks, error: taskErr } = await prodClient
         .from('tasks')
         .select('*')
         .in('id', taskIds)
@@ -140,7 +140,7 @@ export function useSubmitDailyReport() {
       }
 
       // Fire-and-forget Slack notification
-      cloudClient.functions.invoke('slack-daily-report', {
+      supabase.functions.invoke('slack-daily-report', {
         body: { report, member_name },
       }).then(({ error: slackErr }) => {
         if (slackErr) console.warn('Slack daily report notification failed:', slackErr.message);
@@ -165,7 +165,7 @@ export function useClientNames(clientIds: string[]) {
     queryKey: ['client-names', clientIds],
     queryFn: async () => {
       if (clientIds.length === 0) return {};
-      const { data, error } = await supabase
+      const { data, error } = await prodClient
         .from('clients')
         .select('id, name')
         .in('id', clientIds);
