@@ -521,6 +521,39 @@ export function AgencySettingsModal({ open, onOpenChange }: AgencySettingsModalP
                 )}
               </div>
             </div>
+            {/* Agent Slack DM Notifications */}
+            <div className="border-2 border-border p-4 space-y-4">
+              <div>
+                <h4 className="font-medium mb-1 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Agent Slack DM Notifications
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Get a Slack DM every time an AI agent completes a run with results and actions taken.
+                </p>
+                
+                <div className="flex items-center justify-between mb-3">
+                  <Label htmlFor="agentDmEnabled">Enable DM Notifications</Label>
+                  <Switch 
+                    id="agentDmEnabled"
+                    checked={agentDmEnabled} 
+                    onCheckedChange={setAgentDmEnabled} 
+                  />
+                </div>
+
+                <Label htmlFor="slackDmUserId">Slack User ID</Label>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Find your Slack user ID: Click your profile → "..." menu → Copy member ID
+                </p>
+                <Input
+                  id="slackDmUserId"
+                  value={slackDmUserId}
+                  onChange={(e) => setSlackDmUserId(e.target.value)}
+                  placeholder="U014Y02CNLS"
+                  className="font-mono"
+                />
+              </div>
+            </div>
             {/* Composio Integration */}
             <div className="border-2 border-border p-4 space-y-4">
               <div>
