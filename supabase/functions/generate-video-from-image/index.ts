@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { getGeminiApiKey } from '../_shared/get-gemini-key.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,7 +21,7 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = clientApiKey || Deno.env.get('GEMINI_API_KEY');
+    const apiKey = await getGeminiApiKey(clientApiKey);
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: 'No Google AI API key configured. Add GEMINI_API_KEY in settings.' }),
