@@ -498,6 +498,13 @@ const Index = () => {
               </SectionErrorBoundary>
             )}
 
+            {/* Agents */}
+            {activeTab === 'agents' && (
+              <SectionErrorBoundary sectionName="Agents">
+                <AgentsTab clients={clients} />
+              </SectionErrorBoundary>
+            )}
+
             {/* Integrations */}
             {activeTab === 'integrations' && (
               <SectionErrorBoundary sectionName="Integrations">

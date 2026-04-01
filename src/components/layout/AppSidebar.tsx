@@ -76,6 +76,11 @@ const navStructure = [
     ],
   },
   {
+    title: 'Agents',
+    value: 'agents',
+    icon: Cpu,
+  },
+  {
     title: 'Ads Manager',
     value: 'ads-manager',
     icon: Megaphone,
