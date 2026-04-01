@@ -65,7 +65,6 @@ export function SODView({ tasks, isAccountManager, existingReport, onSubmit, mem
   const togglePriority = (taskId: string) => {
     setTopPriorities(prev => {
       if (prev.includes(taskId)) return prev.filter(id => id !== taskId);
-      if (prev.length >= 3) return prev;
       return [...prev, taskId];
     });
   };
